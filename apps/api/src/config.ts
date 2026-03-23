@@ -4,7 +4,7 @@
  * fails fast rather than surfacing errors at runtime.
  */
 
-function require(name: string): string {
+function requireEnv(name: string): string {
   const value = process.env[name];
   if (!value) throw new Error(`Missing required environment variable: ${name}`);
   return value;
@@ -17,33 +17,33 @@ function optional(name: string, fallback: string): string {
 export const config = {
   nodeEnv: optional("NODE_ENV", "development"),
   port: Number(process.env.PORT) || 3001,
-  publicBaseUrl: require("PUBLIC_BASE_URL"),
+  publicBaseUrl: requireEnv("PUBLIC_BASE_URL"),
 
   db: {
-    url: require("DATABASE_URL"),
+    url: requireEnv("DATABASE_URL"),
   },
 
   auth: {
-    jwtSecret: require("API_JWT_SECRET"),
+    jwtSecret: requireEnv("API_JWT_SECRET"),
   },
 
   twilio: {
-    accountSid: require("TWILIO_ACCOUNT_SID"),
-    authToken: require("TWILIO_AUTH_TOKEN"),
-    phoneNumber: require("TWILIO_PHONE_NUMBER"),
+    accountSid: requireEnv("TWILIO_ACCOUNT_SID"),
+    authToken: requireEnv("TWILIO_AUTH_TOKEN"),
+    phoneNumber: requireEnv("TWILIO_PHONE_NUMBER"),
   },
 
   deepgram: {
-    apiKey: require("DEEPGRAM_API_KEY"),
+    apiKey: requireEnv("DEEPGRAM_API_KEY"),
   },
 
   anthropic: {
-    apiKey: require("ANTHROPIC_API_KEY"),
+    apiKey: requireEnv("ANTHROPIC_API_KEY"),
   },
 
   ghl: {
-    locationId: require("GHL_LOCATION_ID"),
-    clientId: require("GHL_CLIENT_ID"),
-    clientSecret: require("GHL_CLIENT_SECRET"),
+    locationId: requireEnv("GHL_LOCATION_ID"),
+    clientId: requireEnv("GHL_CLIENT_ID"),
+    clientSecret: requireEnv("GHL_CLIENT_SECRET"),
   },
 } as const;
