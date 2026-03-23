@@ -8,12 +8,14 @@ const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
 
 /**
- * Returns an Axios instance with the current GHL access token.
+ * Returns an Axios instance and locationId for the current GHL AgencyConfig.
  * Refreshes the token first if it expires within 5 minutes.
  */
-async function getGhlClient(): Promise<AxiosInstance> {
+async function getGhlClient(): Promise<{ client: AxiosInstance; locationId: string }> {
   const agencyConfig = await prisma.agencyConfig.findFirst({
-    where: { ghlLocationId: config.ghl.locationId },
+    where: config.ghl.locationId
+      ? { ghlLocationId: config.ghl.locationId }
+      : undefined, // Single-tenant: use first config if locationId not set
   });
 
   if (!agencyConfig) {
@@ -26,7 +28,7 @@ async function getGhlClient(): Promise<AxiosInstance> {
       ? await refreshToken(agencyConfig)
       : agencyConfig.ghlAccessToken;
 
-  return axios.create({
+  const client = axios.create({
     baseURL: GHL_BASE_URL,
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -34,6 +36,8 @@ async function getGhlClient(): Promise<AxiosInstance> {
       "Content-Type": "application/json",
     },
   });
+
+  return { client, locationId: agencyConfig.ghlLocationId };
 }
 
 // ─── Token refresh ────────────────────────────────────────────────────────────
@@ -42,6 +46,14 @@ async function refreshToken(agencyConfig: {
   ghlRefreshToken: string;
   ghlLocationId: string;
 }): Promise<string> {
+  if (!config.ghl.clientId || !config.ghl.clientSecret) {
+    throw new Error("[ghl] GHL_CLIENT_ID and GHL_CLIENT_SECRET required for token refresh");
+  }
+
+  const redirectUri = config.publicBaseUrl
+    ? `${config.publicBaseUrl.replace(/\/$/, "")}/oauth/callback`
+    : undefined;
+
   const response = await axios.post<{
     access_token: string;
     refresh_token: string;
@@ -51,6 +63,7 @@ async function refreshToken(agencyConfig: {
     client_secret: config.ghl.clientSecret,
     grant_type: "refresh_token",
     refresh_token: agencyConfig.ghlRefreshToken,
+    ...(redirectUri && { redirect_uri: redirectUri }),
   });
 
   const { access_token, refresh_token, expires_in } = response.data;
@@ -95,16 +108,14 @@ interface GhlContactResponse {
  */
 async function upsertContact(
   client: AxiosInstance,
+  locationId: string,
   payload: GhlContactPayload
 ): Promise<string> {
   // GHL v2 contacts API: POST creates or merges by phone/email
-  const response = await client.post<GhlContactResponse>(
-    `/contacts/`,
-    {
-      ...payload,
-      locationId: config.ghl.locationId,
-    }
-  );
+  const response = await client.post<GhlContactResponse>(`/contacts/`, {
+    ...payload,
+    locationId,
+  });
 
   return response.data.contact.id;
 }
@@ -126,16 +137,14 @@ interface GhlOpportunityPayload {
  */
 async function createOpportunity(
   client: AxiosInstance,
+  locationId: string,
   payload: GhlOpportunityPayload
 ): Promise<string> {
-  const response = await client.post<{ opportunity: { id: string } }>(
-    "/opportunities/",
-    {
-      ...payload,
-      locationId: config.ghl.locationId,
-      status: "open",
-    }
-  );
+  const response = await client.post<{ opportunity: { id: string } }>("/opportunities/", {
+    ...payload,
+    locationId,
+    status: "open",
+  });
 
   return response.data.opportunity.id;
 }
@@ -160,7 +169,7 @@ export async function syncCallToGhl(callId: string, score: number): Promise<void
   });
 
   const entity = call.entity;
-  const client = await getGhlClient();
+  const { client, locationId } = await getGhlClient();
 
   // ── Contact upsert ─────────────────────────────────────────────────────────
   const contactPayload: GhlContactPayload = {
@@ -176,7 +185,7 @@ export async function syncCallToGhl(callId: string, score: number): Promise<void
     customFields: buildCustomFields(entity, call.completenessScore),
   };
 
-  const ghlContactId = await upsertContact(client, contactPayload);
+  const ghlContactId = await upsertContact(client, locationId, contactPayload);
   console.log(`[ghl] ${call.callSid}: contact upserted id=${ghlContactId}`);
 
   const updateData: {
@@ -204,7 +213,7 @@ export async function syncCallToGhl(callId: string, score: number): Promise<void
           ? `${entity.firstName} ${entity.lastName} — Life Insurance`
           : `${call.from} — Life Insurance`;
 
-      const opportunityId = await createOpportunity(client, {
+      const opportunityId = await createOpportunity(client, locationId, {
         name,
         pipelineId,
         pipelineStageId,

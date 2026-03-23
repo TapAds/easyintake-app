@@ -21,7 +21,7 @@ voiceRouter.post(
     next();
   },
   validateTwilioSignature,
-  async (req: Request, res: Response): Promise<void> => {
+  (req: Request, res: Response): void => {
     const { CallSid, From, To } = req.body as {
       CallSid: string;
       From: string;
@@ -30,8 +30,12 @@ voiceRouter.post(
 
     console.log(`[voice] inbound call ${CallSid} from ${From}`);
 
-    try {
-      await prisma.call.upsert({
+    // Respond immediately — Twilio times out if we wait for DB/async work
+    res.type("text/xml").send(buildVoiceTwiml(CallSid));
+
+    // Create call record in background (fire-and-forget)
+    prisma.call
+      .upsert({
         where: { callSid: CallSid },
         create: {
           callSid: CallSid,
@@ -44,13 +48,8 @@ voiceRouter.post(
           from: From,
           to: To,
         },
-      });
-      console.log(`[voice] call record created for ${CallSid}`);
-    } catch (err) {
-      // Log but don't block — returning TwiML is the priority
-      console.error(`[voice] failed to create call record`, err);
-    }
-
-    res.type("text/xml").send(buildVoiceTwiml(CallSid));
+      })
+      .then(() => console.log(`[voice] call record created for ${CallSid}`))
+      .catch((err) => console.error(`[voice] failed to create call record`, err));
   }
 );

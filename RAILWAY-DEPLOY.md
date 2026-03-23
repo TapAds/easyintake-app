@@ -45,7 +45,7 @@ git push -u origin main
 
 ## Step 5: Add All Other Variables
 
-In your app service → **Variables**, add these (copy from your local `.env`):
+In your app service → **Variables**, add these:
 
 | Variable | Where to get it |
 |----------|-----------------|
@@ -56,20 +56,17 @@ In your app service → **Variables**, add these (copy from your local `.env`):
 | `TWILIO_PHONE_NUMBER` | Your Twilio number (e.g. +15551234567) |
 | `DEEPGRAM_API_KEY` | Deepgram Console |
 | `ANTHROPIC_API_KEY` | Anthropic Console |
-| `GHL_LOCATION_ID` | GoHighLevel |
-| `GHL_CLIENT_ID` | GHL OAuth |
-| `GHL_CLIENT_SECRET` | GHL OAuth |
-| `GHL_ACCESS_TOKEN` | GHL OAuth (for seeding) |
-| `GHL_REFRESH_TOKEN` | GHL OAuth (for seeding) |
+| `GHL_CLIENT_ID` | GHL OAuth (Step 9) |
+| `GHL_CLIENT_SECRET` | GHL OAuth (Step 9) |
+
+*GHL access/refresh tokens are obtained via OAuth in Step 9 — do not add them manually.*
 
 ---
 
-## Step 6: Set Root Directory
+## Step 6: Root Directory (optional)
 
-1. App service → **Settings** tab
-2. Find **Root Directory**
-3. Enter: `apps/api` (so Railway builds from the API folder)
-4. Save — this will trigger a redeploy
+- **Leave empty** to build from repo root (uses workspace scripts).
+- Or set to `apps/api` to build the API folder directly.
 
 ---
 
@@ -77,7 +74,7 @@ In your app service → **Variables**, add these (copy from your local `.env`):
 
 1. App service → **Settings** tab
 2. Scroll to **Networking** → **Generate Domain**
-3. Copy the URL (e.g. `https://easyintake-production-xxxx.up.railway.app`)
+3. Copy the URL (e.g. `https://easyintake-app-production.up.railway.app`)
 4. Go to **Variables** → add or edit `PUBLIC_BASE_URL` = that URL (no trailing slash)
 5. Redeploy: **Deployments** tab → three dots on latest → **Redeploy**
 
@@ -92,17 +89,26 @@ In your app service → **Variables**, add these (copy from your local `.env`):
 
 ---
 
-## Step 9: Seed AgencyConfig (One-Time)
+## Step 9: GHL OAuth — Connect GoHighLevel
 
-Install Railway CLI and run the seed script:
+1. **Create OAuth app** in [GHL Marketplace](https://marketplace.gohighlevel.com) → My Apps → Create App (Private is fine).
 
-```bash
-npm i -g @railway/cli
-railway login
-railway link    # select your project
-cd apps/api
-railway run npx tsx scripts/seed-agency-config.ts
-```
+2. **Auth settings** (Advanced Settings → Auth):
+   - **Scopes**: Add `contacts.readonly`, `contacts.write`, `opportunities.readonly`, `opportunities.write` (or broader if needed)
+   - **Redirect URL**: `https://YOUR-RAILWAY-URL/oauth/callback` — click Add
+   - **Client Keys**: Add a key pair → copy **Client ID** and **Client Secret**
+
+3. **Add to Railway**: `GHL_CLIENT_ID`, `GHL_CLIENT_SECRET` (from step 2)
+
+4. **Install the app**:
+   - Copy your app's **Installation URL** from the Auth page (click Show)
+   - Open it in a browser → log in to GHL if needed
+   - **Select the Location (Sub-Account)** you want to connect
+   - Authorize
+
+5. You'll be redirected to `.../oauth/callback`. If it succeeds, you'll see "GHL Connected". AgencyConfig is seeded automatically — **no CLI seed needed**.
+
+**Troubleshooting:** [GHL OAuth 2.0 docs](https://marketplace.gohighlevel.com/docs/Authorization/OAuth2.0/)
 
 ---
 
@@ -110,4 +116,4 @@ railway run npx tsx scripts/seed-agency-config.ts
 
 Your app is live. Call your Twilio number to test.
 
-Agent UI: `https://YOUR-RAILWAY-URL/public/agent.html`
+- **Agent UI**: `https://YOUR-RAILWAY-URL/public/agent.html`

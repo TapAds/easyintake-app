@@ -42,8 +42,8 @@ export const config = {
   },
 
   ghl: {
-    locationId: requireEnv("GHL_LOCATION_ID"),
-    clientId: requireEnv("GHL_CLIENT_ID"),
-    clientSecret: requireEnv("GHL_CLIENT_SECRET"),
+    locationId: optional("GHL_LOCATION_ID", ""), // Set via OAuth callback or manually
+    clientId: optional("GHL_CLIENT_ID", ""),
+    clientSecret: optional("GHL_CLIENT_SECRET", ""),
   },
 } as const;

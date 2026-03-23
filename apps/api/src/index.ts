@@ -14,6 +14,7 @@ import { transcriptRouter } from "./api/routes/transcript";
 import { internalRouter } from "./api/routes/internal";
 import { voiceRouter } from "./webhooks/twilio/voice";
 import { callStatusRouter } from "./webhooks/twilio/callStatus";
+import { ghlOauthRouter } from "./webhooks/ghl/oauth";
 import { errorHandler } from "./api/middleware/errorHandler";
 import { startFollowUpPoller, stopFollowUpPoller } from "./services/followUpPoller";
 import { prisma } from "./db/prisma";
@@ -35,6 +36,7 @@ app.use("/api", healthRouter);
 app.use("/api/calls", callsRouter);
 app.use("/api/calls", transcriptRouter);
 app.use("/internal", internalRouter);
+app.use("/oauth", ghlOauthRouter);
 app.use("/webhooks/twilio", voiceRouter);
 app.use("/webhooks/twilio", callStatusRouter);
 
