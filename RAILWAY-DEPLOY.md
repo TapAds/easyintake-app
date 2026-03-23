@@ -1,0 +1,113 @@
+# Deploy to Railway — Simple Steps
+
+---
+
+## Step 1: Push Your Code to GitHub
+
+```bash
+cd easy-intake-app
+git init          # if not already a repo
+git add .
+git commit -m "Initial deploy"
+git remote add origin https://github.com/YOUR-USERNAME/YOUR-REPO.git
+git push -u origin main
+```
+
+---
+
+## Step 2: Connect Railway to GitHub
+
+1. Go to [railway.app](https://railway.app) → **New Project**
+2. Click **GitHub Repository**
+3. Select your repo → **Deploy Now**
+4. Wait for the first build (it may fail — that’s okay for now)
+
+---
+
+## Step 3: Add PostgreSQL
+
+1. In your Railway project, click **+ New**
+2. Click **Database** → **PostgreSQL**
+3. Wait for it to finish provisioning
+4. Click the **Postgres** service → **Variables** tab → copy `DATABASE_URL`
+
+---
+
+## Step 4: Connect Postgres to Your App
+
+1. Click your **app service** (the one from GitHub)
+2. Go to **Variables** tab
+3. Click **+ New Variable** → **Add a Reference**
+4. Select **Postgres** → **DATABASE_URL**
+5. Confirm — it will auto-fill when the Postgres URL changes
+
+---
+
+## Step 5: Add All Other Variables
+
+In your app service → **Variables**, add these (copy from your local `.env`):
+
+| Variable | Where to get it |
+|----------|-----------------|
+| `PUBLIC_BASE_URL` | Leave empty for now — add after Step 7 |
+| `API_JWT_SECRET` | Run: `node -e "console.log(require('crypto').randomBytes(48).toString('hex'))"` |
+| `TWILIO_ACCOUNT_SID` | Twilio Console |
+| `TWILIO_AUTH_TOKEN` | Twilio Console |
+| `TWILIO_PHONE_NUMBER` | Your Twilio number (e.g. +15551234567) |
+| `DEEPGRAM_API_KEY` | Deepgram Console |
+| `ANTHROPIC_API_KEY` | Anthropic Console |
+| `GHL_LOCATION_ID` | GoHighLevel |
+| `GHL_CLIENT_ID` | GHL OAuth |
+| `GHL_CLIENT_SECRET` | GHL OAuth |
+| `GHL_ACCESS_TOKEN` | GHL OAuth (for seeding) |
+| `GHL_REFRESH_TOKEN` | GHL OAuth (for seeding) |
+
+---
+
+## Step 6: Set Root Directory
+
+1. App service → **Settings** tab
+2. Find **Root Directory**
+3. Enter: `apps/api` (so Railway builds from the API folder)
+4. Save — this will trigger a redeploy
+
+---
+
+## Step 7: Get Your App URL and Set PUBLIC_BASE_URL
+
+1. App service → **Settings** tab
+2. Scroll to **Networking** → **Generate Domain**
+3. Copy the URL (e.g. `https://easyintake-production-xxxx.up.railway.app`)
+4. Go to **Variables** → add or edit `PUBLIC_BASE_URL` = that URL (no trailing slash)
+5. Redeploy: **Deployments** tab → three dots on latest → **Redeploy**
+
+---
+
+## Step 8: Update Twilio
+
+1. [Twilio Console](https://console.twilio.com) → Phone Numbers → your number
+2. **Voice URL**: `https://YOUR-RAILWAY-URL/webhooks/twilio/voice`
+3. **Status Callback**: `https://YOUR-RAILWAY-URL/webhooks/twilio/call-status`
+4. Save
+
+---
+
+## Step 9: Seed AgencyConfig (One-Time)
+
+Install Railway CLI and run the seed script:
+
+```bash
+npm i -g @railway/cli
+railway login
+railway link    # select your project
+cd apps/api
+railway run npx tsx scripts/seed-agency-config.ts
+```
+
+---
+
+## Done
+
+Your app is live. Call your Twilio number to test.
+
+Agent UI: `https://YOUR-RAILWAY-URL/public/agent.html`

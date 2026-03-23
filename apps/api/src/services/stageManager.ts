@@ -1,0 +1,278 @@
+import { FlowStage } from "@prisma/client";
+import { prisma } from "../db/prisma";
+import {
+  EntityFieldName,
+  QUOTE_FIELDS,
+  APPLICATION_FIELDS,
+  REQUIRED_QUOTE_FIELDS,
+} from "../config/fieldStages";
+import {
+  ProductType,
+  PRODUCT_REQUIRED_FIELDS,
+  isKnownProductType,
+} from "../config/productRequirements";
+import { ProductConfig } from "../types/product";
+import { callEvents } from "../lib/callEvents";
+
+export type EntityState = Partial<Record<EntityFieldName, unknown>>;
+
+// ─── In-memory entity accumulator ────────────────────────────────────────────
+//
+// Accumulates extracted entity fields per callSid during a live call.
+// Avoids a DB read/write on every utterance.
+//
+// Lifecycle:
+//   - Initialised by initEntityCache() when a call starts
+//   - Merged into on each utterance extraction
+//   - Read by evaluateStageTransition() after each merge
+//   - Flushed to DB by the call orchestrator on call end
+//   - Cleared by clearEntityCache() after flush
+
+const callEntityCache = new Map<string, EntityState>();
+
+export function initEntityCache(callSid: string): void {
+  if (!callEntityCache.has(callSid)) {
+    callEntityCache.set(callSid, {});
+  }
+}
+
+/**
+ * Merges newly extracted fields into the in-memory entity cache for a call.
+ * Existing non-null values are never overwritten by null — only by a new
+ * non-null value. This prevents a missed extraction from erasing known data.
+ */
+export function mergeIntoEntityCache(
+  callSid: string,
+  extracted: EntityState
+): EntityState {
+  const current = callEntityCache.get(callSid) ?? {};
+
+  console.log(`[extraction] mergeIntoEntityCache ${callSid} — incoming:`, JSON.stringify(extracted, null, 2));
+
+  for (const [key, value] of Object.entries(extracted)) {
+    if (value !== null && value !== undefined) {
+      (current as Record<string, unknown>)[key] = value;
+    }
+  }
+
+  callEntityCache.set(callSid, current);
+  console.log(`[extraction] mergeIntoEntityCache ${callSid} — after merge:`, JSON.stringify(current, null, 2));
+  return current;
+}
+
+export function getEntityCache(callSid: string): EntityState {
+  return callEntityCache.get(callSid) ?? {};
+}
+
+export function clearEntityCache(callSid: string): void {
+  callEntityCache.delete(callSid);
+}
+
+// ─── Missing fields ───────────────────────────────────────────────────────────
+
+/**
+ * Returns field names that are null/undefined for the given stage.
+ * Pure function — no DB access.
+ */
+export function getMissingFieldsByStage(
+  entity: EntityState,
+  stage: "quote" | "application"
+): EntityFieldName[] {
+  const fields = stage === "quote" ? QUOTE_FIELDS : APPLICATION_FIELDS;
+  return fields.filter(
+    (f) => entity[f] === null || entity[f] === undefined
+  );
+}
+
+/**
+ * Returns the canonical "quote" or "application" label for a Prisma FlowStage.
+ * Used to scope extraction and guidance prompts.
+ */
+export function stageToScope(stage: FlowStage): "quote" | "application" {
+  switch (stage) {
+    case FlowStage.QUOTE_COLLECTION:
+    case FlowStage.QUOTE_READY:
+      return "quote";
+    case FlowStage.PRODUCT_SELECTED:
+    case FlowStage.FULL_APPLICATION:
+      return "application";
+  }
+}
+
+// ─── Transition conditions ────────────────────────────────────────────────────
+
+/**
+ * Returns true when all REQUIRED_QUOTE_FIELDS are non-null.
+ * Sufficient condition to transition QUOTE_COLLECTION → QUOTE_READY.
+ */
+export function isQuoteReady(entity: EntityState): boolean {
+  return REQUIRED_QUOTE_FIELDS.every(
+    (f) => entity[f] !== null && entity[f] !== undefined
+  );
+}
+
+/**
+ * Returns the missing required fields for a known product type.
+ * Used in the product-first flow to determine what to collect next.
+ * Pure function — no DB access.
+ */
+export function getMissingFieldsForProduct(
+  entity: EntityState,
+  productType: ProductType
+): EntityFieldName[] {
+  return PRODUCT_REQUIRED_FIELDS[productType].filter(
+    (f) => entity[f] === null || entity[f] === undefined
+  );
+}
+
+/**
+ * Returns true when all required fields for a specific product type are non-null.
+ * Sufficient condition to transition QUOTE_COLLECTION → FULL_APPLICATION
+ * in the product-first flow (skipping QUOTE_READY).
+ */
+export function isProductQuoteReady(
+  entity: EntityState,
+  productType: ProductType
+): boolean {
+  return PRODUCT_REQUIRED_FIELDS[productType].every(
+    (f) => entity[f] !== null && entity[f] !== undefined
+  );
+}
+
+// ─── Stage transition ─────────────────────────────────────────────────────────
+
+/**
+ * Evaluates whether the current stage should advance and, if so, writes the
+ * new stage to the database and emits a "stage:transition" event.
+ *
+ * Automatic transitions:
+ *
+ *   Product-first flow (selectedProduct is a known ProductType):
+ *     QUOTE_COLLECTION → FULL_APPLICATION
+ *       when all product-specific required fields are non-null.
+ *       QUOTE_READY is skipped — a product is already chosen.
+ *
+ *   Quote-first flow (selectedProduct is null/unknown):
+ *     QUOTE_COLLECTION → QUOTE_READY
+ *       when all generic REQUIRED_QUOTE_FIELDS are non-null.
+ *
+ * Manual transitions (not handled here — use selectProduct()):
+ *   QUOTE_READY → FULL_APPLICATION
+ *
+ * @param selectedProduct — Call.selectedProduct value; drives flow detection.
+ * @returns the stage after evaluation (may be unchanged)
+ */
+export async function evaluateStageTransition(
+  callId: string,
+  callSid: string,
+  currentStage: FlowStage,
+  entity: EntityState,
+  selectedProduct?: string | null
+): Promise<FlowStage> {
+  if (currentStage !== FlowStage.QUOTE_COLLECTION) {
+    return currentStage; // only auto-transitions apply in QUOTE_COLLECTION
+  }
+
+  const productType = isKnownProductType(selectedProduct) ? selectedProduct : null;
+
+  // ── Product-first flow ────────────────────────────────────────────────────
+  // Product is already known → skip QUOTE_READY, go directly to FULL_APPLICATION
+  if (productType && isProductQuoteReady(entity, productType)) {
+    await prisma.call.update({
+      where: { id: callId },
+      data: { flowStage: FlowStage.FULL_APPLICATION },
+    });
+
+    console.log(
+      `[stageManager] ${callSid}: QUOTE_COLLECTION → FULL_APPLICATION ` +
+      `(product-first, product=${productType})`
+    );
+
+    callEvents.emit("stage:transition", {
+      callSid,
+      from: FlowStage.QUOTE_COLLECTION,
+      to: FlowStage.FULL_APPLICATION,
+      flow: "product-first",
+      productType,
+    });
+
+    return FlowStage.FULL_APPLICATION;
+  }
+
+  // ── Quote-first flow ──────────────────────────────────────────────────────
+  // No product selected yet → advance to QUOTE_READY for quoting
+  if (!productType && isQuoteReady(entity)) {
+    await prisma.call.update({
+      where: { id: callId },
+      data: { flowStage: FlowStage.QUOTE_READY },
+    });
+
+    console.log(`[stageManager] ${callSid}: QUOTE_COLLECTION → QUOTE_READY (quote-first)`);
+
+    callEvents.emit("stage:transition", {
+      callSid,
+      from: FlowStage.QUOTE_COLLECTION,
+      to: FlowStage.QUOTE_READY,
+      flow: "quote-first",
+    });
+
+    return FlowStage.QUOTE_READY;
+  }
+
+  return currentStage;
+}
+
+// ─── Manual transitions ───────────────────────────────────────────────────────
+
+/**
+ * QUOTE_READY → FULL_APPLICATION (via PRODUCT_SELECTED).
+ *
+ * Records the selected carrier and product on the Call, then immediately
+ * advances to FULL_APPLICATION. PRODUCT_SELECTED is a point-in-time event,
+ * not a resting state — the carrier/product fields capture the selection.
+ *
+ * Phase 2: this will be called with a real quote engine response.
+ * Phase 1: called manually when the agent records a verbal product selection.
+ */
+export async function selectProduct(
+  callId: string,
+  callSid: string,
+  product: ProductConfig
+): Promise<void> {
+  await prisma.call.update({
+    where: { id: callId },
+    data: {
+      selectedCarrier: product.carrierName,
+      selectedProduct: product.productType,
+      flowStage: FlowStage.FULL_APPLICATION,
+      agentDecisionMade: true,
+    },
+  });
+
+  console.log(
+    `[stageManager] ${callSid}: PRODUCT_SELECTED → FULL_APPLICATION ` +
+    `(${product.carrierName} / ${product.productType})`
+  );
+
+  callEvents.emit("stage:transition", {
+    callSid,
+    from: FlowStage.PRODUCT_SELECTED,
+    to: FlowStage.FULL_APPLICATION,
+    product,
+  });
+}
+
+/**
+ * Reads the current flowStage and selectedProduct for a call from the database.
+ * Returns both so callers can determine the active flow without a second query.
+ * Always the authoritative source — never use cached stage for routing decisions.
+ */
+export async function getCurrentStage(
+  callId: string
+): Promise<{ flowStage: FlowStage; selectedProduct: string | null }> {
+  const call = await prisma.call.findUniqueOrThrow({
+    where: { id: callId },
+    select: { flowStage: true, selectedProduct: true },
+  });
+  return { flowStage: call.flowStage, selectedProduct: call.selectedProduct };
+}

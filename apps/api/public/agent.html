@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Easy Intake — Agent</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #111; color: #eee; }
+    .controls { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    input, button { padding: 8px 12px; font-size: 14px; }
+    input[type="text"] { flex: 1; min-width: 200px; }
+    button { cursor: pointer; background: #333; color: #eee; border: 1px solid #555; border-radius: 4px; }
+    button:hover { background: #444; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .panel { background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+    .panel h3 { margin: 0 0 8px 0; font-size: 14px; color: #aaa; }
+    #transcript { max-height: 200px; overflow-y: auto; white-space: pre-wrap; font-size: 13px; line-height: 1.5; }
+    #entities { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+    .entity { background: #252525; padding: 6px 10px; border-radius: 4px; font-size: 12px; }
+    .entity .label { color: #888; }
+    .entity .value { color: #fff; }
+    #guidance { font-size: 14px; color: #6cf; }
+    .score { font-size: 18px; font-weight: 600; }
+    .tier-incomplete { color: #f66; }
+    .tier-partial { color: #fa6; }
+    .tier-qualified { color: #6c6; }
+    .status { font-size: 12px; color: #666; margin-left: 8px; }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <input type="text" id="token" placeholder="JWT token (or fetch from /internal/token)">
+    <input type="text" id="callSid" placeholder="callSid (e.g. CAxxxx)">
+    <button id="fetchToken">Get Token</button>
+    <button id="connect">Connect</button>
+  </div>
+
+  <div class="panel">
+    <h3>Status <span class="status" id="status">Disconnected</span></h3>
+    <p>Score: <span id="score" class="score">—</span></p>
+  </div>
+
+  <div class="panel">
+    <h3>Transcript</h3>
+    <div id="transcript"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Entities</h3>
+    <div id="entities"></div>
+  </div>
+
+  <div class="panel">
+    <h3>Guidance</h3>
+    <div id="guidance">—</div>
+  </div>
+
+  <script>
+    const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+    const wsHost = location.host;
+
+    let ws = null;
+
+    document.getElementById("fetchToken").onclick = async () => {
+      try {
+        const res = await fetch("/internal/token", { method: "POST" });
+        const { token } = await res.json();
+        document.getElementById("token").value = token;
+      } catch (e) {
+        alert("Failed to fetch token: " + e.message);
+      }
+    };
+
+    document.getElementById("connect").onclick = () => {
+      const token = document.getElementById("token").value.trim();
+      const callSid = document.getElementById("callSid").value.trim();
+      if (!token) { alert("Enter token"); return; }
+      if (!callSid) { alert("Enter callSid"); return; }
+
+      const url = `${protocol}//${wsHost}/ws/agent?token=${encodeURIComponent(token)}&callSid=${encodeURIComponent(callSid)}`;
+      ws = new WebSocket(url);
+      ws.onopen = () => {
+        document.getElementById("status").textContent = `Connected to ${callSid}`;
+      };
+      ws.onclose = () => {
+        document.getElementById("status").textContent = "Disconnected";
+      };
+      ws.onmessage = (e) => {
+        const msg = JSON.parse(e.data);
+        switch (msg.type) {
+          case "transcript_chunk":
+            document.getElementById("transcript").textContent += `[${msg.speaker}] ${msg.text}\n`;
+            document.getElementById("transcript").scrollTop = document.getElementById("transcript").scrollHeight;
+            break;
+          case "entity_update":
+            const entitiesEl = document.getElementById("entities");
+            entitiesEl.innerHTML = Object.entries(msg.entities)
+              .filter(([, v]) => v != null && v !== "")
+              .map(([k, v]) => `<div class="entity"><span class="label">${k}:</span> <span class="value">${v}</span></div>`)
+              .join("");
+            document.getElementById("score").textContent = `${(msg.score.overall * 100).toFixed(0)}%`;
+            document.getElementById("score").className = "score tier-" + msg.score.tier;
+            break;
+          case "score_update":
+            document.getElementById("score").textContent = `${(msg.overall * 100).toFixed(0)}%`;
+            document.getElementById("score").className = "score tier-" + msg.tier;
+            break;
+          case "guidance":
+            document.getElementById("guidance").textContent = msg.guidanceText || "—";
+            break;
+          case "call_ended":
+            document.getElementById("status").textContent = "Call ended";
+            break;
+        }
+      };
+    };
+  </script>
+</body>
+</html>

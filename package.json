@@ -1,0 +1,12 @@
+{
+  "name": "easy-intake-app",
+  "private": true,
+  "workspaces": [
+    "apps/api"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/api",
+    "build": "npm run build --workspace=apps/api",
+    "start": "npm run start --workspace=apps/api"
+  }
+}

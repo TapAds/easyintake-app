@@ -1,0 +1,165 @@
+// This is your Prisma schema file.
+// Learn more at https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum CallStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  NO_ANSWER
+}
+
+enum FlowStage {
+  QUOTE_COLLECTION  // collecting minimum fields required to generate a quote
+  QUOTE_READY       // quote fields complete — quote engine call happens here (Phase 2)
+  PRODUCT_SELECTED  // agent and applicant have chosen a carrier and product
+  FULL_APPLICATION  // all underwriting and application fields collected
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  NON_BINARY
+  UNKNOWN
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model Call {
+  id                 String     @id @default(cuid())
+  callSid            String     @unique
+  from               String     // caller E.164 phone
+  to                 String     // agency Twilio number E.164
+  startedAt          DateTime
+  endedAt            DateTime?
+  durationSeconds    Int?
+  status             CallStatus @default(ACTIVE)
+  consentVerbal      Boolean    @default(false)
+  consentTimestamp   DateTime?
+  completenessScore  Float      @default(0)
+  flowStage          FlowStage  @default(QUOTE_COLLECTION)
+  agentDecisionMade  Boolean    @default(false)
+  selectedCarrier    String?    // set when flowStage = PRODUCT_SELECTED
+  selectedProduct    String?    // set when flowStage = PRODUCT_SELECTED
+  ghlContactId       String?
+  ghlOpportunityId   String?    // only populated after agent explicitly acts on suggestion
+  ghlSyncedAt        DateTime?
+  detectedLanguages  String[]   @default([]) // ISO-639-1 codes detected during call
+  primaryLanguage    String?    // ISO-639-1 code of dominant language
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  entity             LifeInsuranceEntity?
+  transcriptSegments TranscriptSegment[]
+  followUpJobs       FollowUpJob[]
+  complianceLogs     ComplianceLog[]
+}
+
+model LifeInsuranceEntity {
+  id      String @id @default(cuid())
+  callId  String @unique
+  call    Call   @relation(fields: [callId], references: [id], onDelete: Cascade)
+
+  // Identity
+  firstName   String?
+  lastName    String?
+  dateOfBirth DateTime? // stored as DateTime; time portion is always midnight UTC
+  gender      Gender?
+
+  // Contact
+  phone    String?
+  email    String?
+  address  String?
+  city     String?
+  state    String?   // 2-char US state code
+  zip      String?
+
+  // Coverage needs
+  coverageAmountDesired Int?    // face value in dollars (e.g. 500000)
+  productTypeInterest   String? // "term" | "whole" | "universal" | "final_expense"
+  termLengthDesired     Int?    // years (10, 15, 20, 25, 30)
+  budgetMonthly         Int?    // max monthly premium in dollars
+
+  // Underwriting signals
+  tobaccoUse             Boolean?
+  tobaccoLastUsed        String?  // "never" | "<1yr" | "1-3yr" | "3+yr"
+  heightFeet             Int?
+  heightInches           Int?
+  weightLbs              Int?
+  existingCoverage       Boolean?
+  existingCoverageAmount Int?     // existing death benefit in dollars
+
+  // Beneficiary (primary only)
+  beneficiaryName     String?
+  beneficiaryRelation String?
+
+  // Multi-language audit
+  originalLanguages String[] @default([]) // ISO-639-1 codes present in extracted text
+  rawExtractedText  Json?    // raw utterances that drove extraction, keyed by languageCode
+
+  // Audit
+  extractedByAI   Json?
+  agentCorrected  Boolean  @default(false)
+  lastCorrectedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model TranscriptSegment {
+  id           String   @id @default(cuid())
+  callId       String
+  call         Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  speaker      String   // "agent" | "caller" | "unknown"
+  text         String
+  offsetMs     Int      // milliseconds from call start
+  languageCode String   @default("en") // ISO-639-1 (e.g. "en", "es", "fr")
+  confidence   Float?                  // STT confidence score from Deepgram (0.0–1.0)
+  createdAt    DateTime @default(now())
+}
+
+model FollowUpJob {
+  id           String    @id @default(cuid())
+  callId       String
+  call         Call      @relation(fields: [callId], references: [id], onDelete: Cascade)
+  status       String    @default("PENDING") // PENDING | SENDING | SENT | FAILED | CANCELLED
+  scheduledFor DateTime
+  sentAt       DateTime?
+  failReason   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model AgencyConfig {
+  id                String   @id @default(cuid())
+  ghlLocationId     String   @unique
+  ghlAccessToken    String
+  ghlRefreshToken   String
+  ghlTokenExpiresAt DateTime
+  agencyName        String   @default("Easy Intake Agency")
+  twilioAccountSid  String
+  twilioPhoneNumber String   // E.164 format
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model ComplianceLog {
+  id           String   @id @default(cuid())
+  callId       String
+  call         Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  inputText    String   // raw AI output before filtering
+  outputText   String   // filtered text shown to agent
+  wasModified  Boolean
+  flaggedTerms String[]
+  createdAt    DateTime @default(now())
+}
