@@ -58,6 +58,7 @@ In your app service → **Variables**, add these:
 | `ANTHROPIC_API_KEY` | Anthropic Console |
 | `GHL_CLIENT_ID` | GHL OAuth (Step 9) |
 | `GHL_CLIENT_SECRET` | GHL OAuth (Step 9) |
+| `COTIZARAHORA_WEBHOOK_SECRET` | Shared secret for intake webhook (cotizarahora) |
 
 *GHL access/refresh tokens are obtained via OAuth in Step 9 — do not add them manually.*
 

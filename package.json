@@ -2,11 +2,15 @@
   "name": "easy-intake-app",
   "private": true,
   "workspaces": [
-    "apps/api"
+    "apps/*",
+    "packages/*"
   ],
   "scripts": {
     "dev": "npm run dev --workspace=apps/api",
+    "dev:web": "npm run dev --workspace=@easy-intake/web",
     "build": "npm run build --workspace=apps/api",
+    "build:web": "npm run build --workspace=@easy-intake/web",
+    "build:shared": "npm run build --workspace=@easy-intake/shared",
     "start": "npm run start --workspace=apps/api"
   }
 }

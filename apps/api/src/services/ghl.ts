@@ -54,16 +54,23 @@ async function refreshToken(agencyConfig: {
     ? `${config.publicBaseUrl.replace(/\/$/, "")}/oauth/callback`
     : undefined;
 
-  const response = await axios.post<{
-    access_token: string;
-    refresh_token: string;
-    expires_in: number; // seconds
-  }>("https://services.leadconnectorhq.com/oauth/token", {
+  const params: Record<string, string> = {
     client_id: config.ghl.clientId,
     client_secret: config.ghl.clientSecret,
     grant_type: "refresh_token",
     refresh_token: agencyConfig.ghlRefreshToken,
-    ...(redirectUri && { redirect_uri: redirectUri }),
+  };
+  if (redirectUri) params.redirect_uri = redirectUri;
+
+  const response = await axios.post<{
+    access_token: string;
+    refresh_token: string;
+    expires_in: number; // seconds
+  }>("https://services.leadconnectorhq.com/oauth/token", new URLSearchParams(params), {
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+    },
   });
 
   const { access_token, refresh_token, expires_in } = response.data;
@@ -118,6 +125,18 @@ async function upsertContact(
   });
 
   return response.data.contact.id;
+}
+
+/**
+ * Adds a note to a GHL contact.
+ * Used for intake webhook (e.g. quote details on quote.completed).
+ */
+async function addContactNote(
+  client: AxiosInstance,
+  contactId: string,
+  body: string
+): Promise<void> {
+  await client.post(`/contacts/${contactId}/notes`, { body });
 }
 
 // ─── Opportunity create ───────────────────────────────────────────────────────
@@ -279,3 +298,61 @@ function buildCustomFields(
 
   return fields;
 }
+
+// ─── Intake webhook (cotizarahora) ───────────────────────────────────────────
+
+const SANDBOX_LEAD_ID = "00000000-0000-0000-0000-000000000001";
+
+export interface IntakeContactPayload {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone: string;
+  postalCode?: string;
+  tags?: string[];
+  customFields?: { key: string; field_value: string }[];
+}
+
+/**
+ * Upserts a contact from intake webhook data. Used by cotizarahora events.
+ */
+export async function upsertIntakeContact(
+  payload: IntakeContactPayload
+): Promise<string> {
+  const { client, locationId } = await getGhlClient();
+  return upsertContact(client, locationId, payload);
+}
+
+/**
+ * Adds a note to a contact. Exported for intake webhook.
+ */
+export async function addNoteToContact(contactId: string, body: string): Promise<void> {
+  const { client } = await getGhlClient();
+  await addContactNote(client, contactId, body);
+}
+
+/**
+ * Creates an opportunity for a contact. Exported for intake webhook (quote.requested_callback).
+ */
+export async function createIntakeOpportunity(
+  contactId: string,
+  name: string,
+  monetaryValue?: number
+): Promise<string | null> {
+  const pipelineId = process.env.GHL_PIPELINE_ID;
+  const pipelineStageId = process.env.GHL_PIPELINE_STAGE_ID;
+  if (!pipelineId || !pipelineStageId) {
+    console.warn("[ghl] GHL_PIPELINE_ID or GHL_PIPELINE_STAGE_ID not set — skipping opportunity");
+    return null;
+  }
+  const { client, locationId } = await getGhlClient();
+  return createOpportunity(client, locationId, {
+    name,
+    pipelineId,
+    pipelineStageId,
+    contactId,
+    monetaryValue,
+  });
+}
+
+export { SANDBOX_LEAD_ID };

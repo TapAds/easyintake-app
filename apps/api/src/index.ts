@@ -15,6 +15,8 @@ import { internalRouter } from "./api/routes/internal";
 import { voiceRouter } from "./webhooks/twilio/voice";
 import { callStatusRouter } from "./webhooks/twilio/callStatus";
 import { ghlOauthRouter } from "./webhooks/ghl/oauth";
+import { intakeWebhookRouter } from "./webhooks/intake";
+import { ghlCustomPageRouter } from "./api/routes/ghlCustomPage";
 import { errorHandler } from "./api/middleware/errorHandler";
 import { startFollowUpPoller, stopFollowUpPoller } from "./services/followUpPoller";
 import { prisma } from "./db/prisma";
@@ -39,6 +41,8 @@ app.use("/internal", internalRouter);
 app.use("/oauth", ghlOauthRouter);
 app.use("/webhooks/twilio", voiceRouter);
 app.use("/webhooks/twilio", callStatusRouter);
+app.use("/api/webhooks/intake", intakeWebhookRouter);
+app.use("/ghl", ghlCustomPageRouter);
 
 // ─── Error handler (must be last) ────────────────────────────────────────────
 

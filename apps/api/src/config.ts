@@ -46,4 +46,8 @@ export const config = {
     clientId: optional("GHL_CLIENT_ID", ""),
     clientSecret: optional("GHL_CLIENT_SECRET", ""),
   },
+
+  intakeWebhook: {
+    secret: optional("COTIZARAHORA_WEBHOOK_SECRET", ""),
+  },
 } as const;

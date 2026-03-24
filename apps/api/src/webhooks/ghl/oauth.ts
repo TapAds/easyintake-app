@@ -81,16 +81,19 @@ ghlOauthRouter.get("/callback", async (req: Request, res: Response): Promise<voi
       userType?: string;
     }>(
       GHL_TOKEN_URL,
-      {
+      new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
         grant_type: "authorization_code",
         code,
         redirect_uri: redirectUri,
         user_type: "Location",
-      },
+      }),
       {
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          Accept: "application/json",
+        },
       }
     );
 

@@ -6,6 +6,39 @@ Easy Intake is a **horizontal data intake engine**. It is NOT an insurance app, 
 
 ---
 
+## Stack
+
+| Package | Tech |
+|---------|------|
+| **apps/api** | Express + TypeScript + Prisma + WebSockets. Twilio (calls), Deepgram (transcription), Claude (AI extraction), GHL webhooks |
+| **apps/web** | Next.js 14 App Router, Clerk auth, next-intl (en/es), Tailwind (primary: #2563EB) |
+| **packages/shared** | Shared TypeScript types |
+| **easy-intake-site** | Static marketing site |
+
+---
+
+## Architecture
+
+- **Vertical-agnostic intake platform** — Field schemas are config-driven per vertical
+- **apps/api** owns all real-time processing
+- **apps/web** owns agent UI and applicant microsite
+- Communication: REST and WebSockets between api and web
+
+---
+
+## Auth (Clerk)
+
+- **Roles:** super_admin, org:admin, org:member, applicant
+- **JWT claims:** role, org_id, org_role
+
+---
+
+## Current Verticals
+
+- **Insurance** — `src/domain/insurance/`
+
+---
+
 ## What This Product Does
 
 1. **Ingestion** — Captures input from any channel. Today: Twilio voice → Deepgram. Future: WhatsApp, SMS, forms, live in-app conversations, video platforms. All feed into the same pipeline.

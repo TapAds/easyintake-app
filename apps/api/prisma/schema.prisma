@@ -163,3 +163,14 @@ model ComplianceLog {
   flaggedTerms String[]
   createdAt    DateTime @default(now())
 }
+
+// ─── Intake webhook (cotizarahora → easyappintake) ─────────────────────────────
+
+model IntakeLead {
+  id             String   @id @default(cuid())
+  leadId         String   @unique // UUID from cotizarahora — idempotency key
+  ghlContactId   String?  // GHL contact ID after upsert
+  lastEvent      String   // lead.captured | quote.completed | quote.requested_callback
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
