@@ -1,3 +1,7 @@
+> ⚠️ This file is superseded by [`RAILWAY-DEPLOY.md`](../RAILWAY-DEPLOY.md) at the repo root. Please refer to that file for current deployment instructions.
+
+---
+
 # Deploy Easy Intake to Railway
 
 Step-by-step guide to deploy the API to Railway.

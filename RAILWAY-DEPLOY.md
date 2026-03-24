@@ -1,5 +1,7 @@
 # Deploy to Railway — Simple Steps
 
+**Canonical Railway deployment guide for this repository.** The older duplicate at `docs/DEPLOY-RAILWAY.md` is superseded — use this file.
+
 ---
 
 ## Step 1: Push Your Code to GitHub

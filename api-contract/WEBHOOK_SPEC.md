@@ -1,5 +1,6 @@
 # API Contract: cotizarahora → easyappintake
-**Version:** 1.0.0  
+**Version:** 1.1.0  
+**Note:** This release aligns the response codes table with the current easyappintake handler implementation (`apps/api/src/webhooks/intake.ts`).  
 **Last Updated:** 2026-03-22  
 **Owned by:** Both teams — changes require updates in both repos
 
@@ -121,23 +122,20 @@ Fired when user clicks "I want an agent to call me" or similar CTA.
 | Code | Meaning | cotizarahora should... |
 |------|---------|------------------------|
 | `200` | Accepted, contact created in GHL | Log success, no retry |
-| `202` | Accepted, queued for processing | Log success, no retry |
 | `400` | Bad payload | Log error, alert dev, no retry |
 | `401` | Auth failed | Alert dev immediately, no retry |
 | `409` | Duplicate — lead already exists | Log, no retry (idempotent) |
-| `422` | Validation error | Log full payload + error, no retry |
 | `500` | easyappintake server error | Retry up to 3x with exponential backoff |
-| `503` | easyappintake unavailable | Retry up to 3x with exponential backoff |
 
 ---
 
 ## Retry Policy (cotizarahora)
 
-- Retry only on `500` and `503`
+- Retry only on `500`
 - Max 3 retries
 - Backoff: 30s → 2min → 10min
 - After 3 failures: store event in Supabase `failed_webhooks` table for manual review
-- Never retry on `400`, `401`, `409`, `422`
+- Never retry on `400`, `401`, or `409`
 
 ---
 
@@ -217,6 +215,7 @@ curl -X POST https://staging.easyappintake.com/api/webhooks/intake \
 
 | Version | Date | Change |
 |---------|------|--------|
+| 1.1.0 | 2026-03-22 | Aligned response codes with actual handler implementation |
 | 1.0.0 | 2026-03-22 | Initial spec |
 
 ---
