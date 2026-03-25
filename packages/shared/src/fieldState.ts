@@ -1,38 +1,16 @@
 /**
- * Field state types for the agent UI.
- * Aligned with API fieldStages and stageManager entity cache.
+ * Generic field identity and runtime value maps for vertical-agnostic intake.
+ * Vertical-specific catalogs live in VerticalConfig / per-vertical packages.
  */
 
-export type EntityFieldName =
-  | "dateOfBirth"
-  | "state"
-  | "gender"
-  | "tobaccoUse"
-  | "heightFeet"
-  | "heightInches"
-  | "weightLbs"
-  | "coverageAmountDesired"
-  | "productTypeInterest"
-  | "termLengthDesired"
-  | "budgetMonthly"
-  | "firstName"
-  | "lastName"
-  | "phone"
-  | "email"
-  | "address"
-  | "city"
-  | "zip"
-  | "tobaccoLastUsed"
-  | "existingCoverage"
-  | "existingCoverageAmount"
-  | "beneficiaryName"
-  | "beneficiaryRelation";
+/** Stable string identity for a field in config and runtime state (was insurance-only enum). */
+export type FieldKey = string;
 
-export interface FieldMeta {
-  stage: "quote" | "application";
-  weight: number;
-  label: string;
-}
+/** Extracted or collected field values keyed by field id. */
+export type FieldValueMap = Partial<Record<FieldKey, unknown>>;
 
-/** Partial record of extracted entity fields (per-call entity cache shape). */
-export type EntityState = Partial<Record<EntityFieldName, unknown>>;
+/**
+ * Legacy name for per-call entity cache shape.
+ * Prefer FieldValueMap in new code.
+ */
+export type EntityState = FieldValueMap;
