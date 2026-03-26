@@ -16,20 +16,26 @@ const isProtectedRoute = createRouteMatcher([
   "/es(.*)",
 ]);
 
-/** Must stay public so unauthenticated users can complete Clerk flows. */
-const isAuthPageRoute = createRouteMatcher([
+/** Public so unauthenticated users can complete Clerk flows (must skip auth.protect). */
+const isPublicAuthRoute = createRouteMatcher([
   "/en/sign-in(.*)",
   "/en/sign-up(.*)",
   "/es/sign-in(.*)",
   "/es/sign-up(.*)",
 ]);
 
+/**
+ * Clerk recommends returning next-intl from inside clerkMiddleware so locale handling
+ * runs on the same response chain as auth (see Clerk "Combine Middleware" docs).
+ */
 const clerkHandler = clerkMiddleware(async (auth, req) => {
-  if (isAuthPageRoute(req)) return;
-  if (isProtectedRoute(req)) await auth.protect();
+  if (!isPublicAuthRoute(req) && isProtectedRoute(req)) {
+    await auth.protect();
+  }
+  return intlMiddleware(req);
 });
 
-export default async function middleware(
+export default function middleware(
   request: NextRequest,
   event: NextFetchEvent
 ) {
@@ -41,14 +47,6 @@ export default async function middleware(
    */
   if (pathname.startsWith("/api") || pathname.startsWith("/trpc")) {
     return NextResponse.next();
-  }
-
-  const intlResponse = intlMiddleware(request);
-  if (
-    intlResponse &&
-    (intlResponse.status === 302 || intlResponse.status === 307)
-  ) {
-    return intlResponse;
   }
   return clerkHandler(request, event);
 }

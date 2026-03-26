@@ -1,4 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
+import { getLocale } from "next-intl/server";
 import { redirect } from "next/navigation";
 
 /**
@@ -14,7 +15,8 @@ export async function getSession() {
 export async function requireAuth() {
   const session = await getSession();
   if (!session.userId) {
-    redirect("/en/sign-in");
+    const locale = await getLocale();
+    redirect(`/${locale}/sign-in`);
   }
   return session;
 }

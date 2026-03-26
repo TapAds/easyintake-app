@@ -16,8 +16,19 @@ export default async function LocaleLayout({
   const { locale } = await params;
   const messages = await getMessages();
 
+  const signInUrl = `/${locale}/sign-in`;
+  const signUpUrl = `/${locale}/sign-up`;
+  const queueUrl = `/${locale}/dashboard/queue`;
+
   return (
-    <ClerkProvider>
+    <ClerkProvider
+      signInUrl={signInUrl}
+      signUpUrl={signUpUrl}
+      signInFallbackRedirectUrl={queueUrl}
+      signUpFallbackRedirectUrl={queueUrl}
+      signInForceRedirectUrl={queueUrl}
+      signUpForceRedirectUrl={queueUrl}
+    >
       <NextIntlClientProvider locale={locale} messages={messages}>
         {children}
       </NextIntlClientProvider>

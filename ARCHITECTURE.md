@@ -75,7 +75,12 @@ flowchart LR
 
 ## 7. Deployment
 
-- **Railway:** Use **[RAILWAY-DEPLOY.md](RAILWAY-DEPLOY.md)** at the repo root as the canonical guide. [`docs/DEPLOY-RAILWAY.md`](docs/DEPLOY-RAILWAY.md) is superseded and points here.
+| Target | Platform | Notes |
+|--------|----------|--------|
+| **`apps/web`** | **Vercel** | Project **`easyintake-app-web`**. Root directory in the Vercel project is **`apps/web`** (monorepo subfolder). Production Clerk keys, domains, and Vercel env checklist: **[`apps/web/DEPLOY-PRODUCTION.md`](apps/web/DEPLOY-PRODUCTION.md)**. |
+| **`apps/api`** | **Railway** | Existing deployment. Use **[RAILWAY-DEPLOY.md](RAILWAY-DEPLOY.md)** at the repo root as the canonical guide. [`docs/DEPLOY-RAILWAY.md`](docs/DEPLOY-RAILWAY.md) is superseded and points here. |
+| **`easy-intake-site`** | **Vercel** | Existing deployment as a **separate** Vercel project (sibling repo path; not part of the npm workspace). |
+
 - Local setup and env overview: [SETUP.md](SETUP.md).
 
 ---

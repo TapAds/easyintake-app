@@ -96,7 +96,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
               </Link>
             </div>
             <UserButton
-              afterSignOutUrl="/en/sign-in"
+              afterSignOutUrl={`/${locale}/sign-in`}
               appearance={{ baseTheme: undefined }}
             />
           </div>

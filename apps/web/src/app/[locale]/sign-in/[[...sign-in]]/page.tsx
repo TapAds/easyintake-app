@@ -6,12 +6,18 @@ export default async function SignInPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
+  const queue = `/${locale}/dashboard/queue`;
+  const signInPath = `/${locale}/sign-in`;
+  const signUpPath = `/${locale}/sign-up`;
 
   return (
     <div className="min-h-screen flex items-center justify-center">
       <SignIn
-        afterSignInUrl={`/${locale}/dashboard/queue`}
-        signUpUrl={`/${locale}/sign-up`}
+        path={signInPath}
+        routing="path"
+        forceRedirectUrl={queue}
+        signUpUrl={signUpPath}
+        signUpForceRedirectUrl={queue}
       />
     </div>
   );
