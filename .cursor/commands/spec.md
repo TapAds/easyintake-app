@@ -12,7 +12,7 @@ with this structure:
 One paragraph. What problem does this solve for the user?
 
 ## Who uses it
-Which user role: agent, applicant, org:admin, super_admin?
+Which user roles or system actors use this? Describe them for this feature.
 
 ## Acceptance criteria
 A checklist of conditions that must be true for this 
@@ -22,7 +22,7 @@ feature to be considered complete.
 Explicit boundaries — what is out of scope.
 
 ## Where it lives
-Which product owns this: cotizarahora or EasyIntake App?
+Which project, application, or service owns this, and what are the boundaries vs other apps or services?
 Which files will likely need to change?
 
 ## Dependencies

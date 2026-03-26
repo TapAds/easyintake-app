@@ -1,0 +1,16 @@
+---
+description: Bilingual next-intl rules for apps/web — locale routing and no hardcoded user-facing strings
+globs: apps/web/**
+alwaysApply: false
+---
+
+# `apps/web` — English and Spanish (next-intl)
+
+You are editing the Next.js app under `apps/web/`.
+
+- **Locales:** Route prefixes **`/en`** and **`/es`** (see existing next-intl setup).
+- **User-facing copy:** Do **not** hardcode strings in components. Add or reuse keys in the project’s message catalogs and use next-intl APIs (`useTranslations`, etc.) per existing patterns in this app.
+- **Scope:** Applies to any UI shown to end users (labels, buttons, errors, empty states, validation messages).
+- **Consistency:** Match naming and file layout already used for translations in this package; do not introduce a second i18n system.
+
+For product-wide context, see `CONTEXT.md` and the main `project.mdc` rule.

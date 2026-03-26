@@ -14,7 +14,7 @@ export async function getSession() {
 export async function requireAuth() {
   const session = await getSession();
   if (!session.userId) {
-    redirect("/sign-in");
+    redirect("/en/sign-in");
   }
   return session;
 }

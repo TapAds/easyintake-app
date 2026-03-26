@@ -68,4 +68,5 @@ Easy Intake is a **horizontal intake engine** in **product intent**: it is not a
 
 - [ARCHITECTURE.md](ARCHITECTURE.md) — data flow, auth split, DB honesty, deployment pointers.
 - [DECISIONS.md](DECISIONS.md) — recorded decisions and [PLANNED] items.
+- [REPORTING_HUB.md](REPORTING_HUB.md) — central reporting hub strategy, event vocabulary, MVP widgets, tenancy and drill-down.
 - [api-contract/WEBHOOK_SPEC.md](api-contract/WEBHOOK_SPEC.md) — cotizarahora webhook contract.

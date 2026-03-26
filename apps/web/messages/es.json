@@ -1,5 +1,107 @@
 {
+  "nav": {
+    "home": "Inicio",
+    "overview": "Resumen",
+    "intakeQueue": "Cola de captación",
+    "sessionDetail": "Sesión"
+  },
   "home": {
-    "comingSoon": "EasyAppIntake — coming soon"
+    "title": "EasyAppIntake",
+    "intro": "Captación asistida por conversación con datos estructurados, validación y entrega a tus sistemas.",
+    "goToDashboard": "Abrir panel",
+    "signedInBlurb": "Usa el panel para el embudo, la confiabilidad de entrega y KPIs operativos en todos los canales."
+  },
+  "dashboard": {
+    "title": "Panel operativo",
+    "subtitle": "Vista agnóstica al sector: captación, verificación, cierre y transferencia a tus destinos, comparable entre organizaciones y canales.",
+    "demoDataNote": "Métricas de ejemplo solo para maquetación. Conecta tu API de analítica cuando esté lista.",
+    "funnel": {
+      "sectionTitle": "Recorrido principal",
+      "intakeTitle": "Captación",
+      "intakeDesc": "Recibe solicitudes por voz, mensajería o eventos de socios.",
+      "validateTitle": "Validar y verificar",
+      "validateDesc": "Confirma identidad, elegibilidad, consentimiento y reglas de calidad de datos.",
+      "closeTitle": "Cerrar y cobrar",
+      "closeDesc": "Finaliza acuerdo y pago o el paso equivalente para tu flujo.",
+      "transferTitle": "Transferir",
+      "transferDesc": "Entrega registros estructurados al CRM, herramientas de caso, webhooks o almacenes.",
+      "entered": "Ingresaron",
+      "completed": "Completaron",
+      "stageCompletion": "Completitud en la etapa"
+    },
+    "conversion": {
+      "sectionTitle": "Conversión entre etapas",
+      "intakeToValidate": "Captación a validación",
+      "validateToClose": "Validación a cierre y cobro",
+      "closeToTransfer": "Cierre a transferencia"
+    },
+    "kpis": {
+      "sectionTitle": "KPIs operativos",
+      "totalSessions": "Sesiones totales (período)",
+      "avgIntakeTime": "Tiempo promedio para completar captación",
+      "minutesValue": "{count, number} min",
+      "verificationRate": "Tasa de aprobación en verificación",
+      "closePaymentRate": "Tasa de éxito en cierre / liquidación",
+      "destinationSuccess": "Tasa de éxito de sincronización al destino",
+      "medianFirstResponse": "Tiempo mediano a primera respuesta",
+      "openExceptions": "Excepciones abiertas y seguimientos",
+      "percentValue": "{value, number} %",
+      "channelMix": "Mix de canales de entrada",
+      "channelMixValue": "Voz {voice, number}% · Mensajería {messaging, number}% · Socio {partner, number}%"
+    },
+    "activity": {
+      "sectionTitle": "Actividad reciente",
+      "when": "Cuándo",
+      "event": "Evento",
+      "events": {
+        "sessionStarted": "Sesión iniciada",
+        "verificationCompleted": "Verificación completada",
+        "closeCompleted": "Cierre o liquidación completada",
+        "destinationSynced": "Sincronización con destino completada",
+        "exceptionRaised": "Excepción: revisar cola"
+      }
+    }
+  },
+  "agent": {
+    "queue": {
+      "title": "Cola de captación",
+      "filterPlaceholder": "Filtrar por sesión, estado, vertical o paquete…",
+      "loading": "Cargando sesiones…",
+      "empty": "Ninguna sesión coincide con el filtro.",
+      "colSessionId": "Sesión",
+      "colVertical": "Vertical",
+      "colPackage": "Paquete",
+      "colStatus": "Estado",
+      "colChannels": "Canales",
+      "colCompleteness": "Completitud",
+      "colUpdated": "Actualizado",
+      "colHitl": "Revisión",
+      "hitlYes": "Sí",
+      "hitlNo": "No",
+      "sortAsc": "Orden ascendente",
+      "sortDesc": "Orden descendente",
+      "loadError": "No se pudieron cargar las sesiones."
+    },
+    "session": {
+      "title": "Sesión",
+      "channelsTitle": "Actividad por canal",
+      "fieldsTitle": "Revisión de campos",
+      "completenessTitle": "Completitud",
+      "hitlTitle": "Revisión humana",
+      "hitlPlaceholder": "Las acciones de aprobación se conectarán al motor cuando estén disponibles.",
+      "openLiveCall": "Abrir llamada en vivo",
+      "noVoiceChannel": "No hay llamada de voz activa para esta sesión.",
+      "fieldConfidence": "Confianza",
+      "missingLabel": "Faltante",
+      "fieldKey": "Campo",
+      "fieldValue": "Valor",
+      "hitlAgentReview": "Revisión del agente pendiente",
+      "hitlDocs": "Aprobación de documentos pendiente",
+      "hitlSignOff": "Firma final pendiente",
+      "yes": "Sí",
+      "no": "No",
+      "backToQueue": "Volver a la cola de captación",
+      "openLiveCallConfigure": "Configura NEXT_PUBLIC_AGENT_HTML_URL para habilitar el enlace de llamada en vivo."
+    }
   }
 }

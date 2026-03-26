@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "EasyAppIntake",
-  description: "Coming soon",
+  description: "Intake, validation, and handoff — localized operations shell.",
 };
 
 export default function RootLayout({

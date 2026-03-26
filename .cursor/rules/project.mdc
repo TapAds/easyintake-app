@@ -1,0 +1,96 @@
+---
+description: Easy Intake monorepo — layout, architecture, auth split, domain boundaries, intake flow, and prohibitions
+alwaysApply: true
+---
+
+# Easy App Intake — Project Rules
+
+You are working on **Easy Intake App** — an intake platform aimed at **vertical-agnostic** behavior over time. **Today's schema and domain code are insurance-centered**; treat generalization as an **architectural goal**, not a claim that all layers are already vertical-agnostic.
+
+---
+
+## Repository layout
+
+- **`easy-intake-app/`** — npm workspaces: `apps/api`, `apps/web`, `packages/shared`.
+- **`easy-intake-site/`** — **Sibling** static marketing site — **not** part of the `apps/*` / `packages/*` workspace.
+
+---
+
+## Architecture (three workspace parts)
+
+| Part | Purpose |
+|------|---------|
+| **apps/api** | Real-time intake engine (Express, WebSockets, Twilio, Deepgram, Claude AI). **Do not modify unless explicitly asked.** |
+| **apps/web** | Next.js 14: localized shell + **Clerk** auth (sign-in/up, protected routes). **Not** the full realtime agent dashboard — that is currently **`apps/api/public/agent.html`**. |
+| **packages/shared** | Types shared between api and web |
+
+---
+
+## Authentication (two layers — be precise)
+
+- **`apps/web`:** **Clerk** for session (middleware, `ClerkProvider`).
+- **`apps/api`:** **Separate HS256 JWT** using `API_JWT_SECRET` for Bearer auth and WebSocket/agent tokens — **not** Clerk-issued JWTs.
+- **Do not** say “the product uses Clerk for auth” without specifying **web vs API**.
+
+### Clerk (web) — roles and orgs
+
+- **Roles (intended):** super_admin, org:admin, org:member, applicant
+- **JWT claims (intended):** role, org_id, org_role — **verify in Clerk Dashboard** if enforcing in code.
+- **New agent signup → auto-create org:** **[PLANNED]** — **not implemented in this repo**; do not describe as current behavior until code exists.
+
+### API tokens
+
+- Agent realtime and protected API routes use **application JWTs** signed with `API_JWT_SECRET`, not Clerk.
+
+- **Never use Supabase Auth** in this product.
+
+---
+
+## Core principles
+
+- **Vertical-agnostic (goal):** Field schemas, labels, tooltips, and copy should be **config-driven** where the engine is shared — **never** hardcode vertical-specific strings in generic components.
+- A **vertical config** defines vertical-specific behavior (insurance first; others later).
+- **Never add vertical-specific logic to generic components** in `apps/web` when the same thing belongs in config/`apps/api` domain code.
+
+---
+
+## Current verticals
+
+- **Insurance** — reference implementation in `apps/api` (DB includes e.g. `LifeInsuranceEntity`).
+- Others follow the same **pattern** when added.
+
+---
+
+## Intake flow
+
+- **`apps/api`** handles real-time processing (calls, transcription, AI extraction, scoring, CRM/SMS).
+- **`apps/web`** is **not** the primary realtime agent surface; **`apps/api/public/agent.html`** is the current WebSocket-backed agent UI during calls.
+- Communication between services uses **REST and WebSockets** as implemented.
+- **cotizarahora.com** sends lead/quote events via **webhook** — see `api-contract/WEBHOOK_SPEC.md`. **[TODO]** Spec lists some HTTP status codes (e.g. 202, 422) not returned by `apps/api/src/webhooks/intake.ts` — align spec and implementation.
+
+---
+
+## Bilingual (web app)
+
+All **user-facing** UI in `apps/web` must support **English** and **Spanish** (`/en`, `/es`). **Never hardcode user-facing strings** — use translations (next-intl). When editing files under `apps/web/`, apply the stricter reminders in `web-i18n.mdc`.
+
+---
+
+## DO NOT
+
+- Add insurance-specific (or any vertical-specific) logic to **generic** web components when it belongs in vertical config or `apps/api`.
+- Rebuild call recording, transcription, or AI extraction in `apps/web` — that lives in `apps/api`.
+- Use Supabase Auth anywhere.
+- Modify `apps/api` unless explicitly asked.
+- Describe **`easy-intake-site`** as inside the npm workspace.
+- Claim **Clerk** is the only auth mechanism for the **entire** product (API uses separate JWTs).
+
+---
+
+## Reference docs
+
+- `CONTEXT.md` — product context and boundaries.
+- `ARCHITECTURE.md` — auth split, data flow, DB honesty, webhook [TODO].
+- `REPORTING_HUB.md` — central reporting strategy, event vocabulary, MVP widgets.
+- `DECISIONS.md` — product roadmap (e.g. explicit event rows / ETL when scale demands).
+- `api-contract/WEBHOOK_SPEC.md` — cotizarahora contract (keep in sync with code).

@@ -99,3 +99,19 @@ export interface IntakeSession {
   createdAt: string;
   updatedAt: string;
 }
+
+/** Row shape for agent queue lists (subset + display hints). */
+export interface IntakeSessionListRow {
+  sessionId: string;
+  organizationId: string;
+  verticalId: string;
+  configPackageId: string;
+  status: IntakeSessionStatus;
+  updatedAt: string;
+  /** 0–1 completeness score for sorting/display. */
+  completenessScore: number;
+  /** Short summary of channels, e.g. "voice · microsite". */
+  channelSummary: string;
+  pendingHitl: boolean;
+}
+

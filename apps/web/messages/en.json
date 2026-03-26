@@ -1,5 +1,107 @@
 {
+  "nav": {
+    "home": "Home",
+    "overview": "Overview",
+    "intakeQueue": "Intake queue",
+    "sessionDetail": "Session"
+  },
   "home": {
-    "comingSoon": "EasyAppIntake — coming soon"
+    "title": "EasyAppIntake",
+    "intro": "Conversation-powered intake with structured data, validation, and handoff to your systems.",
+    "goToDashboard": "Open dashboard",
+    "signedInBlurb": "Use the dashboard for funnel health, handoff reliability, and operational KPIs across channels."
+  },
+  "dashboard": {
+    "title": "Operations dashboard",
+    "subtitle": "Industry-agnostic view of intake, verification, completion, and transfer to your destinations — comparable across organizations and channels.",
+    "demoDataNote": "Sample metrics for layout only. Connect your analytics API when ready.",
+    "funnel": {
+      "sectionTitle": "Core journey",
+      "intakeTitle": "Intake",
+      "intakeDesc": "Capture requests from voice, messaging, or partner events.",
+      "validateTitle": "Validate and verify",
+      "validateDesc": "Confirm identity, eligibility, consent, and data quality rules.",
+      "closeTitle": "Close and collect",
+      "closeDesc": "Finalize agreement and payment or equivalent settlement step for your workflow.",
+      "transferTitle": "Transfer",
+      "transferDesc": "Deliver structured records to CRM, case tools, webhooks, or warehouses.",
+      "entered": "Entered",
+      "completed": "Completed",
+      "stageCompletion": "Completion within stage"
+    },
+    "conversion": {
+      "sectionTitle": "Stage-to-stage conversion",
+      "intakeToValidate": "Intake to validate",
+      "validateToClose": "Validate to close and collect",
+      "closeToTransfer": "Close to transfer"
+    },
+    "kpis": {
+      "sectionTitle": "Operational KPIs",
+      "totalSessions": "Total sessions (period)",
+      "avgIntakeTime": "Avg. time to complete intake",
+      "minutesValue": "{count, number} min",
+      "verificationRate": "Verification pass rate",
+      "closePaymentRate": "Close / settlement success rate",
+      "destinationSuccess": "Destination sync success rate",
+      "medianFirstResponse": "Median time to first response",
+      "openExceptions": "Open exceptions and follow-ups",
+      "percentValue": "{value, number}%",
+      "channelMix": "Inbound channel mix",
+      "channelMixValue": "Voice {voice, number}% · Messaging {messaging, number}% · Partner {partner, number}%"
+    },
+    "activity": {
+      "sectionTitle": "Recent activity",
+      "when": "When",
+      "event": "Event",
+      "events": {
+        "sessionStarted": "Session started",
+        "verificationCompleted": "Verification completed",
+        "closeCompleted": "Close or settlement completed",
+        "destinationSynced": "Destination sync completed",
+        "exceptionRaised": "Exception raised — review queue"
+      }
+    }
+  },
+  "agent": {
+    "queue": {
+      "title": "Intake queue",
+      "filterPlaceholder": "Filter by session, status, vertical, or package…",
+      "loading": "Loading sessions…",
+      "empty": "No sessions match your filter.",
+      "colSessionId": "Session",
+      "colVertical": "Vertical",
+      "colPackage": "Package",
+      "colStatus": "Status",
+      "colChannels": "Channels",
+      "colCompleteness": "Completeness",
+      "colUpdated": "Updated",
+      "colHitl": "Review",
+      "hitlYes": "Yes",
+      "hitlNo": "No",
+      "sortAsc": "Sort ascending",
+      "sortDesc": "Sort descending",
+      "loadError": "Could not load sessions."
+    },
+    "session": {
+      "title": "Session",
+      "channelsTitle": "Channel activity",
+      "fieldsTitle": "Field review",
+      "completenessTitle": "Completeness",
+      "hitlTitle": "Human review",
+      "hitlPlaceholder": "Approval actions will connect to the engine when available.",
+      "openLiveCall": "Open live call",
+      "noVoiceChannel": "No active voice leg for this session.",
+      "fieldConfidence": "Confidence",
+      "missingLabel": "Missing",
+      "fieldKey": "Field",
+      "fieldValue": "Value",
+      "hitlAgentReview": "Agent review pending",
+      "hitlDocs": "Document approval pending",
+      "hitlSignOff": "Final sign-off pending",
+      "yes": "Yes",
+      "no": "No",
+      "backToQueue": "Back to intake queue",
+      "openLiveCallConfigure": "Set NEXT_PUBLIC_AGENT_HTML_URL to enable the live call link."
+    }
   }
 }

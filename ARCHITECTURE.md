@@ -83,3 +83,11 @@ flowchart LR
 ## 8. Communication between parts
 
 - **api ↔ web:** REST/WebSocket **as designed** for product evolution; **today** the heavy realtime path is **API + `agent.html`**, not a rich Next dashboard.
+
+---
+
+## 9. Central reporting hub (strategy)
+
+Operational dashboards should use **layered reporting**: comparable facts (volume, funnel, completeness, sync health, follow-ups) plus **org config** for labels and required fields — not one global lead column set. Clerk-backed UI should use a **BFF** pattern (server routes that call the API with appropriate credentials), not assume Clerk JWTs authenticate the engine.
+
+**Canonical doc:** [REPORTING_HUB.md](REPORTING_HUB.md) — event vocabulary, tenancy bridge, MVP widgets, drill-down contract, mapping to `Call` / `IntakeLead` / `FollowUpJob`. **Roadmap:** explicit `IntakeEvent` rows or ETL when org cardinality and query complexity grow — [DECISIONS.md](DECISIONS.md).

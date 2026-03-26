@@ -14,8 +14,8 @@ Please do the following in order:
    - docs: for documentation only changes
    - refactor: for code changes that aren't fixes or features
    - chore: for dependency updates or config changes
-4. Push to main
-5. Confirm the Vercel deployment triggered
+4. Push to the branch used for production or integration (as configured by the project)
+5. Confirm that CI/CD or hosting deployment triggered or completed as configured by the project
 
 Do not commit .env files, node_modules, or any file 
 containing API keys or secrets.
