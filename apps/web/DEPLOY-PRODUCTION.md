@@ -13,10 +13,9 @@ Use this checklist when moving **`easyintake-app-web`** from local/dev keys to *
 | **Framework** | Next.js (auto-detected) |
 
 - Connect the Git repo and deploy **`main`** (or your production branch).
-- This package ships [`vercel.json`](vercel.json) so **install** and **build** run from the **monorepo root** and resolve `@easy-intake/shared`.
+- This package ships [`vercel.json`](vercel.json) so **install** runs at the **monorepo root** (`npm ci`), then **build** runs **`@easy-intake/shared`** first (generates `packages/shared/dist`), then **`@easy-intake/web`** — required because `@easy-intake/shared` is not committed prebuilt.
 - After the first successful deploy, note the **Production** hostname (e.g. `https://easyintake-app-web.vercel.app` or your custom domain).
 
-Is this is? https://vercel.com/brians-projects-c98c3107/easyintake-app-web/RbDqGwC6xpkqy62wdpJcCfrFeX4k
 ---
 
 ## 2. Environment variables (Vercel)
