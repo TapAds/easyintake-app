@@ -2,9 +2,13 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import type { ReactNode } from "react";
+import { routing } from "@/i18n/routing";
 import "../globals.css";
 
-export const dynamic = "force-dynamic";
+/** Prerender `/en` and `/es` shells so Next can cache static HTML at the edge where nothing below forces dynamic. */
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
 
 export default async function LocaleLayout({
   children,

@@ -14,5 +14,26 @@ export async function fetchIntakeSessionFromBff(
   const url = `${proto}://${host}/api/intake/sessions/${encodeURIComponent(sessionId)}`;
   const res = await fetch(url, { cache: "no-store" });
   if (!res.ok) return null;
-  return (await res.json()) as IntakeSession;
+  let body: unknown;
+  try {
+    body = await res.json();
+  } catch {
+    return null;
+  }
+  if (!body || typeof body !== "object" || !("sessionId" in body)) {
+    return null;
+  }
+  const sid = (body as { sessionId: unknown }).sessionId;
+  if (typeof sid !== "string" || !sid) {
+    return null;
+  }
+  const raw = body as IntakeSession & { channels?: unknown; fieldValues?: unknown };
+  const channels = Array.isArray(raw.channels) ? raw.channels : [];
+  const fieldValues =
+    raw.fieldValues &&
+    typeof raw.fieldValues === "object" &&
+    !Array.isArray(raw.fieldValues)
+      ? raw.fieldValues
+      : {};
+  return { ...raw, channels, fieldValues };
 }

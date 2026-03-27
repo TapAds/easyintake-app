@@ -23,10 +23,15 @@ export function IntakeQueueTable() {
     fetch("/api/intake/sessions", { signal: ac.signal })
       .then((r) => {
         if (!r.ok) throw new Error(String(r.status));
-        return r.json() as Promise<IntakeSessionListRow[]>;
+        return r.json() as Promise<unknown>;
       })
       .then((data) => {
-        if (alive) setRows(data);
+        if (!alive) return;
+        if (!Array.isArray(data)) {
+          setLoadError(true);
+          return;
+        }
+        setRows(data as IntakeSessionListRow[]);
       })
       .catch((err: unknown) => {
         if (!alive) return;
