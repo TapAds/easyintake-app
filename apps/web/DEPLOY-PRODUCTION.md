@@ -77,6 +77,21 @@ In **Vercel → Project → Settings → Environment Variables**, add the same k
 
 ---
 
+## 6. Observability (read-only — spend / CPU insight)
+
+Use the Vercel dashboard to see **where** this project spends compute and time. This is **read-only** (no code or config changes); it supports **billing** and **“build vs runtime”** conversations.
+
+1. Open **[Vercel](https://vercel.com) → your team → project `easyintake-app-web` → Observability**.
+2. **Separate builds from runtime:** In **Observability → Build Diagnostics**, review build duration and step breakdown. High numbers here are **CI/build cost**, not user traffic.
+3. **Top routes / serverless work:** In **Observability → Vercel Functions**, use **invocations and performance by route** (and error rate) to see which paths drive **function** usage. See Vercel’s [Observability Insights](https://vercel.com/docs/observability/insights) and [cost impact of function invocations](https://vercel.com/kb/guide/understand-cost-impact-of-function-invocations).
+4. **Middleware:** **Observability → Middleware** shows invocation counts and latency for `middleware.ts` (Clerk + next-intl). Useful if you suspect middleware-heavy traffic.
+5. **Edge / CDN layer:** **Observability → Edge Requests** shows request volume and caching per route at the edge (distinct from Functions CPU).
+6. **Fluid / CPU:** If your plan surfaces **Fluid** or **Active CPU** for serverless/Edge, interpret it alongside the tabs above — **Functions** and **Middleware** align most closely with per-invocation CPU-style spend; **Edge Requests** reflects edge traffic volume.
+
+**Plan note:** Some breakdowns (e.g. deeper path analytics) may require **Observability Plus** or a higher tier; labels change over time — search the project for **Observability** or **Usage** if the menu differs.
+
+---
+
 ## See also
 
 - Monorepo deployment overview: [`../../ARCHITECTURE.md`](../../ARCHITECTURE.md) (§7).
