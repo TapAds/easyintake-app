@@ -9,12 +9,12 @@ export default async function LiveDemoPage() {
 
   return (
     <AppChrome>
-      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8 space-y-6">
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-4 space-y-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             {t("title")}
           </h1>
-          <p className="mt-2 text-foreground/70 max-w-3xl">{t("subtitle")}</p>
+          <p className="mt-1 text-sm text-foreground/70 max-w-3xl">{t("subtitle")}</p>
         </div>
         <LiveDemoClient apiBaseUrl={apiBase} />
       </main>

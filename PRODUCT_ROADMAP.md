@@ -14,6 +14,7 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 
 ## Soon
 
+- **Customer onboarding — carrier documents** — ingest **PDFs and blank application forms** (e.g. carrier-specific apps, underwriting guides) to bootstrap **vertical presets**, field ordering, and org-specific mappings; delivery TBD (**in-product wizard**, **embedded agent**, **Cursor skill**, or **operator playbook**). Not the same as agency **voice** onboarding below.
 - **inmigracioningreso.com** — separate Next.js product that **webhooks** into Easy Intake (`apps/api`), similar in boundary to cotizarahora.
 - **Immigration vertical config packages** — **`uscis-i90`** (Form I-90), **`uscis-n400`** (Form N-400), after Insurance is **proven end-to-end**.
 - **English and Spanish** for Immigration surfaces (primary audience Spanish-speaking).

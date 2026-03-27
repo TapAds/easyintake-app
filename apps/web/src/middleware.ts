@@ -2,7 +2,6 @@ import {
   clerkMiddleware,
   createRouteMatcher,
 } from "@clerk/nextjs/server";
-import type { NextRequest, NextFetchEvent } from "next/server";
 import { NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
@@ -27,29 +26,22 @@ const isPublicAuthRoute = createRouteMatcher([
 /**
  * Clerk recommends returning next-intl from inside clerkMiddleware so locale handling
  * runs on the same response chain as auth (see Clerk "Combine Middleware" docs).
+ *
+ * For `/api` and `/trpc`, skip next-intl only (it can redirect `/api/...` → `/en/api/...`
+ * and break JSON). Clerk still runs so `auth()` works in Route Handlers.
  */
-const clerkHandler = clerkMiddleware(async (auth, req) => {
+const middleware = clerkMiddleware(async (auth, req) => {
+  const pathname = req.nextUrl.pathname;
+  if (pathname.startsWith("/api") || pathname.startsWith("/trpc")) {
+    return NextResponse.next();
+  }
   if (!isPublicAuthRoute(req) && isProtectedRoute(req)) {
     await auth.protect();
   }
   return intlMiddleware(req);
 });
 
-export default function middleware(
-  request: NextRequest,
-  event: NextFetchEvent
-) {
-  const pathname = request.nextUrl.pathname;
-  /**
-   * Skip intl + Clerk for App Router API routes.
-   * - next-intl can redirect `/api/...` → `/en/api/...` and break JSON.
-   * - Running `clerkMiddleware` on `/api` can leave client `fetch("/api/...")` pending in dev.
-   */
-  if (pathname.startsWith("/api") || pathname.startsWith("/trpc")) {
-    return NextResponse.next();
-  }
-  return clerkHandler(request, event);
-}
+export default middleware;
 
 export const config = {
   matcher: [
