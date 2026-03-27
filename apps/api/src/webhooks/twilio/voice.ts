@@ -2,6 +2,7 @@ import express, { Router, Request, Response, NextFunction } from "express";
 import { validateTwilioSignature } from "./validateSignature";
 import { buildVoiceTwiml } from "./twiml";
 import { prisma } from "../../db/prisma";
+import { ensureIntakeSessionForCall } from "../../services/intakeSessionSync";
 
 export const voiceRouter = Router();
 
@@ -49,7 +50,11 @@ voiceRouter.post(
           to: To,
         },
       })
-      .then(() => console.log(`[voice] call record created for ${CallSid}`))
+      .then((call) =>
+        ensureIntakeSessionForCall(call.id, CallSid, call.startedAt).then(
+          () => console.log(`[voice] call record + intake session for ${CallSid}`)
+        )
+      )
       .catch((err) => console.error(`[voice] failed to create call record`, err));
   }
 );

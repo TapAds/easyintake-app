@@ -10,6 +10,7 @@ import { generateAgentGuidance } from "../services/claude";
 import { extractEntities } from "../services/claude";
 import { FlowStage } from "@prisma/client";
 import { prisma } from "../db/prisma";
+import { scheduleDebouncedEntitySnapshot } from "../services/entitySnapshotPersistence";
 
 // ─── WebSocket message types ──────────────────────────────────────────────────
 
@@ -155,6 +156,7 @@ callEvents.on(
           missingFields: guidance.missingFields,
           priorityField: guidance.priorityField,
         });
+        scheduleDebouncedEntitySnapshot(callSid);
         console.log(`[agentHub] utterance processing complete for ${callSid}`);
       } catch (err) {
         console.error(`[agentHub] ${callSid}: utterance processing error:`, err);

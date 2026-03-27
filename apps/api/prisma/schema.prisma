@@ -56,13 +56,57 @@ model Call {
   ghlSyncedAt        DateTime?
   detectedLanguages  String[]   @default([]) // ISO-639-1 codes detected during call
   primaryLanguage    String?    // ISO-639-1 code of dominant language
+  intakeSessionId    String?
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
+  intakeSession      IntakeSession?       @relation(fields: [intakeSessionId], references: [id], onDelete: SetNull)
   entity             LifeInsuranceEntity?
   transcriptSegments TranscriptSegment[]
   followUpJobs       FollowUpJob[]
   complianceLogs     ComplianceLog[]
+}
+
+// Vertical-agnostic intake session (dashboard / queue). Mirrors packages/shared IntakeSession.
+model IntakeSession {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  verticalId         String
+  configPackageId    String
+  status             String   @default("collecting") // IntakeSessionStatus string
+  substatus          String?
+  primaryChannel     String?  @default("voice")
+  completenessScore  Float    @default(0)
+  fieldValues        Json     @default("{}")
+  channels           Json     @default("[]")
+  hitl               Json     @default("{}")
+  externalIds        Json?
+  configTemplateId   String?
+
+  template IntakeFieldTemplate? @relation(fields: [configTemplateId], references: [id], onDelete: SetNull)
+  calls    Call[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, updatedAt])
+  @@index([configPackageId])
+}
+
+// Field catalog for a product/form; created or updated during org onboarding.
+model IntakeFieldTemplate {
+  id               String   @id @default(cuid())
+  organizationId   String
+  configPackageId  String
+  name             String?
+  fieldDefinitions Json     @default("[]")
+
+  sessions IntakeSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, configPackageId])
 }
 
 model LifeInsuranceEntity {

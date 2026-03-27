@@ -1,16 +1,51 @@
 import { NextResponse } from "next/server";
-import { getIntakeSessionFixture } from "@/lib/bff/intakeSessionFixture";
+import { intakeApiBearerToken } from "@/lib/bff/intakeApiAuth";
+
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 /**
- * BFF stub: returns fixture data shaped to IntakeSession.
- * Replace with apps/api proxy when session API is available.
+ * BFF: Clerk → JWT → GET apps/api/api/intake/sessions/:sessionId
  */
 export async function GET(
   _request: Request,
   context: { params: Promise<{ sessionId: string }> | { sessionId: string } }
 ) {
   const params = await Promise.resolve(context.params);
-  const sessionId = params.sessionId ?? "unknown";
-  const body = getIntakeSessionFixture(sessionId);
-  return NextResponse.json(body);
+  const sessionId = params.sessionId ?? "";
+
+  const authResult = await intakeApiBearerToken();
+  if (authResult instanceof NextResponse) return authResult;
+  const { token, base } = authResult;
+
+  let res: Response;
+  try {
+    res = await fetch(
+      `${base}/api/intake/sessions/${encodeURIComponent(sessionId)}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(25_000),
+      }
+    );
+  } catch (err) {
+    console.error("[intake session BFF] fetch failed:", err);
+    return NextResponse.json(
+      { error: "Failed to reach intake API." },
+      { status: 502 }
+    );
+  }
+
+  const text = await res.text();
+  let payload: unknown = {};
+  try {
+    if (text) payload = JSON.parse(text) as unknown;
+  } catch {
+    return NextResponse.json(
+      { error: `Intake API returned non-JSON (HTTP ${res.status}).` },
+      { status: 502 }
+    );
+  }
+
+  return NextResponse.json(payload, { status: res.status });
 }

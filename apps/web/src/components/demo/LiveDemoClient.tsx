@@ -62,6 +62,17 @@ type VoiceHealthPayload = {
   recentCallsFromDb?: { callSid: string; status: string; startedAt: string }[];
 };
 
+type CallDetailsSnapshot = {
+  callStatus?: string;
+  entities?: Record<string, unknown>;
+  transcript?: string;
+  score?: { overall: number; tier: string } | null;
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 type AgentMsg =
   | { type: "transcript_chunk"; speaker: string; text: string }
   | {
@@ -104,6 +115,7 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
+  const subscribedCallSidRef = useRef<string>("");
   const prevEntitiesRef = useRef<Record<string, unknown>>({});
   const flashTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map()
@@ -273,6 +285,58 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     setBusy(false);
   }, []);
 
+  const applyCallSnapshot = useCallback((data: CallDetailsSnapshot) => {
+    setEntities(
+      (data.entities ?? {}) as Record<string, unknown>
+    );
+    setTranscript(String(data.transcript ?? ""));
+    if (data.score != null) {
+      setScore(data.score);
+    }
+  }, []);
+
+  /** Loads persisted call + transcript from API (retries for post-hang-up orchestrator lag). */
+  const hydrateFromSnapshot = useCallback(
+    async (sid: string, attempts = 8): Promise<boolean> => {
+      const trimmed = sid.trim();
+      if (!trimmed) return false;
+      for (let i = 0; i < attempts; i += 1) {
+        try {
+          const r = await fetch(
+            `/api/demo/call-details?callSid=${encodeURIComponent(trimmed)}`,
+            { cache: "no-store" }
+          );
+          if (!r.ok) {
+            await sleep(600);
+            continue;
+          }
+          const data = (await r.json()) as CallDetailsSnapshot;
+          const entities = (data.entities ?? {}) as Record<string, unknown>;
+          const transcriptStr = String(data.transcript ?? "").trim();
+          const hasEntity = Object.keys(entities).length > 0;
+          const hasTr = transcriptStr.length > 0;
+          if (
+            hasEntity ||
+            hasTr ||
+            data.callStatus === "COMPLETED" ||
+            data.callStatus === "FAILED" ||
+            data.callStatus === "NO_ANSWER"
+          ) {
+            if (hasEntity || hasTr) {
+              applyCallSnapshot(data);
+              return true;
+            }
+          }
+        } catch {
+          /* continue */
+        }
+        await sleep(600);
+      }
+      return false;
+    },
+    [applyCallSnapshot]
+  );
+
   useEffect(() => {
     return () => disconnect();
   }, [disconnect]);
@@ -340,6 +404,43 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     }
     setBusy(true);
     try {
+      let preSnap: CallDetailsSnapshot | null = null;
+      try {
+        const pre = await fetch(
+          `/api/demo/call-details?callSid=${encodeURIComponent(sid)}`,
+          { cache: "no-store" }
+        );
+        if (pre.ok) {
+          preSnap = (await pre.json()) as CallDetailsSnapshot;
+        }
+      } catch {
+        preSnap = null;
+      }
+
+      if (
+        preSnap?.callStatus === "COMPLETED" ||
+        preSnap?.callStatus === "FAILED" ||
+        preSnap?.callStatus === "NO_ANSWER"
+      ) {
+        const entities = (preSnap.entities ?? {}) as Record<string, unknown>;
+        const transcriptStr = String(preSnap.transcript ?? "").trim();
+        const hasNow = Object.keys(entities).length > 0 || transcriptStr.length > 0;
+        if (hasNow) {
+          applyCallSnapshot(preSnap);
+          setGuidanceText(t("callEndedHint"));
+          setGuidanceMissingKeys([]);
+          setBusy(false);
+          return;
+        }
+        const loaded = await hydrateFromSnapshot(sid);
+        if (loaded) {
+          setGuidanceText(t("callEndedHint"));
+          setGuidanceMissingKeys([]);
+          setBusy(false);
+          return;
+        }
+      }
+
       const tokRes = await fetch("/api/agent/ws-token", { method: "POST" });
       if (!tokRes.ok) {
         setError(t("errorToken"));
@@ -364,12 +465,23 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       setGuidanceMissingKeys([]);
 
       ws.onopen = () => {
+        subscribedCallSidRef.current = sid;
         setConnected(true);
         setBusy(false);
       };
       ws.onclose = () => {
         setConnected(false);
         setBusy(false);
+        const endedSid = subscribedCallSidRef.current;
+        subscribedCallSidRef.current = "";
+        if (endedSid) {
+          void hydrateFromSnapshot(endedSid).then((ok) => {
+            if (ok) {
+              setGuidanceText(t("callEndedHint"));
+              setGuidanceMissingKeys([]);
+            }
+          });
+        }
       };
       ws.onerror = () => {
         setError(t("errorWs"));
@@ -405,6 +517,7 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
             case "call_ended":
               setGuidanceText(t("callEndedHint"));
               setGuidanceMissingKeys([]);
+              void hydrateFromSnapshot(sid);
               break;
             default:
               break;
@@ -417,7 +530,14 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       setError(t("errorGeneric"));
       setBusy(false);
     }
-  }, [apiBaseUrl, callSid, disconnect, t]);
+  }, [
+    apiBaseUrl,
+    applyCallSnapshot,
+    callSid,
+    disconnect,
+    hydrateFromSnapshot,
+    t,
+  ]);
 
   const stubButtonClass =
     "text-xs py-1.5 px-2 rounded-md border border-foreground/20 bg-background text-foreground/90 hover:bg-foreground/5 disabled:opacity-50 disabled:cursor-not-allowed";

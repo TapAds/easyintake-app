@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
+import type { Prisma } from "@prisma/client";
 import twilio from "twilio";
 import { config } from "../../config";
+import { prisma } from "../../db/prisma";
 import { requireBearerJwt } from "../middleware/bearerJwtAuth";
 
 export const operatorRouter = Router();
@@ -39,6 +41,49 @@ operatorRouter.get(
     } catch (err) {
       console.error("[operator] twilio recent-calls:", err);
       res.status(502).json({ error: "Twilio request failed" });
+    }
+  }
+);
+
+/**
+ * POST /api/operator/intake-template
+ *
+ * Onboarding hook: register or replace field definitions for an org product/form.
+ * Body: { organizationId, configPackageId, name?, fieldDefinitions: unknown[] }
+ */
+operatorRouter.post(
+  "/intake-template",
+  requireBearerJwt,
+  async (req: Request, res: Response): Promise<void> => {
+    const body = req.body as {
+      organizationId?: string;
+      configPackageId?: string;
+      name?: string;
+      fieldDefinitions?: unknown[];
+    };
+    const organizationId = body.organizationId?.trim();
+    const configPackageId = body.configPackageId?.trim();
+    if (!organizationId || !configPackageId) {
+      res.status(400).json({ error: "organizationId and configPackageId required" });
+      return;
+    }
+    const fieldDefinitions = (
+      Array.isArray(body.fieldDefinitions) ? body.fieldDefinitions : []
+    ) as Prisma.InputJsonValue;
+
+    try {
+      const created = await prisma.intakeFieldTemplate.create({
+        data: {
+          organizationId,
+          configPackageId,
+          name: body.name?.trim() || null,
+          fieldDefinitions,
+        },
+      });
+      res.status(201).json(created);
+    } catch (err) {
+      console.error("[operator] intake-template:", err);
+      res.status(500).json({ error: "Could not create intake template" });
     }
   }
 );
