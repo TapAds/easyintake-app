@@ -8,7 +8,7 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 
 - **Insurance vertical** — first **vertical config package** (string field keys, config-driven forms and HITL).
 - **Agent dashboard** — org queue, session detail, field review from config, reporting overview (replace demo data as APIs land).
-- **Foundation** — `IntakeSession` model (vertical-agnostic), BFF to `apps/api`, bilingual shell.
+- **Foundation** — `IntakeSession` model (vertical-agnostic), BFF to `apps/api`, bilingual shell. **`apps/web`** is deployable to **Vercel** with **Clerk** (production DNS + env per [`apps/web/DEPLOY-PRODUCTION.md`](apps/web/DEPLOY-PRODUCTION.md)); keep **GitHub `main`** in sync with what you expect to run in production.
 
 ---
 
@@ -25,6 +25,17 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 - **Additional verticals** — same config + session model; no new generic page types.
 - **`VoiceProvider` abstraction** — CPaaS portability inside `apps/api` (see platform build plan Section 2b).
 - **WebRTC / SIP support** — broader real-time voice options beyond current Twilio media stream + `agent.html` bridge.
+
+---
+
+## Far horizon
+
+- **Cursor skill: deployment & env parity** — single checklist for Vercel web + API/production env alignment (Clerk, `API_JWT_SECRET`, DNS, smoke) before calling a release “done.”
+- **Cursor skill: partner webhook integration** — idempotency keys, retries, signature verification, and sender-facing error semantics when onboarding a new HTTP sender (beyond spec/code sync).
+- **Cursor skill: Prisma migrations & tenant-safe schema** — how to ship vertical/session model changes without breaking in-flight orgs; expand/contract patterns for shared tables.
+- **Cursor skill: observability & incident triage** — structured logs, redaction defaults, and a first-response playbook when prod calls, webhooks, or CRM sync misbehave.
+- **Cursor skill: testing & QA gates** — contract tests for critical HTTP paths, minimal smoke for bilingual web, when to add E2E vs not for this repo.
+- **Cursor skill: accessibility & UX quality** — keyboard, focus order, semantics, and copy length constraints alongside next-intl for user-facing `apps/web` surfaces.
 
 ---
 

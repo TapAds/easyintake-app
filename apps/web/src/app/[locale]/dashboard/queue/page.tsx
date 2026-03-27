@@ -1,9 +1,14 @@
 import { getTranslations } from "next-intl/server";
 import { AppChrome } from "@/components/AppChrome";
 import { IntakeQueueTable } from "@/components/agent/IntakeQueueTable";
+import { VoiceAgentBridge } from "@/components/agent/VoiceAgentBridge";
 
 export default async function IntakeQueuePage() {
   const t = await getTranslations("agent.queue");
+  const agentBase =
+    process.env.NEXT_PUBLIC_AGENT_HTML_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "";
 
   return (
     <AppChrome>
@@ -13,6 +18,7 @@ export default async function IntakeQueuePage() {
             {t("title")}
           </h1>
         </div>
+        <VoiceAgentBridge agentBaseUrl={agentBase} />
         <IntakeQueueTable />
       </main>
     </AppChrome>

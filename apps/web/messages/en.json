@@ -3,7 +3,7 @@
     "home": "Home",
     "overview": "Overview",
     "intakeQueue": "Intake queue",
-    "sessionDetail": "Session"
+    "liveDemo": "Live demo"
   },
   "home": {
     "title": "EasyAppIntake",
@@ -101,7 +101,52 @@
       "yes": "Yes",
       "no": "No",
       "backToQueue": "Back to intake queue",
-      "openLiveCallConfigure": "Set NEXT_PUBLIC_AGENT_HTML_URL to enable the live call link."
+      "openLiveCallConfigure": "Set NEXT_PUBLIC_AGENT_HTML_URL or NEXT_PUBLIC_API_URL to your apps/api origin (e.g. Railway) to enable the live call link."
+    },
+    "voiceBridge": {
+      "title": "Voice agent console",
+      "description": "Open the realtime agent UI hosted on the intake API. Your browser tab will receive a fresh WebSocket token from this app.",
+      "openWithToken": "Open agent console with token",
+      "opening": "Opening…",
+      "configureHint": "Set NEXT_PUBLIC_AGENT_HTML_URL or NEXT_PUBLIC_API_URL (e.g. your Railway API origin) so the voice console link resolves.",
+      "errorUnauthorized": "You must be signed in to open the voice console.",
+      "errorGeneric": "Could not issue a token. Try again.",
+      "errorConfigure": "Could not build the agent URL. Check your environment variables."
+    }
+  },
+  "demo": {
+    "live": {
+      "title": "Live call demo",
+      "subtitle": "Share this screen while on a voice intake: connect to a Call SID, watch transcript and fields update from the engine.",
+      "voiceHealthTitle": "Voice pipeline (read-only)",
+      "voiceHealthLoading": "Loading voice health…",
+      "labelAgentWs": "Agent WebSocket",
+      "labelEngine": "Engine",
+      "recentDb": "Recent Call SIDs in database",
+      "productLabel": "Carrier / product (demo)",
+      "callSidLabel": "Call SID",
+      "connect": "Connect stream",
+      "connecting": "Connecting…",
+      "disconnect": "Disconnect",
+      "errorCallSid": "Enter a Call SID (or pick one from recent Twilio calls).",
+      "errorApiBase": "Configure NEXT_PUBLIC_API_URL so the browser can open a WebSocket to the API.",
+      "errorToken": "Could not get a WebSocket token. Sign in and ensure API_JWT_SECRET matches the API.",
+      "errorWsUrl": "Could not build WebSocket URL.",
+      "errorWs": "WebSocket error. Check Call SID, token, and API URL.",
+      "errorGeneric": "Something went wrong. Try again.",
+      "twilioTitle": "Recent Twilio calls",
+      "refreshTwilio": "Refresh",
+      "refreshing": "Refreshing…",
+      "twilioLoadError": "Could not load Twilio calls (check API route and credentials).",
+      "twilioEmpty": "No calls yet — place a test call or refresh after dialing.",
+      "colSid": "Call SID",
+      "colStatus": "Status",
+      "colWhen": "Started",
+      "transcriptTitle": "Transcript",
+      "transcriptEmpty": "Transcript appears after you connect and speech is processed.",
+      "scoreLabel": "Completeness",
+      "applicationTitle": "Application fields (live)",
+      "callEndedHint": "Call ended — reconnect if you continue on a new leg."
     }
   }
 }

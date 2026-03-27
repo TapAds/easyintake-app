@@ -133,6 +133,20 @@ Open the agent UI, get a token, enter the callSid, and Connect to see real-time 
 
 ---
 
+## 9. Web app (`apps/web`) — optional local run
+
+The Next.js front end lives in **`apps/web`** (Clerk + next-intl). It depends on the workspace package **`@easy-intake/shared`**. If `packages/shared/dist` is missing, build shared first:
+
+```bash
+# from easy-intake-app (monorepo root)
+npm run build:shared
+npm run dev:web
+```
+
+Open e.g. `http://localhost:3000/en`. For Clerk, configure **`apps/web/.env.local`** (see [`apps/web/.env.local.example`](apps/web/.env.local.example)). **Production** deploy notes: [`apps/web/DEPLOY-PRODUCTION.md`](apps/web/DEPLOY-PRODUCTION.md).
+
+---
+
 ## Checklist
 
 - [ ] `.env` filled (all required vars)

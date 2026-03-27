@@ -3,7 +3,7 @@
     "home": "Inicio",
     "overview": "Resumen",
     "intakeQueue": "Cola de captación",
-    "sessionDetail": "Sesión"
+    "liveDemo": "Demo en vivo"
   },
   "home": {
     "title": "EasyAppIntake",
@@ -101,7 +101,52 @@
       "yes": "Sí",
       "no": "No",
       "backToQueue": "Volver a la cola de captación",
-      "openLiveCallConfigure": "Configura NEXT_PUBLIC_AGENT_HTML_URL para habilitar el enlace de llamada en vivo."
+      "openLiveCallConfigure": "Configura NEXT_PUBLIC_AGENT_HTML_URL o NEXT_PUBLIC_API_URL al origen de apps/api (p. ej. Railway) para habilitar el enlace de llamada en vivo."
+    },
+    "voiceBridge": {
+      "title": "Consola de agente de voz",
+      "description": "Abre la interfaz de agente en tiempo real alojada en la API de captación. Esta aplicación emitirá un token WebSocket en una pestaña nueva.",
+      "openWithToken": "Abrir consola de agente con token",
+      "opening": "Abriendo…",
+      "configureHint": "Configura NEXT_PUBLIC_AGENT_HTML_URL o NEXT_PUBLIC_API_URL (p. ej. el origen de tu API en Railway) para resolver el enlace de la consola de voz.",
+      "errorUnauthorized": "Debes iniciar sesión para abrir la consola de voz.",
+      "errorGeneric": "No se pudo emitir un token. Inténtalo de nuevo.",
+      "errorConfigure": "No se pudo construir la URL del agente. Revisa las variables de entorno."
+    }
+  },
+  "demo": {
+    "live": {
+      "title": "Demo de llamada en vivo",
+      "subtitle": "Comparte esta pantalla durante una captación por voz: conéctate a un Call SID y observa la transcripción y los campos actualizados por el motor.",
+      "voiceHealthTitle": "Canal de voz (solo lectura)",
+      "voiceHealthLoading": "Cargando estado del canal de voz…",
+      "labelAgentWs": "WebSocket del agente",
+      "labelEngine": "Motor",
+      "recentDb": "Call SID recientes en la base de datos",
+      "productLabel": "Aseguradora / producto (demo)",
+      "callSidLabel": "Call SID",
+      "connect": "Conectar transmisión",
+      "connecting": "Conectando…",
+      "disconnect": "Desconectar",
+      "errorCallSid": "Introduce un Call SID (o elige uno de las llamadas recientes de Twilio).",
+      "errorApiBase": "Configura NEXT_PUBLIC_API_URL para que el navegador abra WebSocket hacia la API.",
+      "errorToken": "No se pudo obtener token WebSocket. Inicia sesión y verifica que API_JWT_SECRET coincida con la API.",
+      "errorWsUrl": "No se pudo construir la URL del WebSocket.",
+      "errorWs": "Error de WebSocket. Revisa Call SID, token y URL de la API.",
+      "errorGeneric": "Algo salió mal. Inténtalo de nuevo.",
+      "twilioTitle": "Llamadas recientes de Twilio",
+      "refreshTwilio": "Actualizar",
+      "refreshing": "Actualizando…",
+      "twilioLoadError": "No se pudieron cargar las llamadas de Twilio (revisa la ruta de la API y las credenciales).",
+      "twilioEmpty": "Aún no hay llamadas — realiza una prueba o actualiza después de marcar.",
+      "colSid": "Call SID",
+      "colStatus": "Estado",
+      "colWhen": "Inicio",
+      "transcriptTitle": "Transcripción",
+      "transcriptEmpty": "La transcripción aparece al conectar y procesar el habla.",
+      "scoreLabel": "Completitud",
+      "applicationTitle": "Campos de solicitud (en vivo)",
+      "callEndedHint": "Llamada finalizada — vuelve a conectar si continúas con una nueva troncal."
     }
   }
 }

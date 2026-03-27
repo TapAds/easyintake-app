@@ -61,14 +61,14 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
                 {t("intakeQueue")}
               </Link>
               <Link
-                href={`${prefix}/dashboard/sessions/sess_stub`}
+                href={`${prefix}/dashboard/live-demo`}
                 className={`hover:text-foreground ${
-                  pathname.startsWith(`${prefix}/dashboard/sessions`)
+                  pathname.startsWith(`${prefix}/dashboard/live-demo`)
                     ? "text-primary"
                     : "text-foreground/70"
                 }`}
               >
-                {t("sessionDetail")}
+                {t("liveDemo")}
               </Link>
             </nav>
           </div>

@@ -20,7 +20,7 @@ Easy Intake is a **horizontal intake engine** in **product intent**: it is not a
 | Package | Tech |
 |---------|------|
 | **apps/api** | Express, TypeScript, Prisma, WebSockets. Twilio (voice), Deepgram (transcription), Claude (extraction). Serves **static agent UI** at `public/agent.html`. |
-| **apps/web** | Next.js 14 App Router, **Clerk** (sign-in/up + protected routes), next-intl (`/en`, `/es`), Tailwind (primary e.g. `#2563EB`). **Scope today:** home + auth flows — **not** the full realtime agent dashboard. |
+| **apps/web** | Next.js 14 App Router, **Clerk** (embedded sign-in/up on `/[locale]/sign-in` & `/[locale]/sign-up`, protected routes), next-intl (`/en`, `/es`), Tailwind. Dashboard-style pages (queue, session detail) use BFF/fixture data as implemented. **Deployed** to **Vercel** (project `easyintake-app-web`, monorepo root install + build order per `apps/web/vercel.json`). **Not** the in-call realtime UI — that is still **`apps/api/public/agent.html`**. |
 | **packages/shared** | Shared TypeScript types and config helpers. |
 
 ---

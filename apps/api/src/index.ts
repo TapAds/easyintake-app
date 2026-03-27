@@ -9,6 +9,7 @@ import { handleMediaStream } from "./webhooks/twilio/mediaStream";
 import { createAgentWss } from "./ws/agentHub";
 
 import { healthRouter } from "./api/routes/health";
+import { operatorRouter } from "./api/routes/operator";
 import { callsRouter } from "./api/routes/calls";
 import { transcriptRouter } from "./api/routes/transcript";
 import { internalRouter } from "./api/routes/internal";
@@ -35,6 +36,7 @@ app.use("/public", express.static(path.join(__dirname, "..", "public")));
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
 app.use("/api", healthRouter);
+app.use("/api/operator", operatorRouter);
 app.use("/api/calls", callsRouter);
 app.use("/api/calls", transcriptRouter);
 app.use("/internal", internalRouter);

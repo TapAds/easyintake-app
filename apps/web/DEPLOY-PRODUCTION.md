@@ -10,9 +10,10 @@ Use this checklist when moving **`easyintake-app-web`** from local/dev keys to *
 |--------|--------|
 | **Project** | `easyintake-app-web` |
 | **Root Directory** | `apps/web` |
+| **Include files outside the root directory in the Build Step** | **Enabled** (required so `packages/shared` and the root lockfile are present) |
 | **Framework** | Next.js (auto-detected) |
 
-- Connect the Git repo and deploy **`main`** (or your production branch).
+- Connect the Git repo and deploy **`main`** (or your production branch). **GitHub `main` must include the same `apps/web` and `packages/shared` sources you expect** — Vercel only builds what is pushed.
 - This package ships [`vercel.json`](vercel.json) so **install** runs at the **monorepo root** (`npm ci`), then **build** runs **`@easy-intake/shared`** first (generates `packages/shared/dist`), then **`@easy-intake/web`** — required because `@easy-intake/shared` is not committed prebuilt.
 - After the first successful deploy, note the **Production** hostname (e.g. `https://easyintake-app-web.vercel.app` or your custom domain).
 
@@ -28,7 +29,9 @@ In **Vercel → Project → Settings → Environment Variables**, add the same k
 | `CLERK_SECRET_KEY` | **Production** secret key from Clerk | Matching instance |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/en/sign-in` | Same (locale-relative paths work on any host) |
 | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/en/sign-up` | Same |
-| `NEXT_PUBLIC_CLERK_*_REDIRECT_URL` / `*_FALLBACK_*` | `/en/dashboard/queue` (defaults; app also sets locale in code) | Same |
+| `NEXT_PUBLIC_API_URL` | HTTPS origin of **`apps/api`** on Railway (e.g. `https://your-api.up.railway.app`) | Staging API if needed |
+| `NEXT_PUBLIC_AGENT_HTML_URL` | Optional; same as API origin if agent static files are served there | Same |
+| `API_JWT_SECRET` | **Same value as** `API_JWT_SECRET` on **`apps/api`** — used by Route Handlers to mint WebSocket JWTs for the agent console | Never expose to the browser; server-only on Vercel |
 
 - **Never** commit real keys. Set them only in Vercel (and local `.env` / `.env.local` for dev).
 - After changing env vars, **redeploy** (or trigger a new deployment) so the build picks them up.
@@ -42,6 +45,7 @@ In **Vercel → Project → Settings → Environment Variables**, add the same k
 3. **Domains / URLs:** Register the URL users open in the browser:
    - Production hostname from Vercel (e.g. `easyintake-app-web.vercel.app` or `app.yourdomain.com`).
    - Follow Clerk’s prompts to add DNS or verify the domain if required.
+   - **Clerk Production DNS (custom domain):** Clerk may require **CNAME** records at your DNS host (e.g. Namecheap) for subdomains such as **`clerk`** → Clerk frontend API, **`accounts`** → account portal, and **email/DKIM** hosts (`clkmail`, `clk._domainkey`, etc.) — add exactly what the Clerk **DNS** / **Domains** UI lists, then **Verify** in Clerk.
 4. **Redirects / allowed paths:** This app uses **path-based** routing with locales:
    - Sign-in: `/en/sign-in`, `/es/sign-in` (and Clerk may use nested paths such as `/en/sign-in/**`).
    - Sign-up: `/en/sign-up`, `/es/sign-up`.
@@ -65,9 +69,11 @@ In **Vercel → Project → Settings → Environment Variables**, add the same k
 
 | Symptom | Things to check |
 |--------|------------------|
+| **Build:** `Can't resolve '@easy-intake/shared'` | Monorepo install must run at **repo root**; **`@easy-intake/shared` must be built before** `next build` (see [`vercel.json`](vercel.json)). Enable **Include files outside the root directory**. Ensure **`package-lock.json`** at the monorepo root is committed so `npm ci` succeeds. |
 | Infinite redirect or “redirect URL not allowed” | Clerk domain + redirect/path settings for your exact production origin and `/en|es/sign-in` paths. |
 | Works locally, 500 or blank on Vercel | Env vars set for **Production** and a **new deploy** after saving them. |
 | Wrong Clerk branding / users | Vercel is still using **Development** keys; switch to Production keys for Production env. |
+| **404** on `/en/...` in production | Confirm **latest `main` is pushed** to GitHub and Vercel built that commit; stale deploys can lack current `[locale]` routes. |
 
 ---
 

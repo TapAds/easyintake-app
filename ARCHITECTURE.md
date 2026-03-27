@@ -20,7 +20,7 @@ easy-intake-site/         ← Sibling static site — NOT in the workspace
 
 | Layer | Mechanism | Purpose |
 |-------|-----------|---------|
-| **apps/web** | **Clerk** | End-user session: sign-in/up, `auth()` / `auth.protect()` on localized routes (`/en`, `/es`). |
+| **apps/web** | **Clerk** | End-user session: sign-in/up at `/[locale]/sign-in` and `/[locale]/sign-up`, `auth()` / `auth.protect()` on localized routes (`/en`, `/es`). Middleware runs **`clerkMiddleware`** then returns **next-intl**’s middleware so auth and locale handling share one chain (see [`apps/web/src/middleware.ts`](apps/web/src/middleware.ts)). Sign-in/sign-up routes are public; other locale routes are protected unless extended in code. |
 | **apps/api** | **HS256 JWT** (`API_JWT_SECRET`) | Bearer `Authorization` for protected HTTP routes; short-lived tokens from `/internal/token` (and similar) for **agent WebSocket** auth. Payload is **application-defined** (e.g. `sub`, `purpose`), not Clerk session claims. |
 
 **Do not** conflate Clerk session with API JWT. Server-to-server or browser-to-API patterns that need the intake engine should use the **API's** JWT rules, not Clerk's, unless you explicitly build a bridge (not assumed here).
@@ -34,7 +34,7 @@ easy-intake-site/         ← Sibling static site — NOT in the workspace
 | UI | Location | Role |
 |----|----------|------|
 | **Realtime agent dashboard (static)** | `apps/api/public/agent.html` | Connects to the API WebSocket with a JWT; shows transcript / entities / guidance during a call. **This is the current realtime agent UI.** |
-| **Next.js app** | `apps/web` | Small surface: home + Clerk sign-in/up + protected shell. **Not** the full agent dashboard yet. |
+| **Next.js app** | `apps/web` | Localized shell (`/en`, `/es`): home, Clerk auth, protected dashboard areas including **intake queue** and **session detail** (data from BFF/fixtures until API wiring is complete). **Not** the realtime voice UI during calls — that remains **`agent.html`** on `apps/api`. |
 
 ---
 
@@ -77,7 +77,7 @@ flowchart LR
 
 | Target | Platform | Notes |
 |--------|----------|--------|
-| **`apps/web`** | **Vercel** | Project **`easyintake-app-web`**. Root directory in the Vercel project is **`apps/web`** (monorepo subfolder). Production Clerk keys, domains, and Vercel env checklist: **[`apps/web/DEPLOY-PRODUCTION.md`](apps/web/DEPLOY-PRODUCTION.md)**. |
+| **`apps/web`** | **Vercel** | Project **`easyintake-app-web`**. **Root Directory** = **`apps/web`**; enable **Include files outside the root directory in the Build Step** so the full monorepo is available. **[`apps/web/vercel.json`](apps/web/vercel.json)** runs **`npm ci`** at the monorepo root, then **`npm run build --workspace=@easy-intake/shared`** (writes `packages/shared/dist`; `dist` is gitignored), then **`npm run build --workspace=@easy-intake/web`**. Custom domains (e.g. `app.easyintakeapp.com`) are configured in Vercel **Domains**; **Clerk Production** may require additional DNS (e.g. `clerk`, `accounts`, email/DKIM) at the registrar — see **[`apps/web/DEPLOY-PRODUCTION.md`](apps/web/DEPLOY-PRODUCTION.md)**. |
 | **`apps/api`** | **Railway** | Existing deployment. Use **[RAILWAY-DEPLOY.md](RAILWAY-DEPLOY.md)** at the repo root as the canonical guide. [`docs/DEPLOY-RAILWAY.md`](docs/DEPLOY-RAILWAY.md) is superseded and points here. |
 | **`easy-intake-site`** | **Vercel** | Existing deployment as a **separate** Vercel project (sibling repo path; not part of the npm workspace). |
 

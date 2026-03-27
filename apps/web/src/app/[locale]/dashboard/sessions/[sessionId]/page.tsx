@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppChrome } from "@/components/AppChrome";
 import { fetchIntakeSessionFromBff } from "@/lib/bff/serverFetch";
+import { buildAgentHtmlUrl } from "@/lib/agent/buildAgentHtmlUrl";
 import { fieldLabelForLocale } from "@/lib/intake/fieldLabels";
 
 export default async function SessionDetailPage({
@@ -18,13 +19,15 @@ export default async function SessionDetailPage({
   }
 
   const t = await getTranslations("agent.session");
-  const agentBase = process.env.NEXT_PUBLIC_AGENT_HTML_URL ?? "";
+  const agentBase =
+    process.env.NEXT_PUBLIC_AGENT_HTML_URL ??
+    process.env.NEXT_PUBLIC_API_URL ??
+    "";
   const hasVoice = session.channels.some((c) => c.channel === "voice");
   const callSid = session.externalIds?.callSid;
-  const agentHref =
-    agentBase && callSid
-      ? `${agentBase.replace(/\/$/, "")}?callSid=${encodeURIComponent(callSid)}`
-      : agentBase || null;
+  const agentHref = hasVoice
+    ? buildAgentHtmlUrl(agentBase, callSid ? { callSid } : undefined)
+    : null;
 
   const fieldEntries = Object.entries(session.fieldValues);
 
