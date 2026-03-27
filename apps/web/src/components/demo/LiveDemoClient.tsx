@@ -23,6 +23,23 @@ function entityValueFingerprint(value: unknown): string {
   return String(value);
 }
 
+function crmFieldString(v: unknown): string {
+  if (v === undefined || v === null) return "";
+  if (typeof v === "string") return v.trim();
+  if (typeof v === "number" && Number.isFinite(v)) return String(v);
+  if (typeof v === "boolean") return v ? "true" : "false";
+  return "";
+}
+
+function crmPhoneDisplay(v: unknown): string {
+  if (v === undefined || v === null) return "";
+  if (typeof v === "string") return v.trim();
+  if (typeof v === "object" && v !== null && "num" in v) {
+    return crmFieldString((v as { num?: unknown }).num);
+  }
+  return "";
+}
+
 type TwilioRow = {
   sid: string;
   status: string;
@@ -84,6 +101,8 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   const [twilioLoading, setTwilioLoading] = useState(false);
   const [flashingKeys, setFlashingKeys] = useState<Set<string>>(() => new Set());
   const [linkCopied, setLinkCopied] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const prevEntitiesRef = useRef<Record<string, unknown>>({});
   const flashTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
@@ -115,6 +134,30 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     [sectionRows, score?.overall]
   );
 
+  const crmContactPreview = useMemo(() => {
+    const s = crmFieldString;
+    const first = s(entities.firstName);
+    const last = s(entities.lastName);
+    const phone = crmPhoneDisplay(entities.phone);
+    const email = s(entities.email);
+    const alien = s(entities.alienNumber);
+    const city = s(entities.city);
+    const state = s(entities.state);
+    const location = [city, state].filter(Boolean).join(", ");
+    const hasRecord = Boolean(
+      first || last || phone || email || alien || location
+    );
+    const displayName = [first, last].filter(Boolean).join(" ");
+    return {
+      hasRecord,
+      displayName,
+      phone,
+      email,
+      alien,
+      location,
+    };
+  }, [entities]);
+
   const clientVisibleMissingKeys = useMemo(
     () => visibleKeys.filter((k) => !isFieldValueFilled(entities[k])),
     [visibleKeys, entities]
@@ -144,6 +187,7 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   useEffect(() => {
     prevEntitiesRef.current = { ...entities };
     setFlashingKeys(new Set());
+    setPdfError(null);
     flashTimeoutsRef.current.forEach(clearTimeout);
     flashTimeoutsRef.current.clear();
   }, [presetId]); // eslint-disable-line react-hooks/exhaustive-deps -- sync baseline to current cache when preset changes
@@ -232,6 +276,46 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   useEffect(() => {
     return () => disconnect();
   }, [disconnect]);
+
+  const downloadImmN400Pdf = useCallback(async () => {
+    if (presetId !== "imm_n400") return;
+    setPdfError(null);
+    setPdfBusy(true);
+    try {
+      const res = await fetch("/api/demo/anvil-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ entities }),
+      });
+      const ct = res.headers.get("content-type") ?? "";
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setPdfError(data.error ?? t("pdfDownloadError"));
+        return;
+      }
+      if (!ct.includes("application/pdf")) {
+        setPdfError(t("pdfDownloadError"));
+        return;
+      }
+      const blob = await res.blob();
+      const href = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = href;
+      a.download = "uscis-n400.pdf";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(href);
+    } catch {
+      setPdfError(t("pdfDownloadError"));
+    } finally {
+      setPdfBusy(false);
+    }
+  }, [entities, presetId, t]);
 
   const copyApplicantLink = useCallback(async () => {
     try {
@@ -376,14 +460,22 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-1.5 justify-end">
+      <div className="flex flex-col items-end gap-1">
+        <div className="flex flex-wrap gap-1.5 justify-end">
         <button
           type="button"
           className={stubButtonClass}
-          disabled
-          title={t("actionComingSoon")}
+          disabled={presetId !== "imm_n400" || pdfBusy}
+          title={
+            presetId !== "imm_n400"
+              ? t("pdfWrongPreset")
+              : pdfBusy
+                ? t("pdfDownloading")
+                : undefined
+          }
+          onClick={() => void downloadImmN400Pdf()}
         >
-          {t("actionDownloadPdf")}
+          {pdfBusy ? t("pdfDownloading") : t("actionDownloadPdf")}
         </button>
         <button
           type="button"
@@ -401,19 +493,106 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
         >
           {t("actionCrmSync")}
         </button>
+        </div>
+        {pdfError ? (
+          <p className="text-xs text-red-600 dark:text-red-400 max-w-md text-right" role="alert">
+            {pdfError}
+          </p>
+        ) : null}
       </div>
 
-      <aside
-        className="rounded-lg border border-primary/30 bg-primary/[0.06] px-4 py-3 text-sm text-foreground shadow-sm"
-        aria-label={t("agentInstructionTitle")}
-      >
-        <p className="font-semibold text-foreground">{t("agentInstructionTitle")}</p>
-        <ol className="mt-2 list-decimal list-inside space-y-1.5 text-foreground/95">
-          <li>{t("agentStepConfirmProduct")}</li>
-          <li>{t("agentStepConnectStream")}</li>
-        </ol>
-        <p className="mt-2 text-xs text-foreground/75">{t("agentInstructionHint")}</p>
-      </aside>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
+        <aside
+          className="flex flex-col h-full min-h-0 rounded-lg border border-primary/30 bg-primary/[0.06] px-4 py-3 text-sm text-foreground shadow-sm"
+          aria-label={t("agentInstructionTitle")}
+        >
+          <p className="font-semibold text-foreground">{t("agentInstructionTitle")}</p>
+          <ol className="mt-2 list-decimal list-inside space-y-1.5 text-foreground/95">
+            <li>{t("agentStepConfirmProduct")}</li>
+            <li>{t("agentStepConnectStream")}</li>
+          </ol>
+          <p className="mt-2 text-xs text-foreground/75">{t("agentInstructionHint")}</p>
+        </aside>
+
+        <aside
+          className="flex flex-col rounded-lg border border-foreground/15 bg-foreground/[0.03] px-4 py-3 text-sm text-foreground shadow-sm min-h-0 h-full"
+          aria-label={t("crmPanelTitle")}
+        >
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-semibold text-foreground">{t("crmPanelTitle")}</p>
+            <span
+              className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-medium tabular-nums ${
+                crmContactPreview.hasRecord
+                  ? "border-emerald-600/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200"
+                  : "border-foreground/20 bg-foreground/[0.06] text-foreground/65"
+              }`}
+            >
+              {crmContactPreview.hasRecord ? t("crmBadgeLinked") : t("crmBadgeNone")}
+            </span>
+          </div>
+
+          {crmContactPreview.hasRecord ? (
+            <dl className="mt-2 space-y-1.5 text-xs flex-1 flex flex-col">
+              <div className="flex justify-between gap-2">
+                <dt className="text-foreground/60 shrink-0">{t("crmLabelName")}</dt>
+                <dd className="text-foreground text-right break-words min-w-0">
+                  {crmContactPreview.displayName || t("crmValueEmpty")}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-foreground/60 shrink-0">{t("crmLabelEmail")}</dt>
+                <dd className="text-foreground text-right break-words min-w-0">
+                  {crmContactPreview.email || t("crmValueEmpty")}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-foreground/60 shrink-0">{t("crmLabelPhone")}</dt>
+                <dd className="text-foreground text-right break-words min-w-0">
+                  {crmContactPreview.phone || t("crmValueEmpty")}
+                </dd>
+              </div>
+              {crmContactPreview.location ? (
+                <div className="flex justify-between gap-2">
+                  <dt className="text-foreground/60 shrink-0">
+                    {t("crmLabelLocation")}
+                  </dt>
+                  <dd className="text-foreground text-right break-words min-w-0">
+                    {crmContactPreview.location}
+                  </dd>
+                </div>
+              ) : null}
+              {crmContactPreview.alien ? (
+                <div className="flex justify-between gap-2">
+                  <dt className="text-foreground/60 shrink-0">
+                    {t("crmLabelAlienNumber")}
+                  </dt>
+                  <dd className="text-foreground text-right break-words min-w-0">
+                    {crmContactPreview.alien}
+                  </dd>
+                </div>
+              ) : null}
+              <div className="flex justify-between gap-2 pt-1 border-t border-foreground/10 mt-auto">
+                <dt className="text-foreground/60 shrink-0">{t("crmLabelSession")}</dt>
+                <dd className="text-foreground text-right break-words min-w-0 font-mono text-[11px]">
+                  {callSid.trim() || t("crmValueEmpty")}
+                </dd>
+              </div>
+            </dl>
+          ) : (
+            <div className="mt-2 flex-1 flex flex-col items-stretch justify-center min-h-0 py-2 gap-2">
+              <p className="text-xs text-foreground/70 text-center leading-relaxed">
+                {t("crmNoRecordBody")}
+              </p>
+              {callSid.trim() ? (
+                <p className="text-[11px] text-foreground/60 text-center">
+                  <span className="text-foreground/50">{t("crmLabelSession")}: </span>
+                  <span className="font-mono break-all">{callSid.trim()}</span>
+                </p>
+              ) : null}
+            </div>
+          )}
+        </aside>
+      </div>
 
       <div className="grid gap-2 lg:grid-cols-2">
         <section className="space-y-2">
@@ -609,8 +788,8 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
           <p className="text-xs text-foreground/65 mb-2 max-w-prose">
             {t("applicationPanelHint")}
           </p>
-          <div className="rounded-xl border border-foreground/10 divide-y divide-foreground/10">
-            {visibleKeys.map((key) => {
+          <div className="grid grid-cols-1 md:grid-cols-2 rounded-xl border border-foreground/10 overflow-hidden">
+            {visibleKeys.map((key, index) => {
               const raw = entities[key];
               const display =
                 raw === undefined || raw === null
@@ -619,19 +798,24 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
                     ? JSON.stringify(raw)
                     : String(raw);
               const flash = flashingKeys.has(key);
+              const spanFull =
+                visibleKeys.length % 2 === 1 &&
+                index === visibleKeys.length - 1;
               return (
                 <div
                   key={key}
-                  className={`px-3 py-2 flex flex-col sm:flex-row sm:items-start gap-1 transition-colors duration-500 ${
+                  className={`px-3 py-2 flex flex-col gap-0.5 sm:flex-row sm:items-start sm:gap-2 transition-colors duration-500 border-b border-foreground/10 min-w-0 ${
+                    spanFull ? "md:col-span-2 md:border-r-0" : "md:odd:border-r md:odd:border-foreground/10"
+                  } ${
                     flash
                       ? "bg-primary/[0.12] dark:bg-primary/[0.18]"
                       : ""
                   }`}
                 >
-                  <span className="text-xs font-medium text-foreground/70 max-w-[40%]">
+                  <span className="text-xs font-medium text-foreground/70 shrink-0 sm:max-w-[42%] sm:min-w-0">
                     {fieldLabelForLocale(key, locale, pkg)}
                   </span>
-                  <span className="text-sm text-foreground break-words flex-1">
+                  <span className="text-sm text-foreground break-words flex-1 min-w-0">
                     {display}
                   </span>
                 </div>

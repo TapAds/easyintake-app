@@ -158,6 +158,9 @@
       "agentAdviceTitle": "Consejos para el agente y preguntas sugeridas",
       "missingFieldsHeading": "Información faltante",
       "actionDownloadPdf": "Descargar PDF",
+      "pdfWrongPreset": "Selecciona Inm - N400 para descargar este PDF.",
+      "pdfDownloading": "Generando PDF…",
+      "pdfDownloadError": "No se pudo generar el PDF. Revisa la configuración de Anvil e inténtalo de nuevo.",
       "actionExtractAi": "Extraer datos con IA",
       "actionCrmSync": "Sincronizar CRM",
       "actionComingSoon": "Próximamente",
@@ -165,7 +168,18 @@
       "applicantLinkHint": "Comparte este enlace con el solicitante para completar su solicitud.",
       "applicantLinkCopy": "Copiar enlace",
       "applicantLinkCopied": "Copiado",
-      "agentAdviceEmpty": "No hay campos faltantes para la selección actual de Producto / formulario."
+      "agentAdviceEmpty": "No hay campos faltantes para la selección actual de Producto / formulario.",
+      "crmPanelTitle": "Contacto CRM",
+      "crmBadgeLinked": "Registro encontrado",
+      "crmBadgeNone": "Sin registro",
+      "crmNoRecordBody": "Aún no hay un contacto coincidente en el CRM. Conecta y captura identidad o datos de contacto para vincular un registro.",
+      "crmLabelName": "Nombre",
+      "crmLabelEmail": "Correo",
+      "crmLabelPhone": "Teléfono",
+      "crmLabelLocation": "Ciudad / estado",
+      "crmLabelAlienNumber": "Número A",
+      "crmLabelSession": "Sesión (Call SID)",
+      "crmValueEmpty": "—"
     }
   }
 }

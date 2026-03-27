@@ -158,6 +158,9 @@
       "agentAdviceTitle": "Agent advice and suggested questions",
       "missingFieldsHeading": "Missing information",
       "actionDownloadPdf": "Download PDF",
+      "pdfWrongPreset": "Select Imm - N400 to download this PDF.",
+      "pdfDownloading": "Generating PDF…",
+      "pdfDownloadError": "Could not generate PDF. Check Anvil configuration and try again.",
       "actionExtractAi": "Extract data with AI",
       "actionCrmSync": "CRM sync",
       "actionComingSoon": "Coming soon",
@@ -165,7 +168,18 @@
       "applicantLinkHint": "Share this link with the applicant to complete their application.",
       "applicantLinkCopy": "Copy link",
       "applicantLinkCopied": "Copied",
-      "agentAdviceEmpty": "No missing fields for the current Product / Form selection."
+      "agentAdviceEmpty": "No missing fields for the current Product / Form selection.",
+      "crmPanelTitle": "CRM contact",
+      "crmBadgeLinked": "Record found",
+      "crmBadgeNone": "No record",
+      "crmNoRecordBody": "No matching contact record in CRM yet. Connect and capture identity or contact fields to link a record.",
+      "crmLabelName": "Name",
+      "crmLabelEmail": "Email",
+      "crmLabelPhone": "Phone",
+      "crmLabelLocation": "City / state",
+      "crmLabelAlienNumber": "A-Number",
+      "crmLabelSession": "Session (Call SID)",
+      "crmValueEmpty": "—"
     }
   }
 }
