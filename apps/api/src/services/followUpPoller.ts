@@ -1,5 +1,7 @@
 import { prisma } from "../db/prisma";
-import { sendFollowUpSms, SmsTemplateId } from "./sms";
+import { resolveGhlLocationIdFromTwilioTo } from "./ghl";
+import { deliverFollowUpSms } from "./followUpSend";
+import { SmsTemplateId } from "./sms";
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 
@@ -8,26 +10,22 @@ const BATCH_SIZE = 10;              // max jobs per poll cycle
 
 // ─── Poller ───────────────────────────────────────────────────────────────────
 
-/**
- * Processes a single FollowUpJob row: sends the SMS, marks SENT or FAILED.
- *
- * The status is set to SENDING before the SMS call to provide a soft lock
- * against double-processing if the poller ever runs concurrently (e.g. during
- * a restart). This is not a hard transactional lock — Phase 2 will add one
- * if horizontal scaling is introduced.
- */
 async function processJob(jobId: string): Promise<void> {
-  // Claim the job atomically (status PENDING → SENDING)
   const job = await prisma.followUpJob.update({
     where: { id: jobId },
     data: { status: "SENDING" },
     include: {
       call: {
         select: {
-          from:             true,
+          from: true,
+          to: true,
           completenessScore: true,
+          ghlContactId: true,
+          intakeSession: {
+            select: { externalIds: true },
+          },
           entity: {
-            select: { firstName: true },
+            select: { firstName: true, email: true },
           },
         },
       },
@@ -40,19 +38,43 @@ async function processJob(jobId: string): Promise<void> {
   const templateId: SmsTemplateId = score >= 0.7 ? "qualified" : "partial";
 
   try {
-    const result = await sendFollowUpSms(phone, templateId, firstName);
+    const ghlLocationId = await resolveGhlLocationIdFromTwilioTo(job.call.to);
+    const ext = job.call.intakeSession?.externalIds;
+    const extObj =
+      ext && typeof ext === "object" && !Array.isArray(ext) ? (ext as Record<string, unknown>) : {};
+    const stickyRaw = extObj.lastInboundChannel;
+    const stickyChannel =
+      stickyRaw === "sms" ||
+      stickyRaw === "email" ||
+      stickyRaw === "whatsapp" ||
+      stickyRaw === "live_chat" ||
+      stickyRaw === "other"
+        ? stickyRaw
+        : null;
+
+    const { provider, externalMessageId } = await deliverFollowUpSms({
+      ghlLocationId,
+      phone,
+      ghlContactId: job.call.ghlContactId,
+      templateId,
+      firstName,
+      stickyChannel,
+      applicantEmail: job.call.entity?.email ?? null,
+    });
 
     await prisma.followUpJob.update({
       where: { id: jobId },
       data: {
         status: "SENT",
         sentAt: new Date(),
+        externalMessageId,
+        outreachProvider: provider,
       },
     });
 
     console.log(
-      `[followUpPoller] job ${jobId}: SMS sent sid=${result.sid} ` +
-      `template=${templateId} phone=${phone}`
+      `[followUpPoller] job ${jobId}: SMS via ${provider} id=${externalMessageId} ` +
+        `template=${templateId} phone=${phone}`
     );
   } catch (err) {
     const failReason = err instanceof Error ? err.message : String(err);
@@ -61,7 +83,7 @@ async function processJob(jobId: string): Promise<void> {
       where: { id: jobId },
       data: {
         status: "FAILED",
-        failReason: failReason.slice(0, 500), // cap length
+        failReason: failReason.slice(0, 500),
       },
     });
 
@@ -69,10 +91,6 @@ async function processJob(jobId: string): Promise<void> {
   }
 }
 
-/**
- * Runs one poll cycle: finds PENDING jobs past their scheduledFor time
- * and processes them sequentially (to respect Twilio rate limits).
- */
 async function pollOnce(): Promise<void> {
   const jobs = await prisma.followUpJob.findMany({
     where: {
@@ -90,7 +108,6 @@ async function pollOnce(): Promise<void> {
 
   for (const job of jobs) {
     await processJob(job.id).catch((err) => {
-      // processJob already logs + updates status; this catches unexpected errors
       console.error(`[followUpPoller] unexpected error for job ${job.id}:`, err);
     });
   }
@@ -100,10 +117,6 @@ async function pollOnce(): Promise<void> {
 
 let timer: ReturnType<typeof setInterval> | null = null;
 
-/**
- * Starts the follow-up SMS poller.
- * Safe to call multiple times — only one interval will run.
- */
 export function startFollowUpPoller(): void {
   if (timer) return;
   timer = setInterval(() => {
@@ -117,9 +130,6 @@ export function startFollowUpPoller(): void {
   );
 }
 
-/**
- * Stops the poller. Used in tests and graceful shutdown.
- */
 export function stopFollowUpPoller(): void {
   if (timer) {
     clearInterval(timer);

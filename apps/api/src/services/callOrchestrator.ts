@@ -214,11 +214,11 @@ export async function handleCallEnd(payload: CallEndPayload): Promise<void> {
   transcriptBuffer.delete(callSid);
 }
 
-// ─── GHL sync (stub — implemented in services/ghl.ts, Step 10) ───────────────
+// ─── GHL sync (services/ghl.ts — location resolved from Call.to → AgencyConfig) ─
 
 /**
  * Triggers GHL contact upsert and (if score ≥ 0.70) opportunity creation.
- * Imported lazily to avoid circular dependency; ghl.ts is built in Step 10.
+ * Imported lazily to avoid circular dependency.
  */
 async function syncToGhl(
   callId: string,
@@ -233,12 +233,8 @@ async function syncToGhl(
     await syncCallToGhl(callId, score);
     console.log(`[orchestrator] ${callSid}: GHL sync complete`);
   } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      err.message.includes("Cannot find module")
-    ) {
-      // ghl.ts not yet implemented (Step 10)
-      console.log(`[orchestrator] ${callSid}: GHL sync skipped — ghl.ts not yet implemented`);
+    if (err instanceof Error && err.message.includes("Cannot find module")) {
+      console.log(`[orchestrator] ${callSid}: GHL sync skipped — ghl module missing`);
     } else {
       throw err;
     }

@@ -16,17 +16,29 @@ import { internalRouter } from "./api/routes/internal";
 import { voiceRouter } from "./webhooks/twilio/voice";
 import { callStatusRouter } from "./webhooks/twilio/callStatus";
 import { ghlOauthRouter } from "./webhooks/ghl/oauth";
+import { ghlEventsWebhookRouter } from "./webhooks/ghl/events";
 import { intakeWebhookRouter } from "./webhooks/intake";
 import { intakeSessionsRouter } from "./api/routes/intakeSessions";
 import { ghlCustomPageRouter } from "./api/routes/ghlCustomPage";
 import { errorHandler } from "./api/middleware/errorHandler";
 import { startFollowUpPoller, stopFollowUpPoller } from "./services/followUpPoller";
+import {
+  startSignatureReminderPoller,
+  stopSignatureReminderPoller,
+} from "./services/signatureReminderPoller";
 import { prisma } from "./db/prisma";
 
 const app = express();
 
 // Required for correct URL when behind ngrok/proxy (Twilio signature validation)
 app.set("trust proxy", true);
+
+// GoHighLevel marketplace webhooks must verify signatures against the raw JSON body.
+app.use(
+  "/api/webhooks/ghl",
+  express.raw({ type: "application/json", limit: "2mb" }),
+  ghlEventsWebhookRouter
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -91,6 +103,7 @@ server.listen(config.port, () => {
     .catch((err: unknown) => console.error("[db] connection failed:", err));
 
   startFollowUpPoller();
+  startSignatureReminderPoller();
 });
 
 // ─── Graceful shutdown (from Deepgram starter pattern) ───────────────────────
@@ -98,6 +111,7 @@ server.listen(config.port, () => {
 function gracefulShutdown(signal: string) {
   console.log(`\n[server] ${signal} received, shutting down...`);
   stopFollowUpPoller();
+  stopSignatureReminderPoller();
   server.close(() => {
     console.log("[server] closed");
     process.exit(0);

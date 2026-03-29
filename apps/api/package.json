@@ -5,6 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:kill": "bash ../../scripts/kill-api-port.sh",
     "build": "prisma generate && tsc",
     "start": "prisma migrate deploy && node dist/index.js",
     "db:migrate": "prisma migrate dev",

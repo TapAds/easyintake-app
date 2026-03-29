@@ -55,6 +55,36 @@ intakeSessionsRouter.get(
     const sessionId = String(req.params.sessionId);
     const row = await prisma.intakeSession.findUnique({
       where: { id: sessionId },
+      include: {
+        attachments: {
+          orderBy: { createdAt: "desc" },
+          take: 50,
+          select: {
+            id: true,
+            sourceUrl: true,
+            mimeType: true,
+            byteSize: true,
+            status: true,
+            inboundChannel: true,
+            createdAt: true,
+            errorMessage: true,
+          },
+        },
+        signatureRequests: {
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          select: {
+            id: true,
+            status: true,
+            ghlTemplateId: true,
+            reminderCount: true,
+            maxReminders: true,
+            sentAt: true,
+            signedAt: true,
+            lastError: true,
+          },
+        },
+      },
     });
 
     if (!row) {
@@ -67,18 +97,20 @@ intakeSessionsRouter.get(
     const channels = Array.isArray(row.channels) ? row.channels : [];
     const externalIds = (row.externalIds as Record<string, unknown>) ?? {};
 
+    const { attachments: attachmentRows, signatureRequests: sigRows, ...sessionRest } = row;
+
     res.json({
-      sessionId: row.id,
-      organizationId: row.organizationId,
-      verticalId: row.verticalId,
-      configPackageId: row.configPackageId,
-      status: row.status,
-      substatus: row.substatus ?? undefined,
-      primaryChannel: row.primaryChannel ?? "voice",
+      sessionId: sessionRest.id,
+      organizationId: sessionRest.organizationId,
+      verticalId: sessionRest.verticalId,
+      configPackageId: sessionRest.configPackageId,
+      status: sessionRest.status,
+      substatus: sessionRest.substatus ?? undefined,
+      primaryChannel: sessionRest.primaryChannel ?? "voice",
       channels,
       fieldValues,
       completeness: {
-        score: row.completenessScore,
+        score: sessionRest.completenessScore,
       },
       hitl: {
         pendingAgentReview: hitl.pendingAgentReview ?? false,
@@ -86,10 +118,30 @@ intakeSessionsRouter.get(
         pendingFinalSignOff: hitl.pendingFinalSignOff ?? false,
         pendingApplicantSignature: hitl.pendingApplicantSignature ?? false,
       },
+      attachments: attachmentRows.map((a) => ({
+        id: a.id,
+        mimeType: a.mimeType,
+        byteSize: a.byteSize,
+        status: a.status,
+        inboundChannel: a.inboundChannel,
+        createdAt: a.createdAt.toISOString(),
+        sourceUrl: a.sourceUrl.length > 200 ? `${a.sourceUrl.slice(0, 200)}…` : a.sourceUrl,
+        errorPreview: a.errorMessage ? a.errorMessage.slice(0, 240) : undefined,
+      })),
+      signatureRequests: sigRows.map((s) => ({
+        id: s.id,
+        status: s.status,
+        ghlTemplateId: s.ghlTemplateId,
+        reminderCount: s.reminderCount,
+        maxReminders: s.maxReminders,
+        sentAt: s.sentAt?.toISOString(),
+        signedAt: s.signedAt?.toISOString(),
+        lastError: s.lastError ? s.lastError.slice(0, 240) : undefined,
+      })),
       externalIds:
         Object.keys(externalIds).length > 0 ? externalIds : undefined,
-      createdAt: row.createdAt.toISOString(),
-      updatedAt: row.updatedAt.toISOString(),
+      createdAt: sessionRest.createdAt.toISOString(),
+      updatedAt: sessionRest.updatedAt.toISOString(),
     });
   }
 );

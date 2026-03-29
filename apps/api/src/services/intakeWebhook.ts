@@ -90,7 +90,8 @@ function buildQuoteNote(data: IntakeWebhookPayload["data"]): string {
  */
 export async function processIntakeEvent(
   event: IntakeEvent,
-  data: IntakeWebhookPayload["data"]
+  data: IntakeWebhookPayload["data"],
+  ghlLocationId: string
 ): Promise<{ ghlContactId: string | null; duplicate: boolean }> {
   const leadId = data.lead_id;
   const isSandbox = leadId === SANDBOX_LEAD_ID;
@@ -108,12 +109,12 @@ export async function processIntakeEvent(
     if (event === "quote.requested_callback") tags.push("callback-requested");
 
     const contactPayload = buildContactPayload(data, tags);
-    ghlContactId = await upsertIntakeContact(contactPayload);
+    ghlContactId = await upsertIntakeContact(contactPayload, ghlLocationId);
     console.log(`[intake] ${event} lead_id=${leadId} ghlContactId=${ghlContactId}`);
 
     if (event === "quote.completed" && ghlContactId) {
       const noteBody = buildQuoteNote(data);
-      await addNoteToContact(ghlContactId, noteBody);
+      await addNoteToContact(ghlContactId, noteBody, ghlLocationId);
     }
 
     if (event === "quote.requested_callback" && ghlContactId) {
@@ -124,7 +125,8 @@ export async function processIntakeEvent(
       const oppId = await createIntakeOpportunity(
         ghlContactId,
         name,
-        data.quote_amount_monthly
+        data.quote_amount_monthly,
+        ghlLocationId
       );
       if (oppId) {
         console.log(`[intake] quote.requested_callback opportunity created id=${oppId}`);

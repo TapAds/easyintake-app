@@ -32,6 +32,8 @@ const V2_TO_EASY_INTAKE_FIELD: Record<string, EntityFieldName> = {
   work_phone: "phone",
   email: "email",
   face_amount: "coverageAmountDesired",
+  term_length: "termLengthDesired",
+  inforce_face_amount: "existingCoverageAmount",
   tobacco_use: "tobaccoUse",
   planned_premium: "budgetMonthly",
   product_name: "productTypeInterest",
@@ -80,7 +82,9 @@ function normalizeValue(
     v2Field === "face_amount" ||
     v2Field === "planned_premium" ||
     v2Field === "weight" ||
-    v2Field === "annual_income"
+    v2Field === "annual_income" ||
+    v2Field === "term_length" ||
+    v2Field === "inforce_face_amount"
   ) {
     const num = Number(String(value).replace(/[^0-9.-]/g, ""));
     return isNaN(num) ? undefined : num;

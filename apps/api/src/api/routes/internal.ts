@@ -2,8 +2,14 @@ import { Router, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../db/prisma";
 import { config } from "../../config";
-import { syncCallToGhl } from "../../services/ghl";
-import { sendFollowUpSms, SmsTemplateId } from "../../services/sms";
+import {
+  resolveGhlLocationIdFromTwilioTo,
+  syncCallToGhl,
+  listGhlProposalTemplates,
+} from "../../services/ghl";
+import { createSignatureRequestAndSend } from "../../services/ghlSignature";
+import { deliverFollowUpSms } from "../../services/followUpSend";
+import { SmsTemplateId } from "../../services/sms";
 import { callEvents } from "../../lib/callEvents";
 
 export const internalRouter = Router();
@@ -118,6 +124,90 @@ internalRouter.post(
   }
 );
 
+// ─── POST /internal/ghl/signature/send ───────────────────────────────────────
+
+/**
+ * Queues a GHL template send (Documents & Contracts) and starts signature reminders.
+ * Body: { intakeSessionId?, templateId?, locationId?, contactId? }
+ * When intakeSessionId is set, location/contact are read from session externalIds.
+ */
+internalRouter.post(
+  "/ghl/signature/send",
+  async (req: Request, res: Response): Promise<void> => {
+    const body = req.body as {
+      intakeSessionId?: string;
+      templateId?: string;
+      locationId?: string;
+      contactId?: string;
+    };
+
+    let locationId = body.locationId?.trim() ?? "";
+    let contactId = body.contactId?.trim() ?? "";
+    const templateId =
+      (body.templateId?.trim() || config.signature.defaultTemplateId.trim() || "").trim() || "";
+
+    if (body.intakeSessionId) {
+      const session = await prisma.intakeSession.findUnique({
+        where: { id: body.intakeSessionId },
+        select: { externalIds: true },
+      });
+      if (!session) {
+        res.status(404).json({ error: "IntakeSession not found" });
+        return;
+      }
+      const ext = (session.externalIds as Record<string, unknown> | null) ?? {};
+      if (!locationId && typeof ext.ghlLocationId === "string") locationId = ext.ghlLocationId;
+      if (!contactId && typeof ext.ghlContactId === "string") contactId = ext.ghlContactId;
+    }
+
+    if (!locationId || !contactId || !templateId) {
+      res.status(400).json({
+        error:
+          "Requires templateId (or GHL_DEFAULT_SIGNATURE_TEMPLATE_ID) and ghlLocationId + ghlContactId, or intakeSessionId with those external ids",
+      });
+      return;
+    }
+
+    try {
+      const result = await createSignatureRequestAndSend({
+        intakeSessionId: body.intakeSessionId ?? null,
+        ghlLocationId: locationId,
+        ghlContactId: contactId,
+        templateId,
+      });
+      res.json({ ok: true, ...result });
+    } catch (err) {
+      console.error("[internal] signature send failed:", err);
+      res.status(500).json({
+        error: "GHL template send failed",
+        detail: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+);
+
+/**
+ * GET /internal/ghl/signature/templates?locationId=
+ * Lists proposal/document templates for a sub-account (debug / operator).
+ */
+internalRouter.get("/ghl/signature/templates", async (req: Request, res: Response): Promise<void> => {
+  const locationId = String(req.query.locationId ?? "").trim();
+  if (!locationId) {
+    res.status(400).json({ error: "locationId query required" });
+    return;
+  }
+  try {
+    const data = await listGhlProposalTemplates(locationId);
+    res.json({ ok: true, data });
+  } catch (err) {
+    console.error("[internal] list templates failed:", err);
+    res.status(500).json({
+      error: "list templates failed",
+      detail: err instanceof Error ? err.message : String(err),
+    });
+  }
+});
+
 // ─── POST /internal/sms/send ──────────────────────────────────────────────────
 
 /**
@@ -140,9 +230,12 @@ internalRouter.post(
     const call = await prisma.call.findUnique({
       where: { callSid },
       select: {
-        from:             true,
+        from: true,
+        to: true,
         completenessScore: true,
-        entity: { select: { firstName: true } },
+        ghlContactId: true,
+        intakeSession: { select: { externalIds: true } },
+        entity: { select: { firstName: true, email: true } },
       },
     });
 
@@ -158,8 +251,28 @@ internalRouter.post(
     const firstName = call.entity?.firstName ?? "";
 
     try {
-      const result = await sendFollowUpSms(call.from, resolvedTemplateId, firstName);
-      res.json({ ok: true, sid: result.sid, status: result.status });
+      const ghlLocationId = await resolveGhlLocationIdFromTwilioTo(call.to);
+      const ext = call.intakeSession?.externalIds;
+      const extObj =
+        ext && typeof ext === "object" && !Array.isArray(ext) ? (ext as Record<string, unknown>) : {};
+      const s = extObj.lastInboundChannel;
+      const stickyChannel =
+        s === "sms" || s === "email" || s === "whatsapp" || s === "live_chat" || s === "other" ? s : null;
+
+      const result = await deliverFollowUpSms({
+        ghlLocationId,
+        phone: call.from,
+        ghlContactId: call.ghlContactId,
+        templateId: resolvedTemplateId,
+        firstName,
+        stickyChannel,
+        applicantEmail: call.entity?.email ?? null,
+      });
+      res.json({
+        ok: true,
+        provider: result.provider,
+        externalMessageId: result.externalMessageId,
+      });
     } catch (err) {
       console.error(`[internal] SMS send failed for ${callSid}:`, err);
       res.status(500).json({

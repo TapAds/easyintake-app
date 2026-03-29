@@ -114,6 +114,9 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   const [linkCopied, setLinkCopied] = useState(false);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [extractBusy, setExtractBusy] = useState(false);
+  const [extractError, setExtractError] = useState<string | null>(null);
+  const [extractNotice, setExtractNotice] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const subscribedCallSidRef = useRef<string>("");
   const prevEntitiesRef = useRef<Record<string, unknown>>({});
@@ -126,6 +129,15 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     () => preset?.visibleFieldKeys ?? [],
     [preset]
   );
+
+  /** Life-insurance demo presets use LifeInsuranceEntity + V2 extraction; immigration uses another vertical. */
+  const canExtractWithInsuranceModel = presetId !== "imm_n400";
+
+  const pdfTemplateId = useMemo(() => {
+    if (presetId === "imm_n400") return "uscis_n400" as const;
+    if (presetId === "nlg_term_life") return "nlg_term_life" as const;
+    return null;
+  }, [presetId]);
 
   const pkg =
     preset?.configPackageId ?? DEFAULT_LIVE_DEMO_CONFIG_PACKAGE_ID;
@@ -200,6 +212,8 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     prevEntitiesRef.current = { ...entities };
     setFlashingKeys(new Set());
     setPdfError(null);
+    setExtractError(null);
+    setExtractNotice(null);
     flashTimeoutsRef.current.forEach(clearTimeout);
     flashTimeoutsRef.current.clear();
   }, [presetId]); // eslint-disable-line react-hooks/exhaustive-deps -- sync baseline to current cache when preset changes
@@ -341,8 +355,8 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     return () => disconnect();
   }, [disconnect]);
 
-  const downloadImmN400Pdf = useCallback(async () => {
-    if (presetId !== "imm_n400") return;
+  const downloadDemoPdf = useCallback(async () => {
+    if (!pdfTemplateId) return;
     setPdfError(null);
     setPdfBusy(true);
     try {
@@ -350,7 +364,7 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ entities }),
+        body: JSON.stringify({ entities, template: pdfTemplateId }),
       });
       const ct = res.headers.get("content-type") ?? "";
       if (!res.ok) {
@@ -368,7 +382,10 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       const href = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = href;
-      a.download = "uscis-n400.pdf";
+      a.download =
+        pdfTemplateId === "nlg_term_life"
+          ? "nlg-term-life-application.pdf"
+          : "uscis-n400.pdf";
       a.rel = "noopener";
       document.body.appendChild(a);
       a.click();
@@ -379,7 +396,48 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     } finally {
       setPdfBusy(false);
     }
-  }, [entities, presetId, t]);
+  }, [entities, pdfTemplateId, t]);
+
+  const runBatchExtract = useCallback(async () => {
+    const sid = callSid.trim();
+    if (!sid || !canExtractWithInsuranceModel) return;
+    setExtractError(null);
+    setExtractNotice(null);
+    setExtractBusy(true);
+    try {
+      const res = await fetch("/api/demo/extract-transcript", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ callSid: sid }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        entities?: Record<string, unknown>;
+        score?: { overall: number; tier: string };
+        mergeMeta?: {
+          appliedKeys?: string[];
+          skippedDueToCorrection?: string[];
+        };
+      };
+      if (!res.ok) {
+        setExtractError(data.error ?? t("extractError"));
+        return;
+      }
+      if (data.entities) {
+        setEntities(data.entities);
+      }
+      if (data.score) setScore(data.score);
+      const skipped = data.mergeMeta?.skippedDueToCorrection?.length ?? 0;
+      if (skipped > 0) {
+        setExtractNotice(t("extractPreservedCorrections", { count: skipped }));
+      }
+    } catch {
+      setExtractError(t("extractError"));
+    } finally {
+      setExtractBusy(false);
+    }
+  }, [callSid, canExtractWithInsuranceModel, t]);
 
   const copyApplicantLink = useCallback(async () => {
     try {
@@ -585,25 +643,38 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
         <button
           type="button"
           className={stubButtonClass}
-          disabled={presetId !== "imm_n400" || pdfBusy}
+          disabled={!pdfTemplateId || pdfBusy}
           title={
-            presetId !== "imm_n400"
+            !pdfTemplateId
               ? t("pdfWrongPreset")
               : pdfBusy
                 ? t("pdfDownloading")
                 : undefined
           }
-          onClick={() => void downloadImmN400Pdf()}
+          onClick={() => void downloadDemoPdf()}
         >
           {pdfBusy ? t("pdfDownloading") : t("actionDownloadPdf")}
         </button>
         <button
           type="button"
           className={primaryStubClass}
-          disabled
-          title={t("actionComingSoon")}
+          disabled={
+            !canExtractWithInsuranceModel ||
+            !callSid.trim() ||
+            extractBusy
+          }
+          title={
+            !canExtractWithInsuranceModel
+              ? t("extractWrongPreset")
+              : !callSid.trim()
+                ? t("extractNeedCallSid")
+                : extractBusy
+                  ? t("extractRunning")
+                  : undefined
+          }
+          onClick={() => void runBatchExtract()}
         >
-          {t("actionExtractAi")}
+          {extractBusy ? t("extractRunning") : t("actionExtractAi")}
         </button>
         <button
           type="button"
@@ -617,6 +688,16 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
         {pdfError ? (
           <p className="text-xs text-red-600 dark:text-red-400 max-w-md text-right" role="alert">
             {pdfError}
+          </p>
+        ) : null}
+        {extractError ? (
+          <p className="text-xs text-red-600 dark:text-red-400 max-w-md text-right" role="alert">
+            {extractError}
+          </p>
+        ) : null}
+        {extractNotice ? (
+          <p className="text-xs text-amber-800 dark:text-amber-200 max-w-md text-right" role="status">
+            {extractNotice}
           </p>
         ) : null}
       </div>

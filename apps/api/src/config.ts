@@ -42,12 +42,44 @@ export const config = {
   },
 
   ghl: {
-    locationId: optional("GHL_LOCATION_ID", ""), // Set via OAuth callback or manually
+    locationId: optional("GHL_LOCATION_ID", ""), // Default location for webhooks without X-GHL-Location-Id
     clientId: optional("GHL_CLIENT_ID", ""),
     clientSecret: optional("GHL_CLIENT_SECRET", ""),
+    /** strict = require valid X-GHL-Signature / X-WH-Signature; off = skip verify (local dev only) */
+    webhookVerify: optional("GHL_WEBHOOK_VERIFY", "strict"),
   },
+
+  /** FOLLOWUP_SMS_PROVIDER: auto | ghl | twilio — see followUpPoller */
+  followUpSmsProvider: optional("FOLLOWUP_SMS_PROVIDER", "auto"),
 
   intakeWebhook: {
     secret: optional("COTIZARAHORA_WEBHOOK_SECRET", ""),
+  },
+
+  /** Phase 3 — inbound documents from GHL (SMS/WhatsApp/email attachments) */
+  documents: {
+    maxBytesPerFile: Number(process.env.DOCUMENT_MAX_BYTES) || 5_000_000,
+    fetchTimeoutMs: Number(process.env.DOCUMENT_FETCH_TIMEOUT_MS) || 45_000,
+    maxPerMessage: Number(process.env.DOCUMENT_MAX_PER_MESSAGE) || 5,
+  },
+
+  /** Phase 4 — GHL Documents & Contracts (templates/send, signature webhooks, reminders) */
+  signature: {
+    reminderMax: Number(process.env.GHL_SIGNATURE_REMINDER_MAX) || 5,
+    reminderBaseMinutes: Number(process.env.GHL_SIGNATURE_REMINDER_BASE_MINUTES) || 120,
+    defaultTemplateId: optional("GHL_DEFAULT_SIGNATURE_TEMPLATE_ID", ""),
+    /** Comma-separated GHL webhook `type` values that mean “document signed” for your app subscription */
+    signedWebhookTypes: new Set(
+      optional("GHL_WEBHOOK_SIGNATURE_SIGNED_TYPES", "ProposalSigned,DocumentSigned")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    ),
+    reminderSms: optional(
+      "GHL_SIGNATURE_REMINDER_SMS",
+      "Reminder: please complete the signature for your documents. Reply if you need help."
+    ),
+    /** When set, moves opportunity to this pipeline stage after a matched signature webhook */
+    completedPipelineStageId: optional("GHL_SIGNATURE_COMPLETED_STAGE_ID", ""),
   },
 } as const;

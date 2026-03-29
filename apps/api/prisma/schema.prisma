@@ -84,13 +84,70 @@ model IntakeSession {
   configTemplateId   String?
 
   template IntakeFieldTemplate? @relation(fields: [configTemplateId], references: [id], onDelete: SetNull)
-  calls    Call[]
+  calls        Call[]
+  attachments  IntakeAttachment[]
+  signatureRequests SignatureRequest[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([organizationId, updatedAt])
   @@index([configPackageId])
+}
+
+/// Phase 4 — GHL Documents & Contracts: template send, signature completion webhooks, reminder nudges.
+model SignatureRequest {
+  id              String   @id @default(cuid())
+  intakeSessionId String?
+  intakeSession   IntakeSession? @relation(fields: [intakeSessionId], references: [id], onDelete: SetNull)
+
+  ghlLocationId  String
+  ghlContactId   String
+  ghlTemplateId  String
+  /// Set when GHL returns a document / proposal instance id (shape varies by API version).
+  ghlDocumentId  String?
+
+  /// pending_send | sent | signed | declined | expired | failed | cancelled
+  status        String    @default("pending_send")
+  reminderCount Int       @default(0)
+  maxReminders  Int       @default(5)
+  nextReminderAt DateTime?
+  lastError     String?  @db.Text
+
+  /// GHL webhook id that completed this request (for support / audits).
+  signedWebhookId String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  sentAt    DateTime?
+  signedAt  DateTime?
+
+  @@index([ghlLocationId, ghlContactId])
+  @@index([status, nextReminderAt])
+  @@index([intakeSessionId])
+}
+
+/// Applicant document received via GHL (SMS/MMS, WhatsApp, email). Phase 3 — fetch + vision/PDF extraction audit trail.
+model IntakeAttachment {
+  id               String   @id @default(cuid())
+  intakeSessionId  String
+  intakeSession    IntakeSession @relation(fields: [intakeSessionId], references: [id], onDelete: Cascade)
+  ghlMessageId     String?
+  ghlContactId     String
+  inboundChannel   String
+  sourceUrl        String   @db.Text
+  mimeType         String?
+  byteSize         Int
+  sha256           String
+  /// fetched | extracted | failed | skipped
+  status           String
+  errorMessage     String?  @db.Text
+  extractedPreview Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([intakeSessionId, createdAt])
+  @@index([sha256, intakeSessionId])
 }
 
 // Field catalog for a product/form; created or updated during org onboarding.
@@ -180,8 +237,31 @@ model FollowUpJob {
   scheduledFor DateTime
   sentAt       DateTime?
   failReason   String?
+  /// SMS | EMAIL | WHATSAPP — preferred outbound channel (sticky; Phase 2+ from inbound)
+  outreachChannel String   @default("SMS")
+  /// Set when send succeeds: GoHighLevel message id from Conversations API, or Twilio MessageSid
+  externalMessageId String?
+  /// ghl | twilio — which provider actually sent the message
+  outreachProvider  String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+/// Idempotent receipt log for GoHighLevel marketplace webhooks (duplicate webhookId = no-op).
+model GhlWebhookReceipt {
+  webhookId  String   @id
+  eventType  String?
+  receivedAt DateTime @default(now())
+}
+
+/// Deduplicate InboundMessage processing when GHL retries or sends duplicate deliveries.
+model GhlProcessedInboundMessage {
+  messageId   String   @id
+  locationId  String
+  contactId   String
+  processedAt DateTime @default(now())
+
+  @@index([locationId, contactId])
 }
 
 model AgencyConfig {

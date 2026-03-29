@@ -21,6 +21,30 @@ export type SmsTemplateId = "qualified" | "partial";
  *
  * Opt-out footer is required for TCPA compliance and always appended.
  */
+export function getFollowUpSmsBody(templateId: SmsTemplateId, firstName: string): string {
+  return buildSmsBody(templateId, firstName);
+}
+
+/** Subject for GHL email follow-up (same scenarios as SMS templates). */
+export function getFollowUpEmailSubject(templateId: SmsTemplateId): string {
+  switch (templateId) {
+    case "qualified":
+      return "Thanks for connecting with us";
+    case "partial":
+      return "Complete your life insurance intake";
+  }
+}
+
+/** Plain HTML body for GHL Conversations email channel — no AI copy. */
+export function getFollowUpEmailHtml(templateId: SmsTemplateId, firstName: string): string {
+  const text = getFollowUpSmsBody(templateId, firstName);
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+  return `<p style="font-family:system-ui,sans-serif;font-size:15px;">${escaped.replace(/\n/g, "<br/>")}</p>`;
+}
+
 function buildSmsBody(templateId: SmsTemplateId, firstName: string): string {
   const name = firstName.trim() || "there";
 
@@ -63,7 +87,7 @@ export async function sendFollowUpSms(
   templateId: SmsTemplateId,
   firstName: string
 ): Promise<SendSmsResult> {
-  const body = buildSmsBody(templateId, firstName);
+  const body = getFollowUpSmsBody(templateId, firstName);
 
   const message = await twilioClient.messages.create({
     body,

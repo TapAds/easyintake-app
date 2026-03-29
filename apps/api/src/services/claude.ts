@@ -91,6 +91,88 @@ export async function extractEntities(
   return parsed;
 }
 
+const DOCUMENT_EXTRACTION_USER_INSTRUCTION = `The attached file was sent by an insurance applicant via SMS, WhatsApp, or email (e.g. government ID, intake form, application PDF, declaration page, or screenshot).
+
+Extract structured field values using the SAME rules and strict JSON OUTPUT FORMAT as for voice transcripts (only the single JSON object with an "updates" array; no markdown).
+
+Rules:
+- Only extract data clearly visible as belonging to the applicant or proposed insured.
+- If the file is illegible, unrelated, or has no extractable applicant fields, return {"updates":[]}.
+- Handwritten or poor-quality text: only include fields you are confident about (confidence >= 0.75 in each update).`;
+
+export type DocumentMediaType =
+  | "application/pdf"
+  | "image/jpeg"
+  | "image/png"
+  | "image/gif"
+  | "image/webp";
+
+/**
+ * Vision / PDF extraction for applicant documents (Phase 3). Uses beta Messages API for PDF support.
+ * Maps V2 JSON → entity fields the same way as transcript extraction.
+ */
+export async function extractEntitiesFromDocument(
+  base64Data: string,
+  mediaType: DocumentMediaType
+): Promise<ExtractedEntities> {
+  const systemPrompt = EXTRACTION_SYSTEM_PROMPT_V2;
+
+  const mediaBlock =
+    mediaType === "application/pdf"
+      ? ({
+          type: "document",
+          source: {
+            type: "base64",
+            media_type: "application/pdf",
+            data: base64Data,
+          },
+        } as const)
+      : ({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: mediaType,
+            data: base64Data,
+          },
+        } as const);
+
+  const response = await client.beta.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 2048,
+    system: systemPrompt,
+    messages: [
+      {
+        role: "user",
+        content: [{ type: "text", text: DOCUMENT_EXTRACTION_USER_INSTRUCTION }, mediaBlock],
+      },
+    ],
+  });
+
+  console.log("[doc-extraction] raw response:", JSON.stringify(response.content, null, 2));
+
+  const textBlock = response.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    console.warn("[claude] extractEntitiesFromDocument: no text block in response");
+    return {};
+  }
+
+  let rawJson = textBlock.text.trim();
+  const codeFenceMatch = rawJson.match(/^```(?:json)?\s*([\s\S]*?)```$/);
+  if (codeFenceMatch) rawJson = codeFenceMatch[1].trim();
+
+  let v2Result: V2ExtractionResult;
+  try {
+    v2Result = JSON.parse(rawJson) as V2ExtractionResult;
+  } catch (err) {
+    console.warn("[doc-extraction] failed to parse JSON:", err);
+    return {};
+  }
+
+  const parsed = transformV2ToExtractedEntities(v2Result);
+  console.log("[doc-extraction] parsed result:", JSON.stringify(parsed, null, 2));
+  return parsed;
+}
+
 /**
  * Generates a next-best-question suggestion for the agent.
  *

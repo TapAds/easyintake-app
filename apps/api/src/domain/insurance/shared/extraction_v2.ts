@@ -45,7 +45,7 @@ These are the highest-priority fields. If the applicant explicitly provides them
 PERSONAL: first_name, middle_name, last_name, dob, gender, home_address, city, state, zip, mobile_phone, email, citizenship, occupation, employer, annual_income, height, weight
 OWNER: owner_type, owner_name, owner_dob, owner_relationship, owner_address, owner_email, owner_phone
 BENEFICIARY: primary_beneficiary_name, primary_beneficiary_relationship, primary_beneficiary_dob, contingent_beneficiary_name, contingent_beneficiary_relationship
-POLICY: product_name, company, face_amount, death_benefit_option, coverage_type, premium_frequency, planned_premium, has_inforce_insurance, ever_declined, moving_violations, felony, bankruptcy, extreme_sports, aviation, foreign_travel
+POLICY: product_name, company, face_amount, term_length, inforce_face_amount, death_benefit_option, coverage_type, premium_frequency, planned_premium, has_inforce_insurance, ever_declined, moving_violations, felony, bankruptcy, extreme_sports, aviation, foreign_travel
 HEALTH: tobacco_use, tobacco_type, tobacco_frequency, current_medications, medications_list, doctor_name, last_doctor_visit
 HEALTH CONDITIONS (yes/no): hx_heart, hx_circulatory, hx_respiratory, hx_digestive, hx_neurological, hx_cancer, hx_diabetes, drug_alcohol, specialist_visit, hospitalized, pending_appointments, family_hx_positive
 
@@ -91,6 +91,11 @@ APPLICANT: "Quiero quinientos mil de cobertura." or "Opción nivel, pago mensual
 → {"updates":[{"field":"face_amount","value":"500000","confidence":0.98}]}
 DEATH_BENEFIT_OPTION: "nivel"/"level"→A, "creciente"/"increasing"→B
 PREMIUM_FREQUENCY: "mensual"→monthly, "anual"→annual, "trimestral"→quarterly
+APPLICANT: "Quiero un plazo de veinte años." or "a term of 20 years"
+→ {"updates":[{"field":"term_length","value":"20","confidence":0.96}]}
+(term_length: integer policy years 10–40 when stated explicitly)
+APPLICANT: "Ya tengo una póliza de cien mil." (existing death benefit amount)
+→ {"updates":[{"field":"has_inforce_insurance","value":"yes","confidence":0.95},{"field":"inforce_face_amount","value":"100000","confidence":0.93}]}
 
 EXAMPLE 9 – Health conditions (yes/no):
 APPLICANT: "No tengo problemas de corazón." or "Sí, tengo diabetes tipo 2."

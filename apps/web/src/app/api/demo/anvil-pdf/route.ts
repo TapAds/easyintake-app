@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { buildImmN400FillData } from "@/lib/anvil/buildImmN400FillData";
+import { buildNlgTermLifeFillData } from "@/lib/anvil/buildNlgTermLifeFillData";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -33,12 +34,11 @@ export async function POST(req: Request) {
   }
 
   const apiKey = process.env.ANVIL_API_KEY?.trim();
-  const templateId = process.env.ANVIL_TEMPLATE_IMM_400_EID?.trim();
-  if (!apiKey || !templateId) {
+  if (!apiKey) {
     return NextResponse.json(
       {
         error:
-          "PDF generation is not configured. Set ANVIL_API_KEY and ANVIL_TEMPLATE_IMM_400_EID on the server.",
+          "PDF generation is not configured. Set ANVIL_API_KEY on the server.",
       },
       { status: 500 }
     );
@@ -63,14 +63,65 @@ export async function POST(req: Request) {
 
   if (!entities) {
     return NextResponse.json(
-      { error: "Expected body: { entities: Record<string, unknown> }" },
+      {
+        error:
+          "Expected body: { entities: object, template?: \"uscis_n400\" | \"nlg_term_life\" }",
+      },
       { status: 400 }
     );
   }
 
-  const data = buildImmN400FillData(entities);
+  const templateRaw =
+    body &&
+    typeof body === "object" &&
+    "template" in body &&
+    typeof (body as { template?: unknown }).template === "string"
+      ? String((body as { template: string }).template).trim()
+      : "uscis_n400";
+
+  const template =
+    templateRaw === "nlg_term_life" ? "nlg_term_life" : "uscis_n400";
+
+  const templateIdImm = process.env.ANVIL_TEMPLATE_IMM_400_EID?.trim();
+  const templateIdNlg = process.env.ANVIL_TEMPLATE_NLG_TERM_LIFE_EID?.trim();
+
+  let templateId: string | undefined;
+  let data: Record<string, unknown>;
+  let title: string;
+  let filename: string;
+
+  if (template === "nlg_term_life") {
+    templateId = templateIdNlg;
+    if (!templateId) {
+      return NextResponse.json(
+        {
+          error:
+            "NLG Term Life PDF is not configured. Set ANVIL_TEMPLATE_NLG_TERM_LIFE_EID on the server.",
+        },
+        { status: 500 }
+      );
+    }
+    data = buildNlgTermLifeFillData(entities);
+    title = "National Life Group Application Blank";
+    filename = "nlg-term-life-application.pdf";
+  } else {
+    templateId = templateIdImm;
+    if (!templateId) {
+      return NextResponse.json(
+        {
+          error:
+            "USCIS N-400 PDF is not configured. Set ANVIL_TEMPLATE_IMM_400_EID on the server.",
+        },
+        { status: 500 }
+      );
+    }
+    data = buildImmN400FillData(entities);
+    title = "USCIS N400";
+    filename = "uscis-n400.pdf";
+  }
+
   const payload = {
-    title: "USCIS N400",
+    title,
     fontSize: 10,
     textColor: "#333333",
     data,
@@ -134,7 +185,7 @@ export async function POST(req: Request) {
     status: 200,
     headers: {
       "Content-Type": "application/pdf",
-      "Content-Disposition": 'attachment; filename="uscis-n400.pdf"',
+      "Content-Disposition": `attachment; filename="${filename}"`,
       "Cache-Control": "no-store",
     },
   });

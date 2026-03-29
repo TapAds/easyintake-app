@@ -7,24 +7,29 @@ import { config } from "../config";
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
 
+/** Refresh access token if it expires within this window (30 minutes). */
+const TOKEN_REFRESH_BUFFER_MS = 30 * 60 * 1000;
+
 /**
- * Returns an Axios instance and locationId for the current GHL AgencyConfig.
- * Refreshes the token first if it expires within 5 minutes.
+ * Returns an Axios instance authorized for a specific sub-account (location).
+ * Refreshes the token if it expires within TOKEN_REFRESH_BUFFER_MS.
  */
-async function getGhlClient(): Promise<{ client: AxiosInstance; locationId: string }> {
-  const agencyConfig = await prisma.agencyConfig.findFirst({
-    where: config.ghl.locationId
-      ? { ghlLocationId: config.ghl.locationId }
-      : undefined, // Single-tenant: use first config if locationId not set
+export async function getGhlClientForLocation(
+  ghlLocationId: string
+): Promise<{ client: AxiosInstance; locationId: string }> {
+  const agencyConfig = await prisma.agencyConfig.findUnique({
+    where: { ghlLocationId },
   });
 
   if (!agencyConfig) {
-    throw new Error("[ghl] AgencyConfig not found — run setup to configure GHL credentials");
+    throw new Error(
+      `[ghl] No AgencyConfig for GHL location ${ghlLocationId} — install the app for this sub-account`
+    );
   }
 
-  const fiveMinutesFromNow = new Date(Date.now() + 5 * 60 * 1000);
+  const refreshThreshold = new Date(Date.now() + TOKEN_REFRESH_BUFFER_MS);
   const accessToken =
-    agencyConfig.ghlTokenExpiresAt <= fiveMinutesFromNow
+    agencyConfig.ghlTokenExpiresAt <= refreshThreshold
       ? await refreshToken(agencyConfig)
       : agencyConfig.ghlAccessToken;
 
@@ -38,6 +43,57 @@ async function getGhlClient(): Promise<{ client: AxiosInstance; locationId: stri
   });
 
   return { client, locationId: agencyConfig.ghlLocationId };
+}
+
+/**
+ * Maps the agency Twilio inbound number (Call.to) to the GHL location that owns this install.
+ */
+export async function resolveGhlLocationIdFromTwilioTo(toE164: string): Promise<string> {
+  const agency = await prisma.agencyConfig.findFirst({
+    where: { twilioPhoneNumber: toE164 },
+    select: { ghlLocationId: true },
+  });
+  if (!agency) {
+    throw new Error(
+      `[ghl] No AgencyConfig with twilioPhoneNumber=${toE164} — check OAuth seed or Twilio number`
+    );
+  }
+  return agency.ghlLocationId;
+}
+
+/**
+ * Resolves GHL location for partner webhooks (e.g. cotizarahora).
+ * Order: explicit header > GHL_LOCATION_ID env > exactly one AgencyConfig row.
+ */
+export async function resolveGhlLocationIdForIntake(explicitLocationId?: string): Promise<string> {
+  if (explicitLocationId) {
+    const row = await prisma.agencyConfig.findUnique({
+      where: { ghlLocationId: explicitLocationId },
+      select: { ghlLocationId: true },
+    });
+    if (!row) {
+      throw new Error(`[ghl] X-GHL-Location-Id ${explicitLocationId} has no AgencyConfig`);
+    }
+    return explicitLocationId;
+  }
+
+  if (config.ghl.locationId) {
+    const row = await prisma.agencyConfig.findUnique({
+      where: { ghlLocationId: config.ghl.locationId },
+      select: { ghlLocationId: true },
+    });
+    if (row) return row.ghlLocationId;
+  }
+
+  const all = await prisma.agencyConfig.findMany({ select: { ghlLocationId: true } });
+  if (all.length === 1) {
+    console.warn("[ghl] intake: using sole AgencyConfig row — set X-GHL-Location-Id for multi-tenant");
+    return all[0].ghlLocationId;
+  }
+
+  throw new Error(
+    "[ghl] Cannot resolve GHL location for intake — pass X-GHL-Location-Id header or set GHL_LOCATION_ID"
+  );
 }
 
 // ─── Token refresh ────────────────────────────────────────────────────────────
@@ -65,7 +121,7 @@ async function refreshToken(agencyConfig: {
   const response = await axios.post<{
     access_token: string;
     refresh_token: string;
-    expires_in: number; // seconds
+    expires_in: number;
   }>("https://services.leadconnectorhq.com/oauth/token", new URLSearchParams(params), {
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
@@ -85,7 +141,7 @@ async function refreshToken(agencyConfig: {
     },
   });
 
-  console.log(`[ghl] token refreshed, expires ${expiresAt.toISOString()}`);
+  console.log(`[ghl] token refreshed for ${agencyConfig.ghlLocationId}, expires ${expiresAt.toISOString()}`);
   return access_token;
 }
 
@@ -108,17 +164,11 @@ interface GhlContactResponse {
   contact: { id: string };
 }
 
-/**
- * Creates or updates a GHL contact for the given phone number.
- * GHL deduplicates by phone automatically on contact lookup.
- * Returns the GHL contact ID.
- */
 async function upsertContact(
   client: AxiosInstance,
   locationId: string,
   payload: GhlContactPayload
 ): Promise<string> {
-  // GHL v2 contacts API: POST creates or merges by phone/email
   const response = await client.post<GhlContactResponse>(`/contacts/`, {
     ...payload,
     locationId,
@@ -127,10 +177,6 @@ async function upsertContact(
   return response.data.contact.id;
 }
 
-/**
- * Adds a note to a GHL contact.
- * Used for intake webhook (e.g. quote details on quote.completed).
- */
 async function addContactNote(
   client: AxiosInstance,
   contactId: string,
@@ -149,11 +195,6 @@ interface GhlOpportunityPayload {
   monetaryValue?: number;
 }
 
-/**
- * Creates a GHL opportunity for the given contact.
- * The pipeline and stage IDs must be configured in AgencyConfig (Phase 2).
- * For Phase 1, we read them from environment variables.
- */
 async function createOpportunity(
   client: AxiosInstance,
   locationId: string,
@@ -168,39 +209,124 @@ async function createOpportunity(
   return response.data.opportunity.id;
 }
 
-// ─── Main sync function ───────────────────────────────────────────────────────
+// ─── Conversations — outbound SMS (Phase 1) ────────────────────────────────────
+
+export interface SendGhlConversationSmsResult {
+  messageId: string | null;
+  status: number;
+}
 
 /**
- * Syncs a completed call to GHL:
- *   - Always upserts a contact (score ≥ 0.40 guaranteed by caller)
- *   - Creates an opportunity only if score ≥ 0.70 (qualified tier)
- *
- * Writes ghlContactId, ghlOpportunityId (if created), and ghlSyncedAt
- * back to the Call record.
- *
- * Errors thrown from this function are caught by callOrchestrator.ts.
+ * Sends SMS via GoHighLevel Conversations so the thread appears in the agency inbox.
+ * @see https://marketplace.gohighlevel.com/docs/ghl/conversations/send-a-new-message
  */
+export async function sendGhlConversationSms(
+  ghlLocationId: string,
+  params: { contactId: string; phone: string; message: string }
+): Promise<SendGhlConversationSmsResult> {
+  const { client } = await getGhlClientForLocation(ghlLocationId);
+
+  const body: Record<string, string> = {
+    type: "SMS",
+    contactId: params.contactId,
+    phone: params.phone,
+    message: params.message,
+    locationId: ghlLocationId,
+  };
+
+  const response = await client.post<{
+    messageId?: string;
+    id?: string;
+    msg?: { id?: string };
+  }>("/conversations/messages", body);
+
+  const data = response.data;
+  const messageId = data.messageId ?? data.id ?? data.msg?.id ?? null;
+  return { messageId, status: response.status };
+}
+
+/**
+ * WhatsApp via Conversations API (LC WhatsApp). Confirm `type` with current GHL docs if requests fail.
+ */
+export async function sendGhlConversationWhatsApp(
+  ghlLocationId: string,
+  params: { contactId: string; phone: string; message: string }
+): Promise<SendGhlConversationSmsResult> {
+  const { client } = await getGhlClientForLocation(ghlLocationId);
+
+  const body: Record<string, string> = {
+    type: "WhatsApp",
+    contactId: params.contactId,
+    phone: params.phone,
+    message: params.message,
+    locationId: ghlLocationId,
+  };
+
+  const response = await client.post<{
+    messageId?: string;
+    id?: string;
+  }>("/conversations/messages", body);
+
+  const data = response.data;
+  const messageId = data.messageId ?? data.id ?? null;
+  return { messageId, status: response.status };
+}
+
+/**
+ * Sends email via Conversations (long-form). Shape may vary by API version — callers should handle 4xx.
+ */
+export async function sendGhlConversationEmail(
+  ghlLocationId: string,
+  params: {
+    contactId: string;
+    subject: string;
+    html: string;
+    email?: string;
+  }
+): Promise<SendGhlConversationSmsResult> {
+  const { client } = await getGhlClientForLocation(ghlLocationId);
+
+  const body: Record<string, string> = {
+    type: "Email",
+    contactId: params.contactId,
+    subject: params.subject,
+    html: params.html,
+    locationId: ghlLocationId,
+  };
+  if (params.email) body.email = params.email;
+
+  const response = await client.post<{
+    messageId?: string;
+    id?: string;
+  }>("/conversations/messages", body);
+
+  const data = response.data;
+  const messageId = data.messageId ?? data.id ?? null;
+  return { messageId, status: response.status };
+}
+
+// ─── Main sync function ───────────────────────────────────────────────────────
+
 export async function syncCallToGhl(callId: string, score: number): Promise<void> {
-  // Load call + entity data
   const call = await prisma.call.findUniqueOrThrow({
     where: { id: callId },
     include: { entity: true },
   });
 
-  const entity = call.entity;
-  const { client, locationId } = await getGhlClient();
+  const ghlLocationId = await resolveGhlLocationIdFromTwilioTo(call.to);
+  const { client, locationId } = await getGhlClientForLocation(ghlLocationId);
 
-  // ── Contact upsert ─────────────────────────────────────────────────────────
+  const entity = call.entity;
   const contactPayload: GhlContactPayload = {
-    firstName:   entity?.firstName  ?? undefined,
-    lastName:    entity?.lastName   ?? undefined,
-    phone:       call.from,          // E.164 caller number is the reliable identifier
-    email:       entity?.email      ?? undefined,
-    address1:    entity?.address    ?? undefined,
-    city:        entity?.city       ?? undefined,
-    state:       entity?.state      ?? undefined,
-    postalCode:  entity?.zip        ?? undefined,
-    tags:        ["life-insurance", "easy-intake"],
+    firstName: entity?.firstName ?? undefined,
+    lastName: entity?.lastName ?? undefined,
+    phone: call.from,
+    email: entity?.email ?? undefined,
+    address1: entity?.address ?? undefined,
+    city: entity?.city ?? undefined,
+    state: entity?.state ?? undefined,
+    postalCode: entity?.zip ?? undefined,
+    tags: ["life-insurance", "easy-intake"],
     customFields: buildCustomFields(entity, call.completenessScore),
   };
 
@@ -216,7 +342,6 @@ export async function syncCallToGhl(callId: string, score: number): Promise<void
     ghlSyncedAt: new Date(),
   };
 
-  // ── Opportunity (qualified only) ───────────────────────────────────────────
   if (score >= 0.7) {
     const pipelineId = process.env.GHL_PIPELINE_ID;
     const pipelineStageId = process.env.GHL_PIPELINE_STAGE_ID;
@@ -224,7 +349,7 @@ export async function syncCallToGhl(callId: string, score: number): Promise<void
     if (!pipelineId || !pipelineStageId) {
       console.warn(
         `[ghl] ${call.callSid}: GHL_PIPELINE_ID or GHL_PIPELINE_STAGE_ID not set — ` +
-        `skipping opportunity creation`
+          `skipping opportunity creation`
       );
     } else {
       const name =
@@ -249,6 +374,32 @@ export async function syncCallToGhl(callId: string, score: number): Promise<void
     where: { id: callId },
     data: updateData,
   });
+
+  if (call.intakeSessionId) {
+    const sess = await prisma.intakeSession.findUnique({
+      where: { id: call.intakeSessionId },
+      select: { externalIds: true },
+    });
+    const prevExt =
+      sess?.externalIds &&
+      typeof sess.externalIds === "object" &&
+      !Array.isArray(sess.externalIds)
+        ? { ...(sess.externalIds as Record<string, unknown>) }
+        : {};
+    await prisma.intakeSession.update({
+      where: { id: call.intakeSessionId },
+      data: {
+        externalIds: {
+          ...prevExt,
+          ghlContactId: updateData.ghlContactId,
+          ghlLocationId: locationId,
+          ...(updateData.ghlOpportunityId
+            ? { ghlOpportunityId: updateData.ghlOpportunityId }
+            : {}),
+        } as object,
+      },
+    });
+  }
 }
 
 // ─── Custom fields helper ─────────────────────────────────────────────────────
@@ -313,31 +464,28 @@ export interface IntakeContactPayload {
   customFields?: { key: string; field_value: string }[];
 }
 
-/**
- * Upserts a contact from intake webhook data. Used by cotizarahora events.
- */
 export async function upsertIntakeContact(
-  payload: IntakeContactPayload
+  payload: IntakeContactPayload,
+  ghlLocationId: string
 ): Promise<string> {
-  const { client, locationId } = await getGhlClient();
+  const { client, locationId } = await getGhlClientForLocation(ghlLocationId);
   return upsertContact(client, locationId, payload);
 }
 
-/**
- * Adds a note to a contact. Exported for intake webhook.
- */
-export async function addNoteToContact(contactId: string, body: string): Promise<void> {
-  const { client } = await getGhlClient();
+export async function addNoteToContact(
+  contactId: string,
+  body: string,
+  ghlLocationId: string
+): Promise<void> {
+  const { client } = await getGhlClientForLocation(ghlLocationId);
   await addContactNote(client, contactId, body);
 }
 
-/**
- * Creates an opportunity for a contact. Exported for intake webhook (quote.requested_callback).
- */
 export async function createIntakeOpportunity(
   contactId: string,
   name: string,
-  monetaryValue?: number
+  monetaryValue: number | undefined,
+  ghlLocationId: string
 ): Promise<string | null> {
   const pipelineId = process.env.GHL_PIPELINE_ID;
   const pipelineStageId = process.env.GHL_PIPELINE_STAGE_ID;
@@ -345,13 +493,99 @@ export async function createIntakeOpportunity(
     console.warn("[ghl] GHL_PIPELINE_ID or GHL_PIPELINE_STAGE_ID not set — skipping opportunity");
     return null;
   }
-  const { client, locationId } = await getGhlClient();
+  const { client, locationId } = await getGhlClientForLocation(ghlLocationId);
   return createOpportunity(client, locationId, {
     name,
     pipelineId,
     pipelineStageId,
     contactId,
     monetaryValue,
+  });
+}
+
+// ─── Proposals / documents (Phase 4) ─────────────────────────────────────────
+
+export interface SendGhlProposalTemplateResult {
+  documentId: string | null;
+  raw: unknown;
+}
+
+/**
+ * Sends a document/contract template to a contact via GHL Documents & Contracts API.
+ * @see https://marketplace.gohighlevel.com/docs/ghl/proposals/send-documents-contracts-template
+ */
+export async function sendGhlProposalTemplate(
+  ghlLocationId: string,
+  params: { templateId: string; contactId: string }
+): Promise<SendGhlProposalTemplateResult> {
+  const { client } = await getGhlClientForLocation(ghlLocationId);
+
+  const bodies: Record<string, unknown>[] = [
+    {
+      locationId: ghlLocationId,
+      templateId: params.templateId,
+      contactId: params.contactId,
+    },
+    {
+      locationId: ghlLocationId,
+      templateId: params.templateId,
+      contactIds: [params.contactId],
+    },
+  ];
+
+  let lastErr: unknown;
+  for (const body of bodies) {
+    try {
+      const response = await client.post<Record<string, unknown>>("/proposals/templates/send", body);
+      const data = response.data;
+      const doc =
+        (typeof data.document === "object" &&
+          data.document !== null &&
+          typeof (data.document as { id?: string }).id === "string" &&
+          (data.document as { id: string }).id) ||
+        null;
+      const proposal =
+        (typeof data.proposal === "object" &&
+          data.proposal !== null &&
+          typeof (data.proposal as { id?: string }).id === "string" &&
+          (data.proposal as { id: string }).id) ||
+        null;
+      const documentId =
+        (typeof data.documentId === "string" && data.documentId) ||
+        (typeof data.id === "string" && data.id) ||
+        doc ||
+        proposal ||
+        null;
+      return { documentId, raw: data };
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+}
+
+/** @see https://marketplace.gohighlevel.com/docs/ghl/proposals/list-documents-contracts-templates */
+export async function listGhlProposalTemplates(ghlLocationId: string): Promise<unknown> {
+  const { client } = await getGhlClientForLocation(ghlLocationId);
+  const response = await client.get("/proposals/templates", {
+    params: { locationId: ghlLocationId },
+  });
+  return response.data;
+}
+
+/**
+ * Moves an opportunity to a new stage (e.g. after e-sign completes). Ignores HTTP errors — callers may log.
+ */
+export async function updateGhlOpportunityStage(
+  ghlLocationId: string,
+  opportunityId: string,
+  pipelineStageId: string
+): Promise<void> {
+  const { client } = await getGhlClientForLocation(ghlLocationId);
+  await client.put(`/opportunities/${opportunityId}`, {
+    pipelineStageId,
+    locationId: ghlLocationId,
   });
 }
 

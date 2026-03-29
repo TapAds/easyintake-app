@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../../db/prisma";
 import { requireAuth } from "../middleware/auth";
+import { runTranscriptExtractAndPersist } from "../../services/transcriptExtract";
 
 export const callsRouter = Router();
 
@@ -40,6 +41,38 @@ callsRouter.get("/", async (_req: Request, res: Response): Promise<void> => {
 
   res.json(calls);
 });
+
+// ─── POST /api/calls/:callSid/extract ─────────────────────────────────────────
+
+/**
+ * Runs Claude V2 extraction over all stored transcript segments, merges into
+ * LifeInsuranceEntity (respecting agentCorrected fill-empty-only rule), updates score.
+ */
+callsRouter.post(
+  "/:callSid/extract",
+  async (req: Request, res: Response): Promise<void> => {
+    const callSid = String(req.params.callSid);
+    const result = await runTranscriptExtractAndPersist(callSid);
+    if ("error" in result) {
+      res.status(result.status).json({ error: result.error });
+      return;
+    }
+    res.json({
+      callSid: result.callSid,
+      utteranceCount: result.utteranceCount,
+      chunkCount: result.chunkCount,
+      entities: result.entities,
+      score: {
+        overall: result.completenessScore,
+        tier: result.tier,
+      },
+      mergeMeta: {
+        appliedKeys: result.appliedKeys,
+        skippedDueToCorrection: result.skippedDueToCorrection,
+      },
+    });
+  }
+);
 
 // ─── GET /api/calls/:callSid ──────────────────────────────────────────────────
 

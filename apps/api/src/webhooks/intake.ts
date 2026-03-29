@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { config } from "../config";
+import { resolveGhlLocationIdForIntake } from "../services/ghl";
 import { processIntakeEvent, IntakeWebhookPayload, IntakeEvent } from "../services/intakeWebhook";
 
 export const intakeWebhookRouter = Router();
@@ -71,9 +72,11 @@ intakeWebhookRouter.post("/", async (req: Request, res: Response): Promise<void>
   }
 
   const payload = req.body as IntakeWebhookPayload;
+  const headerLocation = req.get("X-GHL-Location-Id") ?? undefined;
 
   try {
-    const { duplicate } = await processIntakeEvent(payload.event, payload.data);
+    const ghlLocationId = await resolveGhlLocationIdForIntake(headerLocation);
+    const { duplicate } = await processIntakeEvent(payload.event, payload.data, ghlLocationId);
 
     if (duplicate) {
       res.status(409).json({ error: "Duplicate — lead already exists" });
@@ -83,6 +86,11 @@ intakeWebhookRouter.post("/", async (req: Request, res: Response): Promise<void>
     res.status(200).json({ ok: true });
   } catch (err) {
     console.error("[intake] processing failed:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.startsWith("[ghl]")) {
+      res.status(400).json({ error: msg });
+      return;
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 });

@@ -22,6 +22,7 @@ POST https://easyappintake.com/api/webhooks/intake
 Content-Type: application/json
 X-Webhook-Secret: <shared_secret>
 X-Source: cotizarahora
+X-GHL-Location-Id: <optional — GHL sub-account id when multiple AgencyConfig installs share one API>
 ```
 
 ---
@@ -34,6 +35,7 @@ X-Source: cotizarahora
   - easyappintake: `COTIZARAHORA_WEBHOOK_SECRET`
 - Rotate secret via manual coordination between both deployments
 - easyappintake must return `401` if secret is missing or invalid
+- **Multi-tenant:** If more than one GoHighLevel location is registered, send `X-GHL-Location-Id`. If omitted and exactly one location exists, that location is used; otherwise the receiver returns `500` with an error (or document single-tenant default via `GHL_LOCATION_ID` env on easyappintake).
 
 ---
 

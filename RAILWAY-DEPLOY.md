@@ -61,6 +61,9 @@ In your app service → **Variables**, add these:
 | `GHL_CLIENT_ID` | GHL OAuth (Step 9) |
 | `GHL_CLIENT_SECRET` | GHL OAuth (Step 9) |
 | `COTIZARAHORA_WEBHOOK_SECRET` | Shared secret for intake webhook (cotizarahora) |
+| `GHL_LOCATION_ID` | Optional default GHL sub-account for `/api/webhooks/intake` when header omitted |
+| `GHL_WEBHOOK_VERIFY` | Optional: `strict` (default) or `off` (local only) |
+| `FOLLOWUP_SMS_PROVIDER` | Optional: `auto` (default), `ghl`, or `twilio` |
 
 *GHL access/refresh tokens are obtained via OAuth in Step 9 — do not add them manually.*
 
@@ -97,8 +100,9 @@ In your app service → **Variables**, add these:
 1. **Create OAuth app** in [GHL Marketplace](https://marketplace.gohighlevel.com) → My Apps → Create App (Private is fine).
 
 2. **Auth settings** (Advanced Settings → Auth):
-   - **Scopes**: Add `contacts.readonly`, `contacts.write`, `opportunities.readonly`, `opportunities.write` (or broader if needed)
+   - **Scopes**: `contacts.*`, `opportunities.*`, plus **Conversations / message** scopes needed for `POST /conversations/messages` (see [GHL-MARKETPLACE-SETUP.md](GHL-MARKETPLACE-SETUP.md)). Re-install after changing scopes.
    - **Redirect URL**: `https://YOUR-RAILWAY-URL/oauth/callback` — click Add
+   - **Webhooks**: URL `https://YOUR-RAILWAY-URL/api/webhooks/ghl` (for marketplace events; optional until you subscribe)
    - **Client Keys**: Add a key pair → copy **Client ID** and **Client Secret**
 
 3. **Add to Railway**: `GHL_CLIENT_ID`, `GHL_CLIENT_SECRET` (from step 2)

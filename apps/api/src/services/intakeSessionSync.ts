@@ -114,7 +114,7 @@ export async function syncIntakeSessionAfterCallEnd(args: {
 
   const sessionRow = await prisma.intakeSession.findUnique({
     where: { id: sessionId },
-    select: { channels: true },
+    select: { channels: true, externalIds: true },
   });
   const prevChannels = Array.isArray(sessionRow?.channels)
     ? [...(sessionRow.channels as unknown[])]
@@ -152,6 +152,11 @@ export async function syncIntakeSessionAfterCallEnd(args: {
     pendingApplicantSignature: false,
   };
 
+  const prevExt =
+    sessionRow?.externalIds && typeof sessionRow.externalIds === "object" && !Array.isArray(sessionRow.externalIds)
+      ? { ...(sessionRow.externalIds as Record<string, unknown>) }
+      : {};
+
   await prisma.intakeSession.update({
     where: { id: sessionId },
     data: {
@@ -160,7 +165,7 @@ export async function syncIntakeSessionAfterCallEnd(args: {
       fieldValues: fv as object,
       hitl: hitl as object,
       channels: prevChannels as object,
-      externalIds: { callSid },
+      externalIds: { ...prevExt, callSid } as object,
     },
   });
 }
