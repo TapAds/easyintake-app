@@ -114,7 +114,9 @@ Without the agent UI, extraction still runs and populates the entity cache for e
 
 ## 8. Test the Flow
 
-1. **Start a call** — Call your Twilio number. Twilio connects to the Media Stream; Deepgram transcribes; extraction runs on each utterance.
+**Hosted product demo:** [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo) — universal demo line **`+1 430-300-3049`**: pick **Product / Form (demo)** in the UI, then place the call from a second phone.
+
+1. **Start a call** — Call your Twilio number (local/dev) or the demo line above (production demo). Twilio connects to the Media Stream; Deepgram transcribes; extraction runs on each utterance.
 2. **Speak sample intake** — e.g. *"Hi, I'm John, 35, California, want 500k term life, 20 years, non-smoker."*
 3. **Hang up** — Twilio hits status callback; orchestrator flushes entity, computes score, syncs to GHL (if score ≥ 0.4), schedules SMS (if consent + score ≥ 0.4).
 4. **Verify** — Check GHL for the contact; wait ~30 min or trigger poller for SMS.

@@ -20,6 +20,7 @@ import { ghlEventsWebhookRouter } from "./webhooks/ghl/events";
 import { intakeWebhookRouter } from "./webhooks/intake";
 import { intakeSessionsRouter } from "./api/routes/intakeSessions";
 import { ghlCustomPageRouter } from "./api/routes/ghlCustomPage";
+import { ghlEmbedApiRouter } from "./api/routes/ghlEmbedApi";
 import { errorHandler } from "./api/middleware/errorHandler";
 import { startFollowUpPoller, stopFollowUpPoller } from "./services/followUpPoller";
 import {
@@ -59,6 +60,7 @@ app.use("/webhooks/twilio", voiceRouter);
 app.use("/webhooks/twilio", callStatusRouter);
 app.use("/api/webhooks/intake", intakeWebhookRouter);
 app.use("/ghl", ghlCustomPageRouter);
+app.use("/ghl/api", ghlEmbedApiRouter);
 
 // ─── Error handler (must be last) ────────────────────────────────────────────
 

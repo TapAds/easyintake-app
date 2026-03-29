@@ -121,6 +121,8 @@ In your app service → **Variables**, add these:
 
 ## Done
 
-Your app is live. Call your Twilio number to test.
+Your app is live. Call your Twilio number (from `TWILIO_PHONE_NUMBER`) to test.
+
+**Easy Intake product demo:** the hosted web app uses universal demo voice **`+1 430-300-3049`** with [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo) (confirm **Product / Form** in the UI, then dial). That number must terminate on the same `apps/api` you deploy if prospects should hit your Railway stack.
 
 - **Agent UI**: `https://YOUR-RAILWAY-URL/public/agent.html`

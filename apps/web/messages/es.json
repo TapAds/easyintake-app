@@ -14,7 +14,42 @@
   "dashboard": {
     "title": "Panel operativo",
     "subtitle": "Vista agnóstica al sector: captación, verificación, cierre y transferencia a tus destinos, comparable entre organizaciones y canales.",
-    "demoDataNote": "Métricas de ejemplo solo para maquetación. Conecta tu API de analítica cuando esté lista.",
+    "superAdmin": {
+      "demoModeOn": "Estás viendo métricas de demostración (datos ilustrativos).",
+      "liveModeOn": "Estás viendo métricas en vivo desde tu API de captación.",
+      "showDemoLink": "Cambiar a métricas de demostración",
+      "showLiveLink": "Cambiar a métricas en vivo"
+    },
+    "demo": {
+      "banner": "Modo demostración: embudo y KPIs de ejemplo para presentaciones; esta vista no llama a la API de captación.",
+      "funnel": {
+        "entered": "Ingresaron",
+        "completed": "Completaron",
+        "stageCompletion": "Completitud en la etapa"
+      },
+      "conversion": {
+        "hint": "Tasas ilustrativas solo para diseño y demostraciones con interesados.",
+        "intakeToValidate": "Captación a validación",
+        "validateToClose": "Validación a cierre y cobro",
+        "closeToTransfer": "Cierre a transferencia"
+      },
+      "kpis": {
+        "sectionTitle": "KPIs operativos (ejemplo)",
+        "totalSessions": "Sesiones totales (período)",
+        "avgIntakeTime": "Tiempo promedio para completar captación",
+        "minutesValue": "{count, number} min",
+        "verificationRate": "Tasa de aprobación en verificación",
+        "closePaymentRate": "Tasa de éxito en cierre / liquidación",
+        "destinationSuccess": "Tasa de éxito de sincronización al destino",
+        "medianFirstResponse": "Tiempo mediano a primera respuesta",
+        "openExceptions": "Excepciones abiertas y seguimientos",
+        "percentValue": "{value, number} %",
+        "channelMix": "Mix de canales de entrada",
+        "channelMixValue": "Voz {voice, number}% · Mensajería {messaging, number}% · Socio {partner, number}%"
+      }
+    },
+    "liveDataNote": "Las métricas se calculan con las sesiones más recientes que devuelve tu API (hasta 100 filas). Los estados se agrupan en fases del recorrido; las tasas de conversión son proporciones aproximadas sobre esa lista, no un almacén analítico completo.",
+    "loadErrorNote": "No se pudieron cargar las sesiones. Verifica que la aplicación web llegue a la API de captación y que la autenticación del BFF (token de servidor) esté configurada.",
     "funnel": {
       "sectionTitle": "Recorrido principal",
       "intakeTitle": "Captación",
@@ -25,34 +60,32 @@
       "closeDesc": "Finaliza acuerdo y pago o el paso equivalente para tu flujo.",
       "transferTitle": "Transferir",
       "transferDesc": "Entrega registros estructurados al CRM, herramientas de caso, webhooks o almacenes.",
-      "entered": "Ingresaron",
-      "completed": "Completaron",
-      "stageCompletion": "Completitud en la etapa"
+      "sessionsLabel": "Sesiones en la fase",
+      "shareLabel": "Parte de la lista mostrada"
     },
     "conversion": {
       "sectionTitle": "Conversión entre etapas",
-      "intakeToValidate": "Captación a validación",
-      "validateToClose": "Validación a cierre y cobro",
-      "closeToTransfer": "Cierre a transferencia"
+      "liveHint": "Los porcentajes reflejan cuántas sesiones de la lista actual están en o más allá de cada fase (según estado). Resumen el lote, no un embudo histórico.",
+      "intakeToValidate": "En validación o más allá",
+      "validateToClose": "En cierre o más allá (de las que pasaron captación)",
+      "closeToTransfer": "Transferidas (de las en cierre o más allá)"
     },
     "kpis": {
       "sectionTitle": "KPIs operativos",
-      "totalSessions": "Sesiones totales (período)",
-      "avgIntakeTime": "Tiempo promedio para completar captación",
-      "minutesValue": "{count, number} min",
-      "verificationRate": "Tasa de aprobación en verificación",
-      "closePaymentRate": "Tasa de éxito en cierre / liquidación",
-      "destinationSuccess": "Tasa de éxito de sincronización al destino",
-      "medianFirstResponse": "Tiempo mediano a primera respuesta",
-      "openExceptions": "Excepciones abiertas y seguimientos",
+      "totalSessionsLive": "Sesiones en la lista",
+      "avgCompleteness": "Completitud promedio",
+      "pendingAgentReview": "Revisión de agente pendiente (HITL)",
+      "failedOrCancelled": "Fallidas o canceladas",
       "percentValue": "{value, number} %",
-      "channelMix": "Mix de canales de entrada",
+      "channelMix": "Mix de canales (detectado)",
       "channelMixValue": "Voz {voice, number}% · Mensajería {messaging, number}% · Socio {partner, number}%"
     },
     "activity": {
       "sectionTitle": "Actividad reciente",
       "when": "Cuándo",
       "event": "Evento",
+      "empty": "Aún no hay sesiones o ninguna corresponde a tu cuenta.",
+      "sessionUpdated": "Sesión actualizada — estado: {status}",
       "events": {
         "sessionStarted": "Sesión iniciada",
         "verificationCompleted": "Verificación completada",
@@ -120,7 +153,7 @@
       "subtitle": "Comparte esta pantalla durante una captación por voz: conéctate a un Call SID y observa la transcripción y los campos actualizados por el motor.",
       "productFormLabel": "Producto / formulario (demo)",
       "agentInstructionTitle": "Antes de conectar",
-      "agentStepConfirmProduct": "Confirma Producto / formulario (demo).",
+      "agentStepConfirmProduct": "Confirma Producto / formulario (demo) y llama al +1 430-300-3049.",
       "agentStepConnectStream": "Conecta la transmisión.",
       "agentInstructionHint": "El menú Producto / formulario define qué campos se cargan en Campos de solicitud (en vivo).",
       "callSidLabel": "Call SID",

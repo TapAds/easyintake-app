@@ -47,6 +47,12 @@ export const config = {
     clientSecret: optional("GHL_CLIENT_SECRET", ""),
     /** strict = require valid X-GHL-Signature / X-WH-Signature; off = skip verify (local dev only) */
     webhookVerify: optional("GHL_WEBHOOK_VERIFY", "strict"),
+    /**
+     * Phase 6 — GHL custom page iframe. When set, `/ghl/api/*` requires matching
+     * query `page_secret` or header `X-EasyIntake-Embed-Secret`. Add the same value to your
+     * Custom Page URL in GHL (e.g. `&page_secret=...`). Leave empty for local dev only.
+     */
+    customPageSecret: optional("GHL_CUSTOM_PAGE_SECRET", ""),
   },
 
   /** FOLLOWUP_SMS_PROVIDER: auto | ghl | twilio — see followUpPoller */

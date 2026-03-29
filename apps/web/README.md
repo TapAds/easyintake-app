@@ -6,4 +6,6 @@ It is **not** the realtime in-call agent UI — that lives in **`apps/api`** as 
 
 For product purpose, stack, integrations, and how this repo fits together, see **[`../../CONTEXT.md`](../../CONTEXT.md)** at the monorepo root of `easy-intake-app`.
 
+**Live product demo:** [`/en/dashboard/live-demo`](https://app.easyintakeapp.com/en/dashboard/live-demo) (and `/es/...`) — universal voice line **`+1 430-300-3049`**: confirm **Product / Form (demo)** in the UI, then dial; see [docs/demo/LIVE_CALL_DEMO.md](../../docs/demo/LIVE_CALL_DEMO.md).
+
 **Deploy to production (Vercel + Clerk):** **[`DEPLOY-PRODUCTION.md`](DEPLOY-PRODUCTION.md)** — monorepo install/build via [`vercel.json`](vercel.json), env vars, Clerk Production, DNS, smoke test.

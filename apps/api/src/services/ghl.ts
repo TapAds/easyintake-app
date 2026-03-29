@@ -209,6 +209,32 @@ async function createOpportunity(
   return response.data.opportunity.id;
 }
 
+/**
+ * Primary phone for a GHL contact (for Conversations SMS/WhatsApp when not in session fields).
+ */
+export async function getGhlContactPrimaryPhone(
+  ghlLocationId: string,
+  contactId: string
+): Promise<string | null> {
+  try {
+    const { client } = await getGhlClientForLocation(ghlLocationId);
+    const response = await client.get<{
+      contact?: { phone?: string; phoneNumber?: string };
+    }>(`/contacts/${contactId}`);
+    const c = response.data?.contact;
+    const p = c?.phone ?? c?.phoneNumber;
+    if (typeof p === "string" && p.trim()) {
+      return p.trim();
+    }
+  } catch (err) {
+    console.warn(
+      `[ghl] getGhlContactPrimaryPhone failed contactId=${contactId}:`,
+      err instanceof Error ? err.message : err
+    );
+  }
+  return null;
+}
+
 // ─── Conversations — outbound SMS (Phase 1) ────────────────────────────────────
 
 export interface SendGhlConversationSmsResult {

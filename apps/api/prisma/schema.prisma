@@ -63,7 +63,7 @@ model Call {
   intakeSession      IntakeSession?       @relation(fields: [intakeSessionId], references: [id], onDelete: SetNull)
   entity             LifeInsuranceEntity?
   transcriptSegments TranscriptSegment[]
-  followUpJobs       FollowUpJob[]
+  followUpJobs       FollowUpJob[] // post-call jobs only (callId set; intakeSessionId null)
   complianceLogs     ComplianceLog[]
 }
 
@@ -87,6 +87,7 @@ model IntakeSession {
   calls        Call[]
   attachments  IntakeAttachment[]
   signatureRequests SignatureRequest[]
+  followUpJobs FollowUpJob[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -231,8 +232,14 @@ model TranscriptSegment {
 
 model FollowUpJob {
   id           String    @id @default(cuid())
-  callId       String
-  call         Call      @relation(fields: [callId], references: [id], onDelete: Cascade)
+  /// Post-voice follow-up (Twilio call). Null when this job targets a GHL-only IntakeSession.
+  callId       String?
+  call         Call?     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  /// After inbound GHL messages — Smart Chaser when quote fields are still missing (Phase 5).
+  intakeSessionId String?
+  intakeSession   IntakeSession? @relation(fields: [intakeSessionId], references: [id], onDelete: Cascade)
+  /// Insurance entity field key (e.g. dateOfBirth) driving template-safe gap_reminder copy.
+  chaserFieldKey  String?
   status       String    @default("PENDING") // PENDING | SENDING | SENT | FAILED | CANCELLED
   scheduledFor DateTime
   sentAt       DateTime?
@@ -245,6 +252,8 @@ model FollowUpJob {
   outreachProvider  String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@index([intakeSessionId])
 }
 
 /// Idempotent receipt log for GoHighLevel marketplace webhooks (duplicate webhookId = no-op).

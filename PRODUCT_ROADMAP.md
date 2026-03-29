@@ -6,6 +6,7 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 
 ## Now
 
+- **Universal voice demo** — Single product demo line **`+1 430-300-3049`** for [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo): operator confirms **Product / Form (demo)** in the UI, prospect calls the number; fields populate per selected preset. Documented in [docs/demo/LIVE_CALL_DEMO.md](docs/demo/LIVE_CALL_DEMO.md).
 - **Insurance vertical** — first **vertical config package** (string field keys, config-driven forms and HITL).
 - **Agent dashboard** — org queue, session detail, field review from config, reporting overview (replace demo data as APIs land).
 - **Foundation** — `IntakeSession` model (vertical-agnostic), BFF to `apps/api`, bilingual shell. **`apps/web`** is deployable to **Vercel** with **Clerk** (production DNS + env per [`apps/web/DEPLOY-PRODUCTION.md`](apps/web/DEPLOY-PRODUCTION.md)); keep **GitHub `main`** in sync with what you expect to run in production.
@@ -13,6 +14,20 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 ---
 
 ## Soon
+
+**Sequencing:** The next two subsections are **high priority after** GoHighLevel marketplace / app delivery when both tracks are active.
+
+### Onboarding widget / experience
+
+- **Purpose:** Guided first-run setup of the customer’s **tenant** (organization instance): **products sold**, intake **forms** (PDF, web, and other channels), **organization and users** (roles), **CRM integration** (e.g. GHL connection, locations, field mappings), telephony/voice where applicable, default **vertical / config packages**, and other data that is manual or env-driven today.
+- **Relationship to carrier-documents work (below):** This is the **orchestrated UX** that may **include** or **launch** PDF/form ingestion; the separate **Customer onboarding — carrier documents** item remains the **content and ingestion** capability (presets, ordering, mappings).
+- **Outcome:** Enough configuration in-product that the org can run intake, the dashboard, and integrations without operator-only runway.
+
+### Dashboard "Settings" tab
+
+- **Audience:** **Agents** and **agency admins** (org-scoped; permission model TBD — align with Clerk org roles per [DECISIONS.md](DECISIONS.md) / [ARCHITECTURE.md](ARCHITECTURE.md) as those harden).
+- **Purpose:** Ongoing in-app configuration: org profile, **products / forms** mappings, **CRM** integrations, user and invite management as appropriate, voice numbers / environments, feature toggles, and the rest of what the dashboard **Settings** shell should own—aligned with [PLATFORM_BUILD_PLAN.md](docs/specs/PLATFORM_BUILD_PLAN.md) as dashboard IA evolves.
+- **Relationship to onboarding:** **Settings** is the **day-two admin surface** after initial setup; onboarding may **deep-link** or hand off here for advanced edits.
 
 - **Customer onboarding — carrier documents** — ingest **PDFs and blank application forms** (e.g. carrier-specific apps, underwriting guides) to bootstrap **vertical presets**, field ordering, and org-specific mappings; delivery TBD (**in-product wizard**, **embedded agent**, **Cursor skill**, or **operator playbook**). Not the same as agency **voice** onboarding below.
 - **inmigracioningreso.com** — separate Next.js product that **webhooks** into Easy Intake (`apps/api`), similar in boundary to cotizarahora.
@@ -23,6 +38,7 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 
 ## Later
 
+- **Call recording snippets for STT review (not implemented)** — Store or reference **short audio clips** aligned to transcript spans that drove each **field extraction**. In session review / HITL, allow playing the clip for a selected field so agents can **validate or correct** transcript-derived values and improve confidence in STT + extraction. Product scope: UI affordance, storage/retention policy, linkage model (utterance offset ↔ field key ↔ audio segment), and org controls.
 - **Additional verticals** — same config + session model; no new generic page types.
 - **`VoiceProvider` abstraction** — CPaaS portability inside `apps/api` (see platform build plan Section 2b).
 - **WebRTC / SIP support** — broader real-time voice options beyond current Twilio media stream + `agent.html` bridge.
@@ -44,7 +60,7 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 
 Use this as the **practical ladder** when standing up a new agency (voice + engine). Technical detail: [PLATFORM_BUILD_PLAN.md — Section 2b](docs/specs/PLATFORM_BUILD_PLAN.md).
 
-1. **Single number + sandbox** — Twilio number → dev/staging API URL; test calls create `Call` / session records; CRM optional or sandbox.
+1. **Single number + sandbox** — Twilio number → dev/staging API URL; test calls create `Call` / session records; CRM optional or sandbox. **Product demos:** use **`+1 430-300-3049`** with [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo) unless testing a dedicated agency number.
 2. **Tenant mapping** — Bind number(s) to `organizationId` + default vertical/config package; verify webhook **signature** and **media stream** health.
 3. **Production cutover** — Point production number to prod `publicBaseUrl`; enable **status callbacks** and CRM sync per org.
 4. **Forwarding level** — Choose direct-to-engine vs IVR-first per number; add conference / warm handoff only when needed.

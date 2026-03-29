@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "dev:kill": "bash ../../scripts/kill-api-port.sh",
-    "build": "prisma generate && tsc",
+    "build": "prisma generate && tsc && npm run build:ghl-embed",
+    "build:ghl-embed": "npm run build --workspace=@easy-intake/ghl-embed",
     "start": "prisma migrate deploy && node dist/index.js",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",

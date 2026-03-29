@@ -6,6 +6,7 @@ import { computeCompletenessScore } from "./scoring";
 import type { EntityState } from "./stageManager";
 import type { InboundCanonicalChannel } from "../types/ghlInbound";
 import { isGhlSignatureSignedEvent, processGhlSignatureWebhook } from "./ghlSignature";
+import { scheduleGapChaserIfNeeded } from "./smartChaser";
 
 export type { InboundCanonicalChannel } from "../types/ghlInbound";
 
@@ -135,7 +136,8 @@ function mergeExtractedIntoFieldValues(
   return out;
 }
 
-async function findIntakeSessionForContact(
+/** Resolve intake session for GHL contact (voice + messaging). Exported for GHL embed / Phase 6. */
+export async function findIntakeSessionForContact(
   locationId: string,
   contactId: string
 ): Promise<{ id: string; fieldValues: unknown; channels: unknown; externalIds: unknown } | null> {
@@ -366,6 +368,10 @@ export async function processGhlInboundMessage(
       `channel=${inbound.channel} score=${score.toFixed(3)} ` +
       `textKeys=${Object.keys(extractedText).length} docKeys=${Object.keys(extractedDocs).length}`
   );
+
+  void scheduleGapChaserIfNeeded({ intakeSessionId: session.id }).catch((err) => {
+    console.error("[smart-chaser] schedule failed:", err);
+  });
 }
 
 async function appendInboundChannelOnly(inbound: NormalizedGhlInbound): Promise<void> {

@@ -71,18 +71,29 @@ Fill in (visible to Agency Admins):
 
 ---
 
-## 5. Custom Page (Optional — MVP)
+## 5. Custom Page — Command center (Phase 6)
 
-Easy Intake includes a simple Custom Page at `/ghl/custom`. To add it:
+Easy Intake serves a **React command center** at `/ghl/custom` when the UI is built (`npm run build` on the API workspace also builds `@easy-intake/ghl-embed` into `apps/api/public/ghl/app`). Static assets load under `/ghl/app/`.
+
+### Environment
+
+- **`GHL_CUSTOM_PAGE_SECRET`** (recommended in production): Shared secret for `/ghl/api/*`. Pass the same value as:
+  - Query param `page_secret=...` on the Custom Page URL, **or**
+  - Header `X-EasyIntake-Embed-Secret` (the React app sends this when `page_secret` is present in the URL).
+- If unset in **production**, the embed API returns **503** until you configure the secret. In **development**, requests are allowed with a console warning (local only).
+
+### GHL configuration
 
 1. In the app settings, find **Custom Pages** / **Modules**
-2. Add a new Custom Page:
-   - **Placement:** Left navigation (or contact record tab)
-   - **URL:** `https://YOUR_APP_DOMAIN/ghl/custom?location_id={{location.id}}&user_id={{user.id}}`
-   - Example: `https://easyintake-app-production.up.railway.app/ghl/custom?location_id={{location.id}}&user_id={{user.id}}`
-3. The page:
-   - Serves over HTTPS
-   - Allows iframe embedding via CSP `frame-ancestors` for GHL domains
+2. Add a Custom Page on the **contact** record (so `{{contact.id}}` is available):
+   - **Placement:** Contact record tab (recommended) or left navigation
+   - **URL (example):**
+
+     `https://YOUR_APP_DOMAIN/ghl/custom?location_id={{location.id}}&contact_id={{contact.id}}&user_id={{user.id}}&page_secret=YOUR_SECRET`
+
+     Use the same `YOUR_SECRET` as `GHL_CUSTOM_PAGE_SECRET` on the API.
+3. The shell shows **IntakeSession** snapshot (fields, HITL, attachments, signature requests), **active-call** detection, and **live transcript / score / guidance** via WebSocket (`/ws/agent`) using a short-lived JWT from `POST /ghl/api/ws-token`.
+4. CSP **`frame-ancestors`** includes GHL domains so the page can load in an iframe.
 
 ---
 

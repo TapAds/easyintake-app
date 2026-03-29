@@ -7,7 +7,7 @@ const twilioClient = twilio(config.twilio.accountSid, config.twilio.authToken);
 
 // ─── Template IDs ─────────────────────────────────────────────────────────────
 
-export type SmsTemplateId = "qualified" | "partial";
+export type SmsTemplateId = "qualified" | "partial" | "gap_reminder";
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
@@ -21,8 +21,12 @@ export type SmsTemplateId = "qualified" | "partial";
  *
  * Opt-out footer is required for TCPA compliance and always appended.
  */
-export function getFollowUpSmsBody(templateId: SmsTemplateId, firstName: string): string {
-  return buildSmsBody(templateId, firstName);
+export function getFollowUpSmsBody(
+  templateId: SmsTemplateId,
+  firstName: string,
+  gap?: { fieldLabel: string }
+): string {
+  return buildSmsBody(templateId, firstName, gap);
 }
 
 /** Subject for GHL email follow-up (same scenarios as SMS templates). */
@@ -32,12 +36,18 @@ export function getFollowUpEmailSubject(templateId: SmsTemplateId): string {
       return "Thanks for connecting with us";
     case "partial":
       return "Complete your life insurance intake";
+    case "gap_reminder":
+      return "One detail to finish your quote";
   }
 }
 
 /** Plain HTML body for GHL Conversations email channel — no AI copy. */
-export function getFollowUpEmailHtml(templateId: SmsTemplateId, firstName: string): string {
-  const text = getFollowUpSmsBody(templateId, firstName);
+export function getFollowUpEmailHtml(
+  templateId: SmsTemplateId,
+  firstName: string,
+  gap?: { fieldLabel: string }
+): string {
+  const text = getFollowUpSmsBody(templateId, firstName, gap);
   const escaped = text
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -45,7 +55,11 @@ export function getFollowUpEmailHtml(templateId: SmsTemplateId, firstName: strin
   return `<p style="font-family:system-ui,sans-serif;font-size:15px;">${escaped.replace(/\n/g, "<br/>")}</p>`;
 }
 
-function buildSmsBody(templateId: SmsTemplateId, firstName: string): string {
+function buildSmsBody(
+  templateId: SmsTemplateId,
+  firstName: string,
+  gap?: { fieldLabel: string }
+): string {
   const name = firstName.trim() || "there";
 
   switch (templateId) {
@@ -62,6 +76,15 @@ function buildSmsBody(templateId: SmsTemplateId, firstName: string): string {
         `We'd love to help you complete your intake — reply here with any questions. ` +
         `Reply STOP to opt out.`
       );
+
+    case "gap_reminder": {
+      const label = gap?.fieldLabel?.trim() || "details";
+      return (
+        `Hi ${name}, we're almost done with your life insurance quote. ` +
+        `Please reply with your ${label} when you can. ` +
+        `Reply STOP to opt out.`
+      );
+    }
   }
 }
 
@@ -85,9 +108,10 @@ export interface SendSmsResult {
 export async function sendFollowUpSms(
   phone: string,
   templateId: SmsTemplateId,
-  firstName: string
+  firstName: string,
+  gap?: { fieldLabel: string }
 ): Promise<SendSmsResult> {
-  const body = getFollowUpSmsBody(templateId, firstName);
+  const body = getFollowUpSmsBody(templateId, firstName, gap);
 
   const message = await twilioClient.messages.create({
     body,

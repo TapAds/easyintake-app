@@ -62,6 +62,7 @@ In **Vercel → Project → Settings → Environment Variables**, add the same k
 2. Sign in with a test user created in the **Production** Clerk instance (or sign up if allowed).
 3. Confirm redirect to `/en/dashboard/queue` (or `/es/...` after switching locale).
 4. Confirm sign-out returns to the localized sign-in URL.
+5. **Live demo (optional):** Open `/en/dashboard/live-demo`, confirm **Before you connect** lists **`+1 430-300-3049`**, choose a **Product / Form (demo)** preset, call the number from another phone, refresh **Recent Twilio calls**, connect stream, and verify transcript/fields (requires `NEXT_PUBLIC_API_URL`, `API_JWT_SECRET`, and API/Twilio configured per [LIVE_CALL_DEMO.md](../../docs/demo/LIVE_CALL_DEMO.md)).
 
 ---
 

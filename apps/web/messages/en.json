@@ -14,7 +14,42 @@
   "dashboard": {
     "title": "Operations dashboard",
     "subtitle": "Industry-agnostic view of intake, verification, completion, and transfer to your destinations — comparable across organizations and channels.",
-    "demoDataNote": "Sample metrics for layout only. Connect your analytics API when ready.",
+    "superAdmin": {
+      "demoModeOn": "You are viewing demo metrics (illustrative sample data).",
+      "liveModeOn": "You are viewing live metrics from your intake API.",
+      "showDemoLink": "Switch to demo metrics",
+      "showLiveLink": "Switch to live metrics"
+    },
+    "demo": {
+      "banner": "Demo mode: sample funnel and KPIs for walkthroughs — no intake API calls for this view.",
+      "funnel": {
+        "entered": "Entered",
+        "completed": "Completed",
+        "stageCompletion": "Completion within stage"
+      },
+      "conversion": {
+        "hint": "Illustrative conversion rates for layout and stakeholder demos only.",
+        "intakeToValidate": "Intake to validate",
+        "validateToClose": "Validate to close and collect",
+        "closeToTransfer": "Close to transfer"
+      },
+      "kpis": {
+        "sectionTitle": "Operational KPIs (sample)",
+        "totalSessions": "Total sessions (period)",
+        "avgIntakeTime": "Avg. time to complete intake",
+        "minutesValue": "{count, number} min",
+        "verificationRate": "Verification pass rate",
+        "closePaymentRate": "Close / settlement success rate",
+        "destinationSuccess": "Destination sync success rate",
+        "medianFirstResponse": "Median time to first response",
+        "openExceptions": "Open exceptions and follow-ups",
+        "percentValue": "{value, number}%",
+        "channelMix": "Inbound channel mix",
+        "channelMixValue": "Voice {voice, number}% · Messaging {messaging, number}% · Partner {partner, number}%"
+      }
+    },
+    "liveDataNote": "Metrics are computed from the latest intake sessions returned by your API (up to 100 rows). Status values are grouped into journey phases; conversion rates are approximate shares across that list, not a full analytics warehouse.",
+    "loadErrorNote": "Could not load sessions for this view. Confirm the web app can reach your intake API and that server-side auth (BFF token) is configured.",
     "funnel": {
       "sectionTitle": "Core journey",
       "intakeTitle": "Intake",
@@ -25,34 +60,32 @@
       "closeDesc": "Finalize agreement and payment or equivalent settlement step for your workflow.",
       "transferTitle": "Transfer",
       "transferDesc": "Deliver structured records to CRM, case tools, webhooks, or warehouses.",
-      "entered": "Entered",
-      "completed": "Completed",
-      "stageCompletion": "Completion within stage"
+      "sessionsLabel": "Sessions in phase",
+      "shareLabel": "Share of listed sessions"
     },
     "conversion": {
       "sectionTitle": "Stage-to-stage conversion",
-      "intakeToValidate": "Intake to validate",
-      "validateToClose": "Validate to close and collect",
-      "closeToTransfer": "Close to transfer"
+      "liveHint": "Percentages are derived from how many sessions in the current list sit at or beyond each phase (by status). They summarize the batch, not a historical funnel.",
+      "intakeToValidate": "At or past validate",
+      "validateToClose": "At or past close (of those past intake)",
+      "closeToTransfer": "Transferred (of those at close or beyond)"
     },
     "kpis": {
       "sectionTitle": "Operational KPIs",
-      "totalSessions": "Total sessions (period)",
-      "avgIntakeTime": "Avg. time to complete intake",
-      "minutesValue": "{count, number} min",
-      "verificationRate": "Verification pass rate",
-      "closePaymentRate": "Close / settlement success rate",
-      "destinationSuccess": "Destination sync success rate",
-      "medianFirstResponse": "Median time to first response",
-      "openExceptions": "Open exceptions and follow-ups",
+      "totalSessionsLive": "Sessions in list",
+      "avgCompleteness": "Avg. completeness",
+      "pendingAgentReview": "Pending agent review (HITL)",
+      "failedOrCancelled": "Failed or cancelled",
       "percentValue": "{value, number}%",
-      "channelMix": "Inbound channel mix",
+      "channelMix": "Channel mix (detected)",
       "channelMixValue": "Voice {voice, number}% · Messaging {messaging, number}% · Partner {partner, number}%"
     },
     "activity": {
       "sectionTitle": "Recent activity",
       "when": "When",
       "event": "Event",
+      "empty": "No sessions yet, or none returned for your account.",
+      "sessionUpdated": "Session updated — status: {status}",
       "events": {
         "sessionStarted": "Session started",
         "verificationCompleted": "Verification completed",
@@ -120,7 +153,7 @@
       "subtitle": "Share this screen while on a voice intake: connect to a Call SID, watch transcript and fields update from the engine.",
       "productFormLabel": "Product / Form (demo)",
       "agentInstructionTitle": "Before you connect",
-      "agentStepConfirmProduct": "Confirm Product / Form (demo).",
+      "agentStepConfirmProduct": "Confirm Product / Form (demo), and call +1 430-300-3049.",
       "agentStepConnectStream": "Connect stream.",
       "agentInstructionHint": "The Product / Form dropdown sets which fields load in Application fields (live).",
       "callSidLabel": "Call SID",
