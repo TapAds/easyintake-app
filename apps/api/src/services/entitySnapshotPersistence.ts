@@ -1,6 +1,6 @@
 import { prisma } from "../db/prisma";
 import { buildEntityPayload, mergeDbEntityWithCache } from "./entityPayload";
-import { computeCompletenessScore } from "./scoring";
+import { computeCompletenessScore, computeN400CompletenessScore } from "./scoring";
 import { getEntityCache, type EntityState } from "./stageManager";
 
 const DEBOUNCE_MS = 2500;
@@ -24,7 +24,11 @@ async function flushEntitySnapshot(callSid: string): Promise<void> {
   try {
     const call = await prisma.call.findUnique({
       where: { callSid },
-      select: { id: true, status: true },
+      select: {
+        id: true,
+        status: true,
+        intakeSession: { select: { configPackageId: true } },
+      },
     });
     if (!call || call.status !== "ACTIVE") return;
 
@@ -39,7 +43,11 @@ async function flushEntitySnapshot(callSid: string): Promise<void> {
       create: { callId: call.id, ...payload },
       update: payload,
     });
-    const { overall } = computeCompletenessScore(merged as EntityState);
+    const pkg = call.intakeSession?.configPackageId ?? null;
+    const { overall } =
+      pkg === "uscis-n400"
+        ? computeN400CompletenessScore(merged as Record<string, unknown>)
+        : computeCompletenessScore(merged as EntityState);
     await prisma.call.update({
       where: { id: call.id },
       data: { completenessScore: overall },

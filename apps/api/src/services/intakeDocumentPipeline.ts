@@ -1,8 +1,11 @@
 import { createHash } from "crypto";
-import type { EntityFieldName } from "../config/fieldStages";
 import { config } from "../config";
 import { prisma } from "../db/prisma";
-import { extractEntitiesFromDocument, type DocumentMediaType } from "./claude";
+import {
+  extractEntitiesFromDocument,
+  extractN400FromDocument,
+  type DocumentMediaType,
+} from "./claude";
 import {
   fetchGhlAttachment,
   normalizeGhlAttachmentRef,
@@ -11,9 +14,9 @@ import {
 import type { InboundCanonicalChannel } from "../types/ghlInbound";
 
 function mergeEntityPick(
-  a: Partial<Record<EntityFieldName, unknown>>,
-  b: Partial<Record<EntityFieldName, unknown>>
-): Partial<Record<EntityFieldName, unknown>> {
+  a: Record<string, unknown>,
+  b: Record<string, unknown>
+): Record<string, unknown> {
   return { ...a, ...b };
 }
 
@@ -27,10 +30,16 @@ export async function processInboundAttachments(args: {
   ghlMessageId: string | null;
   inboundChannel: InboundCanonicalChannel;
   attachments: unknown[];
-}): Promise<Partial<Record<EntityFieldName, unknown>>> {
-  let combined: Partial<Record<EntityFieldName, unknown>> = {};
+}): Promise<Record<string, unknown>> {
+  let combined: Record<string, unknown> = {};
   const maxN = config.documents.maxPerMessage;
   let processed = 0;
+
+  const session = await prisma.intakeSession.findUnique({
+    where: { id: args.intakeSessionId },
+    select: { configPackageId: true },
+  });
+  const useN400 = session?.configPackageId === "uscis-n400";
 
   for (const raw of args.attachments) {
     if (processed >= maxN) break;
@@ -88,10 +97,12 @@ export async function processInboundAttachments(args: {
       continue;
     }
 
-    let extracted: Partial<Record<EntityFieldName, unknown>> = {};
+    let extracted: Record<string, unknown> = {};
     try {
       const b64 = fetched.buffer.toString("base64");
-      extracted = await extractEntitiesFromDocument(b64, fetched.mimeType as DocumentMediaType);
+      extracted = useN400
+        ? await extractN400FromDocument(b64, fetched.mimeType as DocumentMediaType)
+        : await extractEntitiesFromDocument(b64, fetched.mimeType as DocumentMediaType);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[doc-pipeline] extraction failed:", msg);

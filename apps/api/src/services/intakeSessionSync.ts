@@ -5,13 +5,28 @@ const DEFAULT_ORG = process.env.DEFAULT_ORGANIZATION_ID ?? "org_local_dev";
 const DEFAULT_VERTICAL = process.env.DEFAULT_VERTICAL_ID ?? "insurance";
 const DEFAULT_PACKAGE = process.env.DEFAULT_CONFIG_PACKAGE_ID ?? "insurance";
 
+function immigrationInboundSet(): Set<string> {
+  const raw = process.env.IMMIGRATION_VOICE_NUMBERS ?? "";
+  return new Set(
+    raw
+      .split(",")
+      .map((s) => s.trim().replace(/\s/g, ""))
+      .filter(Boolean)
+  );
+}
+
 /**
  * Ensures a voice call has a linked IntakeSession (created on first inbound leg).
+ * When `toNumber` matches `IMMIGRATION_VOICE_NUMBERS`, binds `uscis-n400`.
+ *
+ * @param organizationId When provided (e.g. `ghl:{locationId}` from AgencyConfig), scopes the session to that org; otherwise `DEFAULT_ORGANIZATION_ID`.
  */
 export async function ensureIntakeSessionForCall(
   callId: string,
   callSid: string,
-  startedAt: Date
+  startedAt: Date,
+  toNumber?: string,
+  organizationId?: string
 ): Promise<void> {
   const call = await prisma.call.findUnique({
     where: { id: callId },
@@ -19,11 +34,18 @@ export async function ensureIntakeSessionForCall(
   });
   if (call?.intakeSessionId) return;
 
+  const imm = immigrationInboundSet();
+  const to = toNumber?.trim().replace(/\s/g, "") ?? "";
+  const useImmigration = to.length > 0 && imm.has(to);
+  const verticalId = useImmigration ? "immigration" : DEFAULT_VERTICAL;
+  const configPackageId = useImmigration ? "uscis-n400" : DEFAULT_PACKAGE;
+  const orgId = organizationId?.trim() || DEFAULT_ORG;
+
   const session = await prisma.intakeSession.create({
     data: {
-      organizationId: DEFAULT_ORG,
-      verticalId: DEFAULT_VERTICAL,
-      configPackageId: DEFAULT_PACKAGE,
+      organizationId: orgId,
+      verticalId,
+      configPackageId,
       status: "collecting",
       completenessScore: 0,
       fieldValues: {},

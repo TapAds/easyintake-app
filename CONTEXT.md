@@ -20,8 +20,8 @@ Easy Intake is a **horizontal intake engine** in **product intent**: it is not a
 | Package | Tech |
 |---------|------|
 | **apps/api** | Express, TypeScript, Prisma, WebSockets. Twilio (voice), Deepgram (transcription), Claude (extraction). Serves **static agent UI** at `public/agent.html`. |
-| **apps/web** | Next.js 14 App Router, **Clerk** (embedded sign-in/up on `/[locale]/sign-in` & `/[locale]/sign-up`, protected routes), next-intl (`/en`, `/es`), Tailwind. Dashboard-style pages (queue, session detail) use BFF/fixture data as implemented. **Deployed** to **Vercel** (project `easyintake-app-web`, monorepo root install + build order per `apps/web/vercel.json`). **Not** the in-call realtime UI — that is still **`apps/api/public/agent.html`**. |
-| **packages/shared** | Shared TypeScript types and config helpers. |
+| **apps/web** | Next.js 14 App Router, **Clerk** (embedded sign-in/up on `/[locale]/sign-in` & `/[locale]/sign-up`, protected routes), next-intl (`/en`, `/es`), Tailwind. Dashboard includes **Live demo**, **Live call**, **Settings** (org / CRM), localized **intake** routes under `/[locale]/intake/*` as implemented. **Deployed** to **Vercel** (project `easyintake-app-web`, monorepo root install + build order per `apps/web/vercel.json`). **Not** the in-call realtime UI — that is still **`apps/api/public/agent.html`**. |
+| **packages/shared** | Shared TypeScript types, **vertical configs** (with optional **Zod** parsing in `verticalConfigZod.ts`), **field visibility** helpers, and **legal** JSON (terms/privacy **en**/**es**) exported for the web app. Immigration **`uscis-n400`** (and related) live under modular `verticals/uscisN400/*`. |
 
 **Universal product demo (voice):** **`+1 430-300-3049`** with the dashboard **[Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo)** (`/[locale]/dashboard/live-demo`): confirm **Product / Form (demo)** in the UI, then call the number; the page shows the **full application catalog by section** for that package as data arrives. Details: [docs/demo/LIVE_CALL_DEMO.md](docs/demo/LIVE_CALL_DEMO.md).
 
@@ -53,6 +53,8 @@ Easy Intake is a **horizontal intake engine** in **product intent**: it is not a
 ## Integrations
 
 - **Twilio, Deepgram, Anthropic, GHL** — wired through **`apps/api`** (voice, STT, AI, CRM). These are **not** "webhooks only."
+- **Voice bridging** — Agencies may configure **`AgencyConfig.voiceAgentForwardNumber`** (E.164) so inbound Twilio leg can **dial out / conference** to an operator or PBX (see `twilioConference.ts` + voice webhooks). Demos and direct-to-engine numbers unchanged unless configured.
+- **Form catalog (operator)** — Bearer-authenticated **`POST /api/intake/form-catalog/analyze-pdf`** analyzes a PDF and returns a **draft** sections/fields catalog (Claude); used to bootstrap vertical presets from carrier blanks.
 - **cotizarahora → easyappintake** — HTTP **webhook** contract only for that product boundary. **Authoritative spec:** [`api-contract/WEBHOOK_SPEC.md`](api-contract/WEBHOOK_SPEC.md).  
   **Note:** The spec lists some HTTP statuses (e.g. 202, 422) that the current handler does not return; treat alignment as **[TODO]** on the spec (see [ARCHITECTURE.md](ARCHITECTURE.md)).
 

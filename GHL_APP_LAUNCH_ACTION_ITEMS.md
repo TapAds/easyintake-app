@@ -66,55 +66,56 @@ _The universal demo line **`+1 430-300-3049`** in repo docs is for the hosted Li
 22. [ ] **Status callback:** `https://<PUBLIC_BASE_URL>/webhooks/twilio/call-status` [RAILWAY-DEPLOY.md §8](RAILWAY-DEPLOY.md).
 23. [ ] **Media stream (automatic):** TwiML uses `wss://<same-host-as-PUBLIC_BASE_URL>/media-stream` — no separate Twilio console field if you use the stock voice handler [apps/api/src/webhooks/twilio/twiml.ts](apps/api/src/webhooks/twilio/twiml.ts); ensure `PUBLIC_BASE_URL` uses the same host Twilio can reach (HTTPS for callbacks, WSS for media).
 24. [ ] **Railway env:** `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` — must match what you use for this location’s install (see Phase E).
+25. [ ] **Optional — demo / operator shortcut (agent ring-to):** Set **`VOICE_AGENT_FORWARD_NUMBER`** (E.164, e.g. your cell) on the API if you want **conference mode**: inbound webhook TwiML + automatic outbound dial to that PSTN ([apps/api/src/webhooks/twilio/voice.ts](easy-intake-app/apps/api/src/webhooks/twilio/voice.ts)). **Use case:** Easy Intake–operated demo line or single-tenant testing. **Not** the long-term model for every customer — customers should configure ring-to per sub-account via **Phase K #51** (Settings + DB). **Per-install override without env:** set **`AgencyConfig.voiceAgentForwardNumber`** in Postgres ([schema](easy-intake-app/apps/api/prisma/schema.prisma)); that value wins over the env var when `twilioPhoneNumber` matches inbound `To`.
 
 ---
 
 ## Phase E — First-location install (OAuth → AgencyConfig)
 
-25. [ ] **Pre-install:** In Railway, `PUBLIC_BASE_URL`, `GHL_CLIENT_ID`, `GHL_CLIENT_SECRET`, and **same** Twilio vars as in Phase D must be set (OAuth callback validates Twilio for seeding [apps/api/src/webhooks/ghl/oauth.ts](apps/api/src/webhooks/ghl/oauth.ts)).
-26. [ ] **Install URL:** From GHL app Auth page → open **Installation URL** in browser; log in as needed.
-27. [ ] **Choose sub-account:** Select a **specific Location** (not “All Accounts” / company-only) [GHL-MARKETPLACE-SETUP.md §6](GHL-MARKETPLACE-SETUP.md).
-28. [ ] **Authorize** → expect redirect to `/oauth/callback` and **“GHL Connected”**.
-29. [ ] **Verify DB:** Confirm `AgencyConfig` row exists with `ghlLocationId`, tokens, and **`twilioPhoneNumber` equal to the Twilio number** that will receive calls for that brand [GHL-MARKETPLACE-SETUP.md §7](GHL-MARKETPLACE-SETUP.md).
-30. [ ] **Re-install after scope changes:** Any time you add OAuth scopes in GHL, locations must **re-authorize**.
+26. [ ] **Pre-install:** In Railway, `PUBLIC_BASE_URL`, `GHL_CLIENT_ID`, `GHL_CLIENT_SECRET`, and **same** Twilio vars as in Phase D must be set (OAuth callback validates Twilio for seeding [apps/api/src/webhooks/ghl/oauth.ts](apps/api/src/webhooks/ghl/oauth.ts)).
+27. [ ] **Install URL:** From GHL app Auth page → open **Installation URL** in browser; log in as needed.
+28. [ ] **Choose sub-account:** Select a **specific Location** (not “All Accounts” / company-only) [GHL-MARKETPLACE-SETUP.md §6](GHL-MARKETPLACE-SETUP.md).
+29. [ ] **Authorize** → expect redirect to `/oauth/callback` and **“GHL Connected”**.
+30. [ ] **Verify DB:** Confirm `AgencyConfig` row exists with `ghlLocationId`, tokens, and **`twilioPhoneNumber` equal to the Twilio number** that will receive calls for that brand [GHL-MARKETPLACE-SETUP.md §7](GHL-MARKETPLACE-SETUP.md).
+31. [ ] **Re-install after scope changes:** Any time you add OAuth scopes in GHL, locations must **re-authorize**.
 
 ---
 
 ## Phase F — GoHighLevel sub-account product setup
 
-31. [ ] **LeadConnector:** Enable/configure **SMS**, **WhatsApp**, and **email** as you intend; 10DLC / template compliance in GHL [GHL_INTEGRATION_CHECKLIST.md §3](GHL_INTEGRATION_CHECKLIST.md).
-32. [ ] **Pipelines (optional):** Copy pipeline and stage IDs; set `GHL_PIPELINE_ID` and `GHL_PIPELINE_STAGE_ID` on the API for opportunity creation on qualified sync [GHL-MARKETPLACE-SETUP.md §7](GHL-MARKETPLACE-SETUP.md).
-33. [ ] **Templates (Phase 4):** In GHL **Documents & Contracts**, create or confirm at least one **template** to send for e-sign; note its **template id** for `GHL_DEFAULT_SIGNATURE_TEMPLATE_ID` or `POST /internal/ghl/signature/send` [GHL_INTEGRATION_CHECKLIST.md §9](GHL_INTEGRATION_CHECKLIST.md).
-34. [ ] **Follow-up channel:** Set `FOLLOWUP_SMS_PROVIDER` (`auto` recommended: GHL Conversations when `ghlContactId` exists) [GHL_INTEGRATION_CHECKLIST.md §1](GHL_INTEGRATION_CHECKLIST.md).
+32. [ ] **LeadConnector:** Enable/configure **SMS**, **WhatsApp**, and **email** as you intend; 10DLC / template compliance in GHL [GHL_INTEGRATION_CHECKLIST.md §3](GHL_INTEGRATION_CHECKLIST.md).
+33. [ ] **Pipelines (optional):** Copy pipeline and stage IDs; set `GHL_PIPELINE_ID` and `GHL_PIPELINE_STAGE_ID` on the API for opportunity creation on qualified sync [GHL-MARKETPLACE-SETUP.md §7](GHL-MARKETPLACE-SETUP.md).
+34. [ ] **Templates (Phase 4):** In GHL **Documents & Contracts**, create or confirm at least one **template** to send for e-sign; note its **template id** for `GHL_DEFAULT_SIGNATURE_TEMPLATE_ID` or `POST /internal/ghl/signature/send` [GHL_INTEGRATION_CHECKLIST.md §9](GHL_INTEGRATION_CHECKLIST.md).
+35. [ ] **Follow-up channel:** Set `FOLLOWUP_SMS_PROVIDER` (`auto` recommended: GHL Conversations when `ghlContactId` exists) [GHL_INTEGRATION_CHECKLIST.md §1](GHL_INTEGRATION_CHECKLIST.md).
 
 ---
 
 ## Phase G — Partner / multi-tenant (if applicable)
 
-35. [ ] **cotizarahora** (or other senders to `/api/webhooks/intake`): Configure `X-Webhook-Secret`, `X-Source: cotizarahora`, and **`X-GHL-Location-Id`** when multiple locations share one API [api-contract/WEBHOOK_SPEC.md](api-contract/WEBHOOK_SPEC.md).
-36. [ ] **Default location:** If only one `AgencyConfig` exists, or set `GHL_LOCATION_ID` for default routing [GHL_INTEGRATION_CHECKLIST.md §1](GHL_INTEGRATION_CHECKLIST.md).
+36. [ ] **cotizarahora** (or other senders to `/api/webhooks/intake`): Configure `X-Webhook-Secret`, `X-Source: cotizarahora`, and **`X-GHL-Location-Id`** when multiple locations share one API [api-contract/WEBHOOK_SPEC.md](api-contract/WEBHOOK_SPEC.md).
+37. [ ] **Default location:** If only one `AgencyConfig` exists, or set `GHL_LOCATION_ID` for default routing [GHL_INTEGRATION_CHECKLIST.md §1](GHL_INTEGRATION_CHECKLIST.md).
 
 ---
 
 ## Phase H — Production hardening
 
-37. [ ] **`GHL_WEBHOOK_VERIFY`:** Use **`strict`** in production so `X-GHL-Signature` / `X-WH-Signature` are verified — do **not** leave `off` [GHL_INTEGRATION_CHECKLIST.md §2](GHL_INTEGRATION_CHECKLIST.md).
-38. [ ] **Internal routes:** Restrict `/internal/*` at network layer (firewall / Railway only) — not authenticated as end-user API [GHL_INTEGRATION_CHECKLIST.md §7](GHL_INTEGRATION_CHECKLIST.md).
-39. [ ] **Document limits (optional):** Tune `DOCUMENT_MAX_BYTES`, `DOCUMENT_FETCH_TIMEOUT_MS`, `DOCUMENT_MAX_PER_MESSAGE` if needed [GHL_INTEGRATION_CHECKLIST.md §1](GHL_INTEGRATION_CHECKLIST.md).
+38. [ ] **`GHL_WEBHOOK_VERIFY`:** Use **`strict`** in production so `X-GHL-Signature` / `X-WH-Signature` are verified — do **not** leave `off` [GHL_INTEGRATION_CHECKLIST.md §2](GHL_INTEGRATION_CHECKLIST.md).
+39. [ ] **Internal routes:** Restrict `/internal/*` at network layer (firewall / Railway only) — not authenticated as end-user API [GHL_INTEGRATION_CHECKLIST.md §7](GHL_INTEGRATION_CHECKLIST.md).
+40. [ ] **Document limits (optional):** Tune `DOCUMENT_MAX_BYTES`, `DOCUMENT_FETCH_TIMEOUT_MS`, `DOCUMENT_MAX_PER_MESSAGE` if needed [GHL_INTEGRATION_CHECKLIST.md §1](GHL_INTEGRATION_CHECKLIST.md).
 
 ---
 
 ## Phase I — End-to-end verification (go / no-go)
 
-_**SMS deferral:** You can move ahead **voice-first** and skip **#41** (and follow-up **#43** if it only matters after SMS works) during **private** installs. **Before GHL Marketplace public launch (Phase J)**, complete **#41** (and **#40** for a real **`InboundMessage`**) if your listing or support promises SMS / conversation intake—see **Phase J → Pre-submit confirmation**._
+_**SMS deferral:** You can move ahead **voice-first** and skip **#42** (and follow-up **#44** if it only matters after SMS works) during **private** installs. **Before GHL Marketplace public launch (Phase J)**, complete **#42** (and **#41** for a real **`InboundMessage`** / webhook delivery) if your listing or support promises SMS / conversation intake—see **Phase J → Pre-submit confirmation**._
 
-40. [ ] **Webhook delivery:** GHL Webhook Logs show **200** from `/api/webhooks/ghl` for a test event; no persistent **401** (signature) failures.
-41. [ ] **Inbound SMS:** Reply or new message updates **`IntakeSession`** (`channels`, `lastInboundChannel`) [GHL_INTEGRATION_CHECKLIST.md §6](GHL_INTEGRATION_CHECKLIST.md). _(Required before public launch if messaging is in scope; see Phase J.)_
-42. [ ] **Voice call:** Complete a test call → **`LifeInsuranceEntity`** / scores as designed → **GHL contact** (and opportunity if configured) [GHL-MARKETPLACE-SETUP.md §7](GHL-MARKETPLACE-SETUP.md).
-43. [ ] **Follow-up:** Poller or `POST /internal/sms/send` sends via expected provider (GHL vs Twilio) [GHL_INTEGRATION_CHECKLIST.md §7](GHL_INTEGRATION_CHECKLIST.md).
-44. [ ] **Attachment (Phase 3):** Send **PDF or image** via SMS/WhatsApp/email → **`IntakeAttachment`** rows and merged **fieldValues** / HITL document flag [GHL_INTEGRATION_CHECKLIST.md §8](GHL_INTEGRATION_CHECKLIST.md).
-45. [ ] **Signatures (Phase 4):** `GET /internal/ghl/signature/templates?locationId=` → `POST /internal/ghl/signature/send` → recipient signs in GHL → webhook fires → **`SignatureRequest`** becomes `signed` and session **`hitl.pendingApplicantSignature`** clears [GHL_INTEGRATION_CHECKLIST.md §9](GHL_INTEGRATION_CHECKLIST.md).
-46. [ ] **Session API:** `GET /api/intake/sessions/:id` (with API auth) returns **attachments** and **`signatureRequests`** summaries [apps/api/src/api/routes/intakeSessions.ts](apps/api/src/api/routes/intakeSessions.ts).
+41. [ ] **Webhook delivery:** GHL Webhook Logs show **200** from `/api/webhooks/ghl` for a test event; no persistent **401** (signature) failures.
+42. [ ] **Inbound SMS:** Reply or new message updates **`IntakeSession`** (`channels`, `lastInboundChannel`) [GHL_INTEGRATION_CHECKLIST.md §6](GHL_INTEGRATION_CHECKLIST.md). _(Required before public launch if messaging is in scope; see Phase J.)_
+43. [ ] **Voice call:** Complete a test call → **`LifeInsuranceEntity`** / scores as designed → **GHL contact** (and opportunity if configured) [GHL-MARKETPLACE-SETUP.md §7](GHL-MARKETPLACE-SETUP.md).
+44. [ ] **Follow-up:** Poller or `POST /internal/sms/send` sends via expected provider (GHL vs Twilio) [GHL_INTEGRATION_CHECKLIST.md §7](GHL_INTEGRATION_CHECKLIST.md).
+45. [ ] **Attachment (Phase 3):** Send **PDF or image** via SMS/WhatsApp/email → **`IntakeAttachment`** rows and merged **fieldValues** / HITL document flag [GHL_INTEGRATION_CHECKLIST.md §8](GHL_INTEGRATION_CHECKLIST.md).
+46. [ ] **Signatures (Phase 4):** `GET /internal/ghl/signature/templates?locationId=` → `POST /internal/ghl/signature/send` → recipient signs in GHL → webhook fires → **`SignatureRequest`** becomes `signed` and session **`hitl.pendingApplicantSignature`** clears [GHL_INTEGRATION_CHECKLIST.md §9](GHL_INTEGRATION_CHECKLIST.md).
+47. [ ] **Session API:** `GET /api/intake/sessions/:id` (with API auth) returns **attachments** and **`signatureRequests`** summaries [apps/api/src/api/routes/intakeSessions.ts](apps/api/src/api/routes/intakeSessions.ts).
 
 ---
 
@@ -128,13 +129,21 @@ _**SMS deferral:** You can move ahead **voice-first** and skip **#41** (and foll
 
 **(Do not skip the next items if the product includes GHL messaging.)**
 
-- [ ] **Inbound SMS / `InboundMessage`:** From a real phone, send SMS **inbound** to the GHL sub-account’s messaging line; confirm **Phase I #40** shows **200** on `/api/webhooks/ghl` and **Phase I #41** — **`IntakeSession`** updates (`channels`, `lastInboundChannel`) per [GHL_INTEGRATION_CHECKLIST.md §6](GHL_INTEGRATION_CHECKLIST.md).
-- [ ] **Voice path** still green after any URL or env changes (Phase I **#42**).
-- Optional but recommended before public listing: **#43–#46** if you document those capabilities.
+- [ ] **Inbound SMS / `InboundMessage`:** From a real phone, send SMS **inbound** to the GHL sub-account’s messaging line; confirm **Phase I #41** shows **200** on `/api/webhooks/ghl` and **Phase I #42** — **`IntakeSession`** updates (`channels`, `lastInboundChannel`) per [GHL_INTEGRATION_CHECKLIST.md §6](GHL_INTEGRATION_CHECKLIST.md).
+- [ ] **Voice path** still green after any URL or env changes (Phase I **#43**).
+- Optional but recommended before public listing: **#44–#47** if you document those capabilities.
 
-47. [ ] **GHL review / submit:** In [marketplace.gohighlevel.com](https://marketplace.gohighlevel.com) → **My Apps**, complete **listing** (icon, descriptions, category, pricing, legal URLs) and any **review artifacts** GHL currently requires (e.g. demo recordings — see [Marketplace review changelog](https://ideas.gohighlevel.com/changelog/marketplace-stronger-app-review-process-for-new-apps)). Submit for **review** / **publication** when the UI allows. *Cannot be done from this repo; you must click through in GHL.*
-48. [ ] **Documentation:** Repo source for agencies: [docs/ghl/CUSTOMER_INSTALL_GUIDE.md](docs/ghl/CUSTOMER_INSTALL_GUIDE.md). **Publish** that content (or a link to it) on your **public support** URL used in the Marketplace listing so customers are not sent to GitHub.
-49. [ ] **Monitor:** Webhook Insights / logs, Railway metrics, and DB growth; plan Redis/queues if webhook volume spikes ([GHL_INTEGRATION_CHECKLIST.md §10](GHL_INTEGRATION_CHECKLIST.md)).
+48. [ ] **GHL review / submit:** In [marketplace.gohighlevel.com](https://marketplace.gohighlevel.com) → **My Apps**, complete **listing** (icon, descriptions, category, pricing, legal URLs) and any **review artifacts** GHL currently requires (e.g. demo recordings — see [Marketplace review changelog](https://ideas.gohighlevel.com/changelog/marketplace-stronger-app-review-process-for-new-apps)). Submit for **review** / **publication** when the UI allows. *Cannot be done from this repo; you must click through in GHL.*
+49. [ ] **Documentation:** Repo source for agencies: [docs/ghl/CUSTOMER_INSTALL_GUIDE.md](docs/ghl/CUSTOMER_INSTALL_GUIDE.md). **Publish** that content (or a link to it) on your **public support** URL used in the Marketplace listing so customers are not sent to GitHub.
+50. [ ] **Monitor:** Webhook Insights / logs, Railway metrics, and DB growth; plan Redis/queues if webhook volume spikes ([GHL_INTEGRATION_CHECKLIST.md §10](GHL_INTEGRATION_CHECKLIST.md)).
+
+---
+
+## Phase K — Dashboard / org Settings (product; post-demo voice)
+
+_**Goal:** Live customers configure voice ring-to and related intake options in **`apps/web` → Settings** (Clerk organization), not via Railway-only env vars._
+
+51. [ ] **Org-scoped voice & agency wiring:** Add **Settings** UI per organization to manage **agent forward / hunt-group PSTN** (conference dial target), and document the mapping **Clerk org ↔ GHL location / `AgencyConfig`** (see [ARCHITECTURE.md](ARCHITECTURE.md)). Implement authenticated API routes that read/update **`AgencyConfig.voiceAgentForwardNumber`** (and any successor fields) so **`VOICE_AGENT_FORWARD_NUMBER`** can remain a **demo / internal fallback** only—not required for each tenant at install time. Reference implementation today: DB column + env fallback in [apps/api/src/webhooks/twilio/voice.ts](easy-intake-app/apps/api/src/webhooks/twilio/voice.ts); UI is **not** built yet.
 
 ---
 
@@ -171,6 +180,7 @@ Use this as a copy-paste reference; **required** items must be set before OAuth 
 | 25 | `DEFAULT_ORGANIZATION_ID` | Optional | Voice session seed |
 | 26 | `DEFAULT_VERTICAL_ID` | Optional | e.g. `insurance` |
 | 27 | `DEFAULT_CONFIG_PACKAGE_ID` | Optional | e.g. `insurance` |
+| 28 | `VOICE_AGENT_FORWARD_NUMBER` | Optional | **Demo / global fallback** — E.164 PSTN Twilio dials into conference after inbound ([Phase D #25](GHL_APP_LAUNCH_ACTION_ITEMS.md)). Prefer **`AgencyConfig.voiceAgentForwardNumber`** or future **Settings** UI (**Phase K #51**) for live multi-tenant installs. |
 
 **Not in env:** Per-location GHL access/refresh tokens — created by OAuth into `AgencyConfig`.
 
@@ -198,4 +208,4 @@ Deploying the separate **Next.js shell** (`apps/web` on Vercel, **Clerk**, bilin
 
 ---
 
-*Last updated: Phase J runbook and customer install guide in `docs/ghl/`. Phase I SMS deferral for private testing; complete Pre-submit confirmation before public listing when messaging is in scope. Production API `api.easyintakeapp.com`; dashboard `app.easyintakeapp.com`.*
+*Last updated: Phase D #25 (demo `VOICE_AGENT_FORWARD_NUMBER`), Phase I/J renumber 41–50, Phase K #51 (Settings — org-scoped voice). Production API `api.easyintakeapp.com`; dashboard `app.easyintakeapp.com`.*

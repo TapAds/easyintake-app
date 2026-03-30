@@ -9,6 +9,20 @@ import {
   agentGuidanceTool,
   buildGuidanceUserMessage,
 } from "../prompts/agentGuidance";
+import {
+  USCIS_N400_EXTRACTION_SYSTEM,
+  buildN400ExtractionTool,
+  buildN400ExtractionUserMessage,
+} from "../prompts/uscisN400Extract";
+import {
+  USCIS_N400_GUIDANCE_SYSTEM,
+  buildN400GuidanceUserMessage,
+  uscisN400GuidanceTool,
+} from "../prompts/uscisN400Guidance";
+import {
+  listMissingApplicableFieldKeys,
+  USCIS_N400_VERTICAL_CONFIG,
+} from "@easy-intake/shared";
 import { EntityFieldName } from "../config/fieldStages";
 import { runCompliance, ComplianceContext, ComplianceViolation } from "./compliance";
 import {
@@ -91,8 +105,8 @@ export type ExtractedEntities = Partial<Record<EntityFieldName, unknown>>;
 
 export type AgentGuidanceResult = {
   guidanceText: string;            // compliance-sanitized, safe to deliver to agent
-  missingFields: EntityFieldName[];
-  priorityField: EntityFieldName | null;
+  missingFields: string[];
+  priorityField: string | null;
   complianceViolations: ComplianceViolation[]; // empty if output was clean
   rawResponse: unknown;            // pre-sanitization Claude output, stored in ComplianceLog
 };
@@ -158,6 +172,41 @@ export async function extractEntities(
   const parsed = transformV2ToExtractedEntities(v2Result);
   console.log("[extraction] parsed result:", JSON.stringify(parsed, null, 2));
   return parsed;
+}
+
+/**
+ * Extracts USCIS N-400 catalog fields from transcript utterances (structured tool call).
+ */
+export async function extractN400Entities(
+  utterances: ExtractEntitiesUtterance[]
+): Promise<Record<string, unknown>> {
+  if (utterances.length === 0) return {};
+  const formatted = formatUtterancesForExtractionPrompt(utterances);
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 4096,
+    system: USCIS_N400_EXTRACTION_SYSTEM,
+    tools: [buildN400ExtractionTool()],
+    tool_choice: { type: "tool", name: "extract_uscis_n400_entities" },
+    messages: [
+      {
+        role: "user",
+        content: buildN400ExtractionUserMessage(formatted),
+      },
+    ],
+  });
+  const toolUse = response.content.find((b) => b.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") {
+    console.warn("[claude] extractN400Entities: no tool_use in response");
+    return {};
+  }
+  const input = toolUse.input as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (v !== null && v !== undefined) out[k] = v;
+  }
+  console.log("[extraction] n400 result keys:", Object.keys(out).length);
+  return out;
 }
 
 const DOCUMENT_EXTRACTION_USER_INSTRUCTION = `The attached file was sent by an insurance applicant via SMS, WhatsApp, or email (e.g. government ID, intake form, application PDF, declaration page, or screenshot).
@@ -242,6 +291,64 @@ export async function extractEntitiesFromDocument(
   return parsed;
 }
 
+const N400_DOCUMENT_INSTRUCTION = `The attached file is an applicant document (e.g. filled or blank N-400, passport scan, or supporting evidence).
+
+Extract N-400 catalog fields visible in the document using the provided tool. Use null for fields not present or illegible.
+Only extract applicant data you can read clearly; do not guess.`;
+
+/**
+ * PDF / image extraction mapped to USCIS N-400 catalog keys (beta API).
+ */
+export async function extractN400FromDocument(
+  base64Data: string,
+  mediaType: DocumentMediaType
+): Promise<Record<string, unknown>> {
+  const mediaBlock =
+    mediaType === "application/pdf"
+      ? ({
+          type: "document",
+          source: {
+            type: "base64",
+            media_type: "application/pdf",
+            data: base64Data,
+          },
+        } as const)
+      : ({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: mediaType,
+            data: base64Data,
+          },
+        } as const);
+
+  const response = await client.beta.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 4096,
+    system: USCIS_N400_EXTRACTION_SYSTEM,
+    tools: [buildN400ExtractionTool()],
+    tool_choice: { type: "tool", name: "extract_uscis_n400_entities" },
+    messages: [
+      {
+        role: "user",
+        content: [{ type: "text", text: N400_DOCUMENT_INSTRUCTION }, mediaBlock],
+      },
+    ],
+  });
+
+  const toolUse = response.content.find((b) => b.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") {
+    console.warn("[doc-extraction] extractN400FromDocument: no tool_use");
+    return {};
+  }
+  const input = toolUse.input as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(input)) {
+    if (v !== null && v !== undefined) out[k] = v;
+  }
+  return out;
+}
+
 /**
  * Generates a next-best-question suggestion for the agent.
  *
@@ -265,7 +372,7 @@ export async function extractEntitiesFromDocument(
  */
 export async function generateAgentGuidance(
   collectedFields: Partial<Record<EntityFieldName, unknown>>,
-  missingFields: EntityFieldName[],
+  missingFields: string[],
   stage: "quote" | "application",
   context?: ComplianceContext
 ): Promise<AgentGuidanceResult> {
@@ -288,7 +395,7 @@ export async function generateAgentGuidance(
     console.warn("[claude] generateAgentGuidance: no tool_use block in response");
     return {
       guidanceText: "Note for agent: continue collecting applicant information.",
-      missingFields,
+      missingFields: [...missingFields],
       priorityField: null,
       complianceViolations: [],
       rawResponse: response,
@@ -306,8 +413,58 @@ export async function generateAgentGuidance(
 
   return {
     guidanceText: compliance.sanitizedText,
-    missingFields: (input.missingFields ?? missingFields) as EntityFieldName[],
-    priorityField: (input.priorityField ?? null) as EntityFieldName | null,
+    missingFields: (input.missingFields ?? missingFields) as string[],
+    priorityField: (input.priorityField ?? null) as string | null,
+    complianceViolations: compliance.violations,
+    rawResponse: toolUse.input,
+  };
+}
+
+/**
+ * Immigration / N-400 next-step guidance (agent-facing, compliance-filtered).
+ */
+export async function generateN400AgentGuidance(
+  collectedFields: Record<string, unknown>,
+  context?: ComplianceContext
+): Promise<AgentGuidanceResult> {
+  const missing = listMissingApplicableFieldKeys(
+    USCIS_N400_VERTICAL_CONFIG,
+    collectedFields
+  );
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 256,
+    system: USCIS_N400_GUIDANCE_SYSTEM,
+    tools: [uscisN400GuidanceTool],
+    tool_choice: { type: "tool", name: "generate_uscis_n400_guidance" },
+    messages: [
+      {
+        role: "user",
+        content: buildN400GuidanceUserMessage(collectedFields),
+      },
+    ],
+  });
+  const toolUse = response.content.find((b) => b.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") {
+    return {
+      guidanceText:
+        "Note for agent: continue collecting N-400 information from the applicant.",
+      missingFields: missing,
+      priorityField: missing[0] ?? null,
+      complianceViolations: [],
+      rawResponse: response,
+    };
+  }
+  const input = toolUse.input as {
+    guidanceText: string;
+    missingFields: string[];
+    priorityField?: string | null;
+  };
+  const compliance = await runCompliance(input.guidanceText, context);
+  return {
+    guidanceText: compliance.sanitizedText,
+    missingFields: (input.missingFields ?? missing) as string[],
+    priorityField: (input.priorityField ?? null) as string | null,
     complianceViolations: compliance.violations,
     rawResponse: toolUse.input,
   };

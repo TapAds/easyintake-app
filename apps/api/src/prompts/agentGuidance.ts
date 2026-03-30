@@ -59,18 +59,25 @@ export const agentGuidanceTool: Anthropic.Tool = {
  */
 export function buildGuidanceUserMessage(
   collectedFields: Partial<Record<EntityFieldName, unknown>>,
-  missingFields: EntityFieldName[],
+  missingFields: string[],
   stage: "quote" | "application"
 ): string {
   const stageLabel = stage === "quote" ? "QUOTE_COLLECTION" : "FULL_APPLICATION";
 
   const collected = (Object.keys(collectedFields) as EntityFieldName[])
     .filter((k) => collectedFields[k] !== null && collectedFields[k] !== undefined)
-    .map((k) => `${FIELD_CONFIG[k].label}: ${String(collectedFields[k])}`)
+    .map((k) => {
+      const label = FIELD_CONFIG[k]?.label ?? k;
+      return `${label}: ${String(collectedFields[k])}`;
+    })
     .join("\n");
 
   const missing = missingFields
-    .map((k) => `- ${FIELD_CONFIG[k].label} (${k})`)
+    .map((k) => {
+      const label =
+        k in FIELD_CONFIG ? FIELD_CONFIG[k as EntityFieldName].label : k;
+      return `- ${label} (${k})`;
+    })
     .join("\n");
 
   return `Current stage: ${stageLabel}

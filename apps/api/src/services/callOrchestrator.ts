@@ -5,7 +5,7 @@ import {
   clearEntityCache,
   type EntityState,
 } from "./stageManager";
-import { computeCompletenessScore } from "./scoring";
+import { computeCompletenessScore, computeN400CompletenessScore } from "./scoring";
 import { buildEntityPayload, mergeDbEntityWithCache } from "./entityPayload";
 import { syncIntakeSessionAfterCallEnd } from "./intakeSessionSync";
 
@@ -89,7 +89,12 @@ export async function handleCallEnd(payload: CallEndPayload): Promise<void> {
   // ── 1. Resolve Call ────────────────────────────────────────────────────────
   const call = await prisma.call.findUnique({
     where: { callSid },
-    select: { id: true, consentVerbal: true, from: true },
+    select: {
+      id: true,
+      consentVerbal: true,
+      from: true,
+      intakeSession: { select: { configPackageId: true } },
+    },
   });
 
   if (!call) {
@@ -141,9 +146,11 @@ export async function handleCallEnd(payload: CallEndPayload): Promise<void> {
   }
 
   // ── 4. Compute score ───────────────────────────────────────────────────────
-  const { overall: completenessScore, tier } = computeCompletenessScore(
-    entityState as EntityState
-  );
+  const pkg = call.intakeSession?.configPackageId ?? null;
+  const { overall: completenessScore, tier } =
+    pkg === "uscis-n400"
+      ? computeN400CompletenessScore(entityState as Record<string, unknown>)
+      : computeCompletenessScore(entityState as EntityState);
 
   // ── 5. Update Call ─────────────────────────────────────────────────────────
   try {

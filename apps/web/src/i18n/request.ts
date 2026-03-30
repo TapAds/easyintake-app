@@ -8,8 +8,14 @@ export default getRequestConfig(async ({ requestLocale }) => {
   }
 
   const common = (await import(`../../messages/${locale}.json`)).default;
-  const terms = (await import(`../../messages/terms-${locale}.json`)).default;
-  const privacy = (await import(`../../messages/privacy-${locale}.json`)).default;
+  const terms =
+    locale === "es"
+      ? (await import("@easy-intake/shared/legal/terms-es.json")).default
+      : (await import("@easy-intake/shared/legal/terms-en.json")).default;
+  const privacy =
+    locale === "es"
+      ? (await import("@easy-intake/shared/legal/privacy-es.json")).default
+      : (await import("@easy-intake/shared/legal/privacy-en.json")).default;
 
   return {
     locale,

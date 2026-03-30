@@ -14,11 +14,22 @@ import {
   stageToScope,
   getMissingFieldsByStage,
 } from "../services/stageManager";
-import { computeCompletenessScore } from "../services/scoring";
-import { generateAgentGuidance, extractEntities } from "../services/claude";
+import {
+  computeCompletenessScore,
+  computeN400CompletenessScore,
+} from "../services/scoring";
+import {
+  generateAgentGuidance,
+  generateN400AgentGuidance,
+  extractEntities,
+  extractN400Entities,
+} from "../services/claude";
+import {
+  listMissingApplicableFieldKeys,
+  USCIS_N400_VERTICAL_CONFIG,
+} from "@easy-intake/shared";
 import { buildV2CurrentStateForPrompt } from "../services/extractionTransform";
 import { appendCallFieldChangeLog, agentActor } from "../services/fieldChangeLog";
-import { FIELD_CONFIG, EntityFieldName } from "../config/fieldStages";
 import { FlowStage } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { scheduleDebouncedEntitySnapshot } from "../services/entitySnapshotPersistence";
@@ -94,10 +105,6 @@ function decodeJwtSub(token: string | null): string {
   }
 }
 
-function isEntityFieldName(s: string): s is EntityFieldName {
-  return Object.prototype.hasOwnProperty.call(FIELD_CONFIG, s);
-}
-
 // ─── callEvents listeners ─────────────────────────────────────────────────────
 //
 // Wired once when agentHub.ts is first imported. All call events fan out to
@@ -133,12 +140,18 @@ callEvents.on(
         console.log(`[agentHub] utterance received for ${callSid}, processing...`);
         const call = await prisma.call.findUnique({
           where: { callSid },
-          select: { id: true, flowStage: true, selectedProduct: true },
+          select: {
+            id: true,
+            flowStage: true,
+            selectedProduct: true,
+            intakeSession: { select: { configPackageId: true } },
+          },
         });
 
         if (!call) return;
 
         const scope = stageToScope(call.flowStage as FlowStage);
+        const configPackageId = call.intakeSession?.configPackageId ?? null;
         const utterances = event.allUtterances ?? [
           { speaker: event.speaker, text: event.text, languageCode: event.languageCode },
         ];
@@ -151,17 +164,23 @@ callEvents.on(
           sources: sourcesSnapshot,
         });
 
-        console.log(`[agentHub] calling extractEntities for ${callSid}`);
-        const extracted = await extractEntities(utterances, scope, {
-          currentState,
-          selectedProduct: call.selectedProduct,
-          scope,
-        });
-        console.log(`[agentHub] extractEntities done for ${callSid}`);
+        console.log(`[agentHub] calling extraction for ${callSid}`);
+        const extracted =
+          configPackageId === "uscis-n400"
+            ? await extractN400Entities(utterances)
+            : await extractEntities(utterances, scope, {
+                currentState,
+                selectedProduct: call.selectedProduct,
+                scope,
+              });
+        console.log(`[agentHub] extraction done for ${callSid}`);
 
         const fullEntity = mergeIntoEntityCache(callSid, extracted);
 
-        const scoreResult = computeCompletenessScore(fullEntity);
+        const scoreResult =
+          configPackageId === "uscis-n400"
+            ? computeN400CompletenessScore(fullEntity as Record<string, unknown>)
+            : computeCompletenessScore(fullEntity);
 
         broadcast(callSid, {
           type: "entity_update",
@@ -177,13 +196,25 @@ callEvents.on(
           tier:    scoreResult.tier,
         });
 
-        const missingFields = getMissingFieldsByStage(fullEntity, scope);
-        const guidance = await generateAgentGuidance(
-          fullEntity,
-          missingFields,
-          scope,
-          { callId: call.id, callSid }
-        );
+        const missingFields =
+          configPackageId === "uscis-n400"
+            ? listMissingApplicableFieldKeys(
+                USCIS_N400_VERTICAL_CONFIG,
+                fullEntity as Record<string, unknown>
+              )
+            : getMissingFieldsByStage(fullEntity, scope);
+        const guidance =
+          configPackageId === "uscis-n400"
+            ? await generateN400AgentGuidance(
+                fullEntity as Record<string, unknown>,
+                { callId: call.id, callSid }
+              )
+            : await generateAgentGuidance(
+                fullEntity,
+                missingFields,
+                scope,
+                { callId: call.id, callSid }
+              );
 
         broadcast(callSid, {
           type: "guidance",
@@ -286,40 +317,47 @@ export function handleAgentConnection(
         if (set?.size === 0) subscribers.delete(msg.callSid);
       }
 
-      if (
-        msg.type === "field_confirm" &&
-        msg.callSid &&
-        msg.field &&
-        isEntityFieldName(msg.field)
-      ) {
+      if (msg.type === "field_confirm" && msg.callSid && msg.field) {
+        const confirmSid = msg.callSid;
+        const confirmField = msg.field;
         void (async () => {
           try {
-            initEntityCache(msg.callSid!);
-            const prev = getEntityCache(msg.callSid!)[msg.field as EntityFieldName];
-            applyAgentFieldConfirm(msg.callSid!, msg.field as EntityFieldName);
+            initEntityCache(confirmSid);
+            const prev = (getEntityCache(confirmSid) as Record<string, unknown>)[
+              confirmField
+            ];
+            applyAgentFieldConfirm(confirmSid, confirmField);
             const call = await prisma.call.findUnique({
-              where: { callSid: msg.callSid },
+              where: { callSid: confirmSid },
               select: { id: true, intakeSessionId: true },
             });
             if (call) {
               await appendCallFieldChangeLog(call.id, {
-                fieldKey: msg.field!,
+                fieldKey: confirmField,
                 oldValue: prev,
                 newValue: prev,
                 reason: "agent_confirm",
                 actor: agentActor(agentSubject),
-                evidence: { callSid: msg.callSid },
+                evidence: { callSid: confirmSid },
               });
             }
-            const fullEntity = getEntityCache(msg.callSid!);
-            const scoreResult = computeCompletenessScore(fullEntity);
-            broadcast(msg.callSid!, {
+            const fullEntity = getEntityCache(confirmSid);
+            const callRow = await prisma.call.findUnique({
+              where: { callSid: confirmSid },
+              select: { intakeSession: { select: { configPackageId: true } } },
+            });
+            const pkg = callRow?.intakeSession?.configPackageId ?? null;
+            const scoreResult =
+              pkg === "uscis-n400"
+                ? computeN400CompletenessScore(fullEntity as Record<string, unknown>)
+                : computeCompletenessScore(fullEntity);
+            broadcast(confirmSid, {
               type: "entity_update",
-              callSid: msg.callSid!,
+              callSid: confirmSid,
               entities: fullEntity as Record<string, unknown>,
               score: { overall: scoreResult.overall, tier: scoreResult.tier },
             });
-            scheduleDebouncedEntitySnapshot(msg.callSid!);
+            scheduleDebouncedEntitySnapshot(confirmSid);
           } catch (e) {
             console.error("[agentHub] field_confirm:", e);
           }
@@ -330,40 +368,52 @@ export function handleAgentConnection(
         msg.type === "field_edit" &&
         msg.callSid &&
         msg.field &&
-        isEntityFieldName(msg.field) &&
         msg.value !== undefined
       ) {
+        const editSid = msg.callSid;
+        const editField = msg.field;
+        const editValue = msg.value;
         void (async () => {
           try {
-            initEntityCache(msg.callSid!);
-            const prev = getEntityCache(msg.callSid!)[msg.field as EntityFieldName];
+            initEntityCache(editSid);
+            const prev = (getEntityCache(editSid) as Record<string, unknown>)[
+              editField
+            ];
             const fullEntity = applyAgentFieldEdit(
-              msg.callSid!,
-              msg.field as EntityFieldName,
-              msg.value
+              editSid,
+              editField,
+              editValue
             );
             const call = await prisma.call.findUnique({
-              where: { callSid: msg.callSid },
+              where: { callSid: editSid },
               select: { id: true, intakeSessionId: true },
             });
             if (call) {
               await appendCallFieldChangeLog(call.id, {
-                fieldKey: msg.field!,
+                fieldKey: editField,
                 oldValue: prev,
-                newValue: msg.value,
+                newValue: editValue,
                 reason: "agent_edit",
                 actor: agentActor(agentSubject),
-                evidence: { callSid: msg.callSid },
+                evidence: { callSid: editSid },
               });
             }
-            const scoreResult = computeCompletenessScore(fullEntity);
-            broadcast(msg.callSid!, {
+            const callRow = await prisma.call.findUnique({
+              where: { callSid: editSid },
+              select: { intakeSession: { select: { configPackageId: true } } },
+            });
+            const pkg = callRow?.intakeSession?.configPackageId ?? null;
+            const scoreResult =
+              pkg === "uscis-n400"
+                ? computeN400CompletenessScore(fullEntity as Record<string, unknown>)
+                : computeCompletenessScore(fullEntity);
+            broadcast(editSid, {
               type: "entity_update",
-              callSid: msg.callSid!,
+              callSid: editSid,
               entities: fullEntity as Record<string, unknown>,
               score: { overall: scoreResult.overall, tier: scoreResult.tier },
             });
-            scheduleDebouncedEntitySnapshot(msg.callSid!);
+            scheduleDebouncedEntitySnapshot(editSid);
           } catch (e) {
             console.error("[agentHub] field_edit:", e);
           }

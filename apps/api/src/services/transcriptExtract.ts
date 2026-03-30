@@ -1,12 +1,11 @@
 import type { LifeInsuranceEntity } from "@prisma/client";
 import { prisma } from "../db/prisma";
-import { EntityFieldName } from "../config/fieldStages";
 import {
   buildEntityPayload,
   entityRowToFlatState,
 } from "./entityPayload";
-import { extractEntities, type ExtractedEntities } from "./claude";
-import { computeCompletenessScore } from "./scoring";
+import { extractEntities, extractN400Entities } from "./claude";
+import { computeCompletenessScore, computeN400CompletenessScore } from "./scoring";
 import type { EntityState } from "./stageManager";
 
 /** Max characters of joined utterance text per Claude extraction call (input budget). */
@@ -24,7 +23,7 @@ function isFieldEmpty(value: unknown): boolean {
  */
 export function mergeExtractIntoFlatState(
   base: EntityState,
-  extracted: ExtractedEntities,
+  extracted: Record<string, unknown>,
   agentCorrected: boolean
 ): {
   merged: EntityState;
@@ -34,15 +33,15 @@ export function mergeExtractIntoFlatState(
   const merged: EntityState = { ...base };
   const appliedKeys: string[] = [];
   const skippedDueToCorrection: string[] = [];
+  const flat = merged as Record<string, unknown>;
 
   for (const [key, value] of Object.entries(extracted)) {
     if (value === null || value === undefined) continue;
-    const k = key as EntityFieldName;
-    if (agentCorrected && !isFieldEmpty(merged[k])) {
+    if (agentCorrected && !isFieldEmpty(flat[key])) {
       skippedDueToCorrection.push(key);
       continue;
     }
-    (merged as Record<string, unknown>)[key] = value;
+    flat[key] = value;
     appliedKeys.push(key);
   }
 
@@ -87,9 +86,9 @@ export function chunkUtterancesForExtraction(
 }
 
 function mergeChunkExtractions(
-  a: ExtractedEntities,
-  b: ExtractedEntities
-): ExtractedEntities {
+  a: Record<string, unknown>,
+  b: Record<string, unknown>
+): Record<string, unknown> {
   return { ...a, ...b };
 }
 
@@ -159,6 +158,7 @@ export async function runTranscriptExtractAndPersist(
     select: {
       id: true,
       entity: true,
+      intakeSession: { select: { configPackageId: true } },
     },
   });
 
@@ -175,10 +175,14 @@ export async function runTranscriptExtractAndPersist(
   }
 
   const chunks = chunkUtterancesForExtraction(utterances);
-  let extracted: ExtractedEntities = {};
+  let extracted: Record<string, unknown> = {};
+  const configPackageId = call.intakeSession?.configPackageId ?? null;
 
   for (const chunk of chunks) {
-    const part = await extractEntities(chunk, "all", { scope: "all" });
+    const part =
+      configPackageId === "uscis-n400"
+        ? await extractN400Entities(chunk)
+        : await extractEntities(chunk, "all", { scope: "all" });
     extracted = mergeChunkExtractions(extracted, part);
   }
 
@@ -191,11 +195,13 @@ export async function runTranscriptExtractAndPersist(
   const { merged, appliedKeys, skippedDueToCorrection } =
     mergeExtractIntoFlatState(base, extracted, agentCorrected);
 
-  if (
-    merged.existingCoverageAmount != null &&
-    (merged.existingCoverage === undefined || merged.existingCoverage === null)
-  ) {
-    merged.existingCoverage = true;
+  if (configPackageId !== "uscis-n400") {
+    if (
+      merged.existingCoverageAmount != null &&
+      (merged.existingCoverage === undefined || merged.existingCoverage === null)
+    ) {
+      merged.existingCoverage = true;
+    }
   }
 
   const payload = buildEntityPayload(merged);
@@ -205,7 +211,10 @@ export async function runTranscriptExtractAndPersist(
     update: payload,
   });
 
-  const { overall, tier } = computeCompletenessScore(merged);
+  const { overall, tier } =
+    configPackageId === "uscis-n400"
+      ? computeN400CompletenessScore(merged as Record<string, unknown>)
+      : computeCompletenessScore(merged);
   await prisma.call.update({
     where: { id: call.id },
     data: { completenessScore: overall },

@@ -177,6 +177,104 @@ async function upsertContact(
   return response.data.contact.id;
 }
 
+interface GhlContactSearchResponse {
+  contacts?: { id?: string; phone?: string }[];
+}
+
+/**
+ * Best-effort lookup so voice inbound does not create duplicate GHL contacts.
+ */
+async function searchContactIdByPhone(
+  client: AxiosInstance,
+  locationId: string,
+  phoneE164: string
+): Promise<string | null> {
+  const q = phoneE164.trim();
+  if (!q) return null;
+  try {
+    const response = await client.post<GhlContactSearchResponse>("/contacts/search", {
+      locationId,
+      pageLimit: 10,
+      page: 1,
+      query: q,
+    });
+    const contacts = response.data?.contacts;
+    if (!Array.isArray(contacts) || contacts.length === 0) return null;
+    const digits = q.replace(/\D/g, "");
+    for (const c of contacts) {
+      if (!c?.id) continue;
+      const p = (c.phone ?? "").replace(/\D/g, "");
+      if (p && digits && (p === digits || p.endsWith(digits) || digits.endsWith(p))) {
+        return c.id;
+      }
+    }
+    return contacts[0]?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Ensures a GHL contact exists for an inbound voice caller and returns its id.
+ */
+export async function ensureInboundVoiceContact(
+  ghlLocationId: string,
+  callerE164: string
+): Promise<string> {
+  const { client, locationId } = await getGhlClientForLocation(ghlLocationId);
+  const existing = await searchContactIdByPhone(client, locationId, callerE164);
+  if (existing) return existing;
+  return upsertContact(client, locationId, {
+    phone: callerE164.trim(),
+    tags: ["easy-intake", "voice-inbound"],
+  });
+}
+
+/**
+ * Links Call + IntakeSession to GHL at ring time so `/ghl/api/active-call` can resolve CallSid while the call is live.
+ */
+export async function earlyLinkVoiceCallToGhl(params: {
+  callDbId: string;
+  callerE164: string;
+  ghlLocationId: string;
+}): Promise<void> {
+  const { callDbId, callerE164, ghlLocationId } = params;
+  const ghlContactId = await ensureInboundVoiceContact(ghlLocationId, callerE164);
+
+  await prisma.call.update({
+    where: { id: callDbId },
+    data: { ghlContactId },
+  });
+
+  const call = await prisma.call.findUnique({
+    where: { id: callDbId },
+    select: { intakeSessionId: true },
+  });
+  if (!call?.intakeSessionId) return;
+
+  const sess = await prisma.intakeSession.findUnique({
+    where: { id: call.intakeSessionId },
+    select: { externalIds: true },
+  });
+  const prevExt =
+    sess?.externalIds &&
+    typeof sess.externalIds === "object" &&
+    !Array.isArray(sess.externalIds)
+      ? { ...(sess.externalIds as Record<string, unknown>) }
+      : {};
+
+  await prisma.intakeSession.update({
+    where: { id: call.intakeSessionId },
+    data: {
+      externalIds: {
+        ...prevExt,
+        ghlContactId,
+        ghlLocationId,
+      } as object,
+    },
+  });
+}
+
 async function addContactNote(
   client: AxiosInstance,
   contactId: string,

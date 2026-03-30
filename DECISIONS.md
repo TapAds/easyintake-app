@@ -35,6 +35,9 @@
 | **String field keys (`packages/shared`)** | **EntityFieldName**-style enums give way to **string keys** in shared types; verticals ship as **config packages** (Insurance first in the build track). |
 | **Insurance as first vertical (current)** | Prisma models such as **`LifeInsuranceEntity`** — DB is **insurance-shaped today**; generalization is **ongoing**, not complete. |
 | **Second client — inmigracioningreso.com** | Immigration intake (Spanish-speaking markets); **`uscis-i90`** / **`uscis-n400`** config packages **after** Insurance is proven; separate Next.js site webhooks to `apps/api`. |
+| **Immigration prompts modular** | USCIS **N-400** extraction/guidance prompts live in **`apps/api/src/prompts/uscisN400Extract.ts`** and **`uscisN400Guidance.ts`**; vertical definition split under **`packages/shared/src/verticals/uscisN400/`** (replacing a single flat module). |
+| **Legal copy in shared package** | Terms and privacy JSON (**en**/**es**) ship from **`packages/shared/src/legal/`** and are re-exported as **`@easy-intake/shared/legal/*`** so `apps/web` loads one canonical copy. |
+| **Optional agency voice forward** | **`AgencyConfig.voiceAgentForwardNumber`** (E.164): when set, Twilio voice path may **bridge** to that destination via dial/conference helper (`twilioConference.ts`); unset preserves prior direct-media behavior for the number. |
 
 ---
 
@@ -53,6 +56,7 @@
 | Decision | Notes |
 |----------|--------|
 | **Extraction path** | Prefer documented "live" extraction modules over legacy prompts where referenced in code. |
+| **Form catalog PDF assist** | **`POST /api/intake/form-catalog/analyze-pdf`** (Bearer JWT) uses Claude to propose a **draft** JSON catalog (sections + fields) from an uploaded blank PDF; treat output as **human-reviewed** before using as a production vertical preset. |
 | **Compliance / templates** | Agent-facing guidance and customer SMS should respect filtering and templates in `apps/api` — do not bypass for convenience. |
 | **Quote engine** | **Out of scope** as a core owned system in current product framing (Phase 2 / external). |
 | **Agent realtime UI (MVP)** | **`apps/api/public/agent.html`** remains the **WebSocket-backed** agent surface for calls; **`apps/web`** **bridges** (link/embed + **application JWT** from BFF). Moving the full realtime agent UI into Next.js is **not** required for MVP. |

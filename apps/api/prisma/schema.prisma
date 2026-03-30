@@ -278,16 +278,18 @@ model GhlProcessedInboundMessage {
 }
 
 model AgencyConfig {
-  id                String   @id @default(cuid())
-  ghlLocationId     String   @unique
-  ghlAccessToken    String
-  ghlRefreshToken   String
-  ghlTokenExpiresAt DateTime
-  agencyName        String   @default("Easy Intake Agency")
-  twilioAccountSid  String
-  twilioPhoneNumber String   // E.164 format
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  id                     String   @id @default(cuid())
+  ghlLocationId          String   @unique
+  ghlAccessToken         String
+  ghlRefreshToken        String
+  ghlTokenExpiresAt      DateTime
+  agencyName             String   @default("Easy Intake Agency")
+  twilioAccountSid       String
+  twilioPhoneNumber      String // E.164 format
+  /// When set, inbound TwiML uses Conference + outbound dial so this PSTN/SIP number rings into the same room (keeps Media Stream on the Twilio leg). Overrides VOICE_AGENT_FORWARD_NUMBER for this agency.
+  voiceAgentForwardNumber String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 }
 
 model ComplianceLog {

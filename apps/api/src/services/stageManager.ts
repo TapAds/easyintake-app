@@ -34,7 +34,7 @@ const callEntityCache = new Map<string, EntityState>();
 /** Per-field provenance for agent locks and prompt wiring (parallel to callEntityCache). */
 const callFieldSourceCache = new Map<
   string,
-  Partial<Record<EntityFieldName, EntityFieldValueSource>>
+  Partial<Record<string, EntityFieldValueSource>>
 >();
 
 export function initEntityCache(callSid: string): void {
@@ -51,7 +51,7 @@ export function initEntityCache(callSid: string): void {
  */
 export function getEntityFieldSources(
   callSid: string
-): Partial<Record<EntityFieldName, EntityFieldValueSource>> {
+): Partial<Record<string, EntityFieldValueSource>> {
   return { ...(callFieldSourceCache.get(callSid) ?? {}) };
 }
 
@@ -70,11 +70,10 @@ export function mergeIntoEntityCache(
 
   for (const [key, value] of Object.entries(extracted)) {
     if (value === null || value === undefined) continue;
-    const k = key as EntityFieldName;
-    const src = sources[k];
+    const src = sources[key];
     if (src === "agent_confirmed" || src === "agent_edited") continue;
-    (current as Record<string, unknown>)[k] = value;
-    sources[k] = "ai";
+    (current as Record<string, unknown>)[key] = value;
+    sources[key] = "ai";
   }
 
   callFieldSourceCache.set(callSid, sources);
@@ -86,10 +85,11 @@ export function mergeIntoEntityCache(
 /** Agent confirms the current cached value (locks against AI overwrites). */
 export function applyAgentFieldConfirm(
   callSid: string,
-  field: EntityFieldName
+  field: string
 ): EntityState {
   const current = callEntityCache.get(callSid) ?? {};
-  if (current[field] === null || current[field] === undefined) return current;
+  const flat = current as Record<string, unknown>;
+  if (flat[field] === null || flat[field] === undefined) return current;
   const sources = { ...(callFieldSourceCache.get(callSid) ?? {}) };
   sources[field] = "agent_confirmed";
   callFieldSourceCache.set(callSid, sources);
@@ -99,7 +99,7 @@ export function applyAgentFieldConfirm(
 /** Agent manually sets a value (locks as agent_edited). */
 export function applyAgentFieldEdit(
   callSid: string,
-  field: EntityFieldName,
+  field: string,
   value: unknown
 ): EntityState {
   const current = { ...(callEntityCache.get(callSid) ?? {}) };

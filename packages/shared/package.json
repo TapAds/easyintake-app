@@ -4,9 +4,22 @@
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./legal/terms-en.json": "./src/legal/terms-en.json",
+    "./legal/terms-es.json": "./src/legal/terms-es.json",
+    "./legal/privacy-en.json": "./src/legal/privacy-en.json",
+    "./legal/privacy-es.json": "./src/legal/privacy-es.json"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

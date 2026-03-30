@@ -4,6 +4,7 @@ import {
   QUOTE_FIELDS,
   APPLICATION_FIELDS,
 } from "../config/fieldStages";
+import { filterApplicableFields, USCIS_N400_VERTICAL_CONFIG } from "@easy-intake/shared";
 import { EntityState } from "./stageManager";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -96,4 +97,30 @@ export function computeCompletenessScore(entity: EntityState): CompletenessScore
     overall,
     tier: tierFromScore(overall),
   };
+}
+
+/**
+ * Weight-sum completeness over applicable (visibility-respecting) N-400 catalog fields.
+ */
+export function computeN400CompletenessScore(entity: Record<string, unknown>): {
+  overall: number;
+  tier: ScoreTier;
+} {
+  const fields = filterApplicableFields(USCIS_N400_VERTICAL_CONFIG.fields, entity);
+  let collected = 0;
+  let total = 0;
+  for (const f of fields) {
+    const w = f.weight ?? 1;
+    total += w;
+    const v = entity[f.key];
+    if (
+      v !== null &&
+      v !== undefined &&
+      !(typeof v === "string" && String(v).trim() === "")
+    ) {
+      collected += w;
+    }
+  }
+  const overall = total === 0 ? 0 : collected / total;
+  return { overall, tier: tierFromScore(overall) };
 }

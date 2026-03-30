@@ -17,17 +17,55 @@ export function AddFormApplicationDialog() {
   const [tab, setTab] = useState<"pdf" | "manual">("pdf");
   const [applicationName, setApplicationName] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [contextFiles, setContextFiles] = useState<File[]>([]);
   const [fields, setFields] = useState<FieldRow[]>([newRow()]);
+  const [catalogDraft, setCatalogDraft] = useState<unknown>(null);
+  const [analyzeBusy, setAnalyzeBusy] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   const close = useCallback(() => {
     setOpen(false);
     setTab("pdf");
     setApplicationName("");
     setFileName(null);
+    setPdfFile(null);
     setContextFiles([]);
     setFields([newRow()]);
+    setCatalogDraft(null);
+    setAnalyzeError(null);
+    setAnalyzeBusy(false);
   }, []);
+
+  const runAnalyzePdf = useCallback(async () => {
+    const file = pdfFile;
+    if (!file) return;
+    setAnalyzeError(null);
+    setAnalyzeBusy(true);
+    setCatalogDraft(null);
+    try {
+      const fd = new FormData();
+      fd.set("file", file);
+      const res = await fetch("/api/intake/form-catalog/analyze", {
+        method: "POST",
+        body: fd,
+        credentials: "include",
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        draft?: unknown;
+      };
+      if (!res.ok) {
+        setAnalyzeError(data.error ?? t("analyzeError"));
+        return;
+      }
+      setCatalogDraft(data.draft ?? data);
+    } catch {
+      setAnalyzeError(t("analyzeError"));
+    } finally {
+      setAnalyzeBusy(false);
+    }
+  }, [pdfFile, t]);
 
   return (
     <>
@@ -48,7 +86,7 @@ export function AddFormApplicationDialog() {
             role="dialog"
             aria-modal="true"
             aria-labelledby={dialogTitleId}
-            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-foreground/15 bg-background p-5 shadow-xl"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-foreground/15 bg-background p-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id={dialogTitleId} className="text-lg font-semibold text-foreground">
@@ -91,17 +129,20 @@ export function AddFormApplicationDialog() {
             </label>
 
             {tab === "pdf" ? (
-              <div className="mt-4">
+              <div className="mt-4 space-y-3">
                 <p className="text-sm text-foreground/65">{t("pdfHint")}</p>
-                <label className="mt-2 flex cursor-pointer flex-col gap-2 rounded-lg border border-dashed border-foreground/25 bg-foreground/[0.02] px-4 py-6 text-center text-sm">
+                <label className="flex cursor-pointer flex-col gap-2 rounded-lg border border-dashed border-foreground/25 bg-foreground/[0.02] px-4 py-6 text-center text-sm">
                   <span className="font-medium text-primary">{t("pdfLabel")}</span>
                   <input
                     type="file"
                     accept="application/pdf"
                     className="hidden"
                     onChange={(e) => {
-                      const f = e.target.files?.[0];
+                      const f = e.target.files?.[0] ?? null;
+                      setPdfFile(f);
                       setFileName(f?.name ?? null);
+                      setCatalogDraft(null);
+                      setAnalyzeError(null);
                     }}
                   />
                   {fileName ? (
@@ -110,6 +151,29 @@ export function AddFormApplicationDialog() {
                     <span className="text-foreground/50">{t("pdfChoose")}</span>
                   )}
                 </label>
+                <button
+                  type="button"
+                  disabled={!pdfFile || analyzeBusy}
+                  className="w-full rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-medium text-primary hover:bg-primary/15 disabled:opacity-50"
+                  onClick={() => void runAnalyzePdf()}
+                >
+                  {analyzeBusy ? t("analyzing") : t("analyzePdf")}
+                </button>
+                {analyzeError ? (
+                  <p className="text-xs text-red-600 dark:text-red-400" role="alert">
+                    {analyzeError}
+                  </p>
+                ) : null}
+                {catalogDraft != null ? (
+                  <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-2">
+                    <p className="text-xs font-medium text-foreground/70 mb-1">
+                      {t("draftPreviewTitle")}
+                    </p>
+                    <pre className="max-h-52 overflow-auto text-[11px] font-mono text-foreground/85 whitespace-pre-wrap break-words">
+                      {JSON.stringify(catalogDraft, null, 2)}
+                    </pre>
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="mt-4 space-y-3">

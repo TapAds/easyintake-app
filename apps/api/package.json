@@ -14,6 +14,7 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@easy-intake/shared": "*",
     "@anthropic-ai/sdk": "^0.32.1",
     "@deepgram/sdk": "^3.9.0",
     "@prisma/client": "^5.22.0",

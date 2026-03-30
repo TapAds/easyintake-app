@@ -1,3 +1,28 @@
+import { USCIS_N400_VERTICAL_CONFIG } from "@easy-intake/shared";
+import type { VerticalFieldDefinition } from "@easy-intake/shared";
+
+/**
+ * Applies per-field `outputMappings` (pdf) from the vertical catalog onto Anvil `data`.
+ */
+export function applyCatalogPdfScalarMappings(
+  entities: Record<string, unknown>,
+  fields: VerticalFieldDefinition[],
+  data: Record<string, unknown>
+): void {
+  for (const field of fields) {
+    const maps = field.outputMappings?.filter(
+      (m) => m.destinationKind === "pdf" || m.destinationKind === undefined
+    );
+    if (!maps?.length) continue;
+    const v = entities[field.key];
+    if (v === undefined || v === null) continue;
+    if (typeof v === "string" && v.trim() === "") continue;
+    for (const m of maps) {
+      data[m.destinationKey] = v;
+    }
+  }
+}
+
 /**
  * Maps live-demo entity keys (uscis-n400 package) to Anvil N-400 template `data` aliases.
  * Only defined values are included; Anvil ignores unspecified template fields.
@@ -217,6 +242,8 @@ export function buildImmN400FillData(
     data.interpretersEmailAddress = email;
     data.preparersEmailAddress = email;
   }
+
+  applyCatalogPdfScalarMappings(entities, USCIS_N400_VERTICAL_CONFIG.fields, data);
 
   return data;
 }

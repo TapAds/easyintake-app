@@ -34,7 +34,7 @@ easy-intake-site/         ← Sibling static site — NOT in the workspace
 | UI | Location | Role |
 |----|----------|------|
 | **Realtime agent dashboard (static)** | `apps/api/public/agent.html` | Connects to the API WebSocket with a JWT; shows transcript / entities / guidance during a call. **This is the current realtime agent UI.** |
-| **Next.js app** | `apps/web` | Localized shell (`/en`, `/es`): home, Clerk auth, protected dashboard areas including **intake queue** and **session detail** (data from BFF/fixtures until API wiring is complete). **Not** the realtime voice UI during calls — that remains **`agent.html`** on `apps/api`. |
+| **Next.js app** | `apps/web` | Localized shell (`/en`, `/es`): home, Clerk auth, protected dashboard (**Live demo**, **Live call**, **Settings**, queue/session surfaces), and applicant-facing **`/[locale]/intake/*`** routes as implemented. **Not** the realtime voice UI during calls — that remains **`agent.html`** on `apps/api`. |
 
 ---
 
@@ -53,15 +53,18 @@ flowchart LR
 ```
 
 - **Inbound call:** Twilio hits `apps/api` voice + status webhooks; media streams feed transcription; utterances drive extraction and stage/score updates; on call end, persistence and CRM/SMS as implemented.
+- **Agency forward / conference (optional):** When **`AgencyConfig.voiceAgentForwardNumber`** is set, the voice webhook + TwiML path may **dial** that destination and/or use a **Twilio conference** so the engine and a live agent share audio (see `twilioConference.ts`, `voice.ts`, `twiml.ts`). If unset, behavior matches the previous direct-media path for that number.
 - **cotizarahora:** Out-of-band **HTTP POST** to `/api/webhooks/intake` per [WEBHOOK_SPEC.md](api-contract/WEBHOOK_SPEC.md); handler validates secret + source, then processes events (GHL upsert, notes, etc.).
+- **Form catalog (draft):** Authenticated **`POST /api/intake/form-catalog/analyze-pdf`** (`formCatalog.ts`) sends a PDF to Claude and returns JSON **sections/fields** suitable for seeding a vertical package (human review required before production use).
+- **Shared legal copy:** Terms/privacy JSON lives in **`packages/shared/src/legal/`** and is exported via **`@easy-intake/shared/legal/*`** for `apps/web` — single source for bilingual legal pages.
 
 ---
 
 ## 5. Database (honest)
 
 - **ORM:** Prisma + PostgreSQL (`apps/api/prisma/schema.prisma`).
-- **Today:** Schema is **insurance vertical–shaped** (e.g. `LifeInsuranceEntity`, insurance-oriented fields). **`IntakeLead`** supports the cotizarahora webhook idempotency story.
-- **Goal:** Vertical-agnostic **engine** with config-driven fields — **storage and models are not fully generalized yet.** New verticals may need schema evolution or abstraction.
+- **Today:** Schema is **insurance vertical–shaped** (e.g. `LifeInsuranceEntity`, insurance-oriented fields). **`IntakeLead`** supports the cotizarahora webhook idempotency story. **`AgencyConfig`** includes optional **`voiceAgentForwardNumber`** for Twilio bridging.
+- **Goal:** Vertical-agnostic **engine** with config-driven fields — **storage and models are not fully generalized yet.** New verticals may need schema evolution or abstraction. **Immigration (N-400, etc.)** is modeled primarily in **`packages/shared`** vertical configs and **API prompts** (`uscisN400Extract`, `uscisN400Guidance`), not a second Prisma entity today.
 
 ---
 

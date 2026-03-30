@@ -3,6 +3,7 @@
 import {
   DEFAULT_LIVE_DEMO_CONFIG_PACKAGE_ID,
   LIVE_DEMO_PRESETS,
+  listApplicableFieldKeys,
 } from "@easy-intake/shared";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -90,8 +91,14 @@ type AgentMsg =
     }
   | { type: "call_ended" };
 
-export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
-  const t = useTranslations("demo.live");
+export function LiveDemoClient({
+  apiBaseUrl,
+  uiMode = "demo",
+}: {
+  apiBaseUrl: string;
+  uiMode?: "demo" | "liveCall";
+}) {
+  const t = useTranslations(uiMode === "liveCall" ? "demo.liveCall" : "demo.live");
   const locale = useLocale();
   const [presetId, setPresetId] = useState(LIVE_DEMO_PRESETS[0]?.id ?? "");
   const [callSid, setCallSid] = useState("");
@@ -113,6 +120,10 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   const [twilioLoading, setTwilioLoading] = useState(false);
   const [flashingKeys, setFlashingKeys] = useState<Set<string>>(() => new Set());
   const [linkCopied, setLinkCopied] = useState(false);
+  const [copiedTwilioSid, setCopiedTwilioSid] = useState<string | null>(null);
+  const copiedTwilioSidTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [extractBusy, setExtractBusy] = useState(false);
@@ -127,9 +138,6 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
 
   const preset = LIVE_DEMO_PRESETS.find((p) => p.id === presetId);
 
-  /** Life-insurance demo presets use LifeInsuranceEntity + V2 extraction; immigration uses another vertical. */
-  const canExtractWithInsuranceModel = presetId !== "imm_n400";
-
   const pdfTemplateId = useMemo(() => {
     if (presetId === "imm_n400") return "uscis_n400" as const;
     if (presetId === "nlg_term_life") return "nlg_term_life" as const;
@@ -141,14 +149,17 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   const verticalCfg = useMemo(() => getVerticalConfigForPackage(pkg), [pkg]);
 
   const applicationFieldKeys = useMemo(
-    () => (verticalCfg?.fields ?? []).map((f) => f.key),
-    [verticalCfg]
+    () =>
+      verticalCfg
+        ? listApplicableFieldKeys(verticalCfg, entities)
+        : [],
+    [verticalCfg, entities]
   );
 
   const sectionFieldGroups = useMemo(() => {
     if (!verticalCfg) return [];
-    return groupFieldsBySection(verticalCfg);
-  }, [verticalCfg]);
+    return groupFieldsBySection(verticalCfg, entities);
+  }, [verticalCfg, entities]);
 
   const sectionRows = useMemo(() => {
     if (!verticalCfg) return [];
@@ -230,6 +241,14 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (copiedTwilioSidTimeoutRef.current) {
+        clearTimeout(copiedTwilioSidTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const prev = prevEntitiesRef.current;
     for (const key of applicationFieldKeys) {
       if (
@@ -252,6 +271,28 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     }
     prevEntitiesRef.current = { ...entities };
   }, [entities, applicationFieldKeys]);
+
+  const copyTwilioCallSid = useCallback(
+    async (sid: string) => {
+      const trimmed = sid.trim();
+      if (!trimmed) return;
+      try {
+        await navigator.clipboard.writeText(trimmed);
+        if (copiedTwilioSidTimeoutRef.current) {
+          clearTimeout(copiedTwilioSidTimeoutRef.current);
+        }
+        setCopiedTwilioSid(trimmed);
+        copiedTwilioSidTimeoutRef.current = setTimeout(() => {
+          setCopiedTwilioSid(null);
+          copiedTwilioSidTimeoutRef.current = null;
+        }, 2000);
+        setError(null);
+      } catch {
+        setError(t("copyCallSidError"));
+      }
+    },
+    [t]
+  );
 
   const loadTwilioCalls = useCallback(() => {
     setTwilioError(null);
@@ -403,7 +444,7 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
 
   const runBatchExtract = useCallback(async () => {
     const sid = callSid.trim();
-    if (!sid || !canExtractWithInsuranceModel) return;
+    if (!sid) return;
     setExtractError(null);
     setExtractNotice(null);
     setExtractBusy(true);
@@ -440,7 +481,7 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     } finally {
       setExtractBusy(false);
     }
-  }, [callSid, canExtractWithInsuranceModel, t]);
+  }, [callSid, t]);
 
   const copyApplicantLink = useCallback(async () => {
     try {
@@ -661,19 +702,13 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
         <button
           type="button"
           className={primaryStubClass}
-          disabled={
-            !canExtractWithInsuranceModel ||
-            !callSid.trim() ||
-            extractBusy
-          }
+          disabled={!callSid.trim() || extractBusy}
           title={
-            !canExtractWithInsuranceModel
-              ? t("extractWrongPreset")
-              : !callSid.trim()
-                ? t("extractNeedCallSid")
-                : extractBusy
-                  ? t("extractRunning")
-                  : undefined
+            !callSid.trim()
+              ? t("extractNeedCallSid")
+              : extractBusy
+                ? t("extractRunning")
+                : undefined
           }
           onClick={() => void runBatchExtract()}
         >
@@ -881,28 +916,36 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-left text-foreground/60 border-b border-foreground/10">
-                      <th className="p-2">{t("colSid")}</th>
-                      <th className="p-2">{t("colStatus")}</th>
-                      <th className="p-2">{t("colWhen")}</th>
+                      <th className="p-2 font-normal w-[1%]" />
+                      <th className="p-2 font-normal">{t("colCallFrom")}</th>
+                      <th className="p-2 font-normal">{t("colCalledNumber")}</th>
+                      <th className="p-2 font-normal">{t("colStatus")}</th>
+                      <th className="p-2 font-normal">{t("colWhen")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {twilioRows.map((row) => (
                       <tr key={row.sid} className="border-t border-foreground/10">
-                        <td className="p-2">
+                        <td className="p-2 whitespace-nowrap align-top">
                           <button
                             type="button"
-                            onClick={() => {
-                              setCallSid(row.sid);
-                              setError(null);
-                            }}
-                            className="font-mono text-primary hover:underline text-left"
+                            onClick={() => void copyTwilioCallSid(row.sid)}
+                            className="rounded border border-foreground/20 bg-background px-2 py-1 text-primary hover:bg-foreground/5 text-left"
+                            aria-label={t("copyCallSid")}
                           >
-                            {row.sid}
+                            {copiedTwilioSid === row.sid
+                              ? t("copiedCallSid")
+                              : t("copyCallSid")}
                           </button>
                         </td>
-                        <td className="p-2">{row.status}</td>
-                        <td className="p-2 text-foreground/70">
+                        <td className="p-2 align-top tabular-nums">
+                          {String(row.from ?? "").trim() || "—"}
+                        </td>
+                        <td className="p-2 align-top tabular-nums">
+                          {String(row.to ?? "").trim() || "—"}
+                        </td>
+                        <td className="p-2 align-top">{row.status}</td>
+                        <td className="p-2 text-foreground/70 align-top">
                           {row.dateCreated
                             ? new Date(row.dateCreated).toLocaleString(locale)
                             : "—"}

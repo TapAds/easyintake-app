@@ -7,8 +7,11 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 ## Now
 
 - **Universal voice demo** — Single product demo line **`+1 430-300-3049`** for [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo): operator confirms **Product / Form (demo)** in the UI, prospect calls the number; **Application fields (live)** shows the **full catalog by section** for that package as values stream in. Documented in [docs/demo/LIVE_CALL_DEMO.md](docs/demo/LIVE_CALL_DEMO.md).
+- **Live call dashboard** — `/{locale}/dashboard/live-call` for operator-led sessions with real-time field grid (paired with engine + Clerk/JWT bridge as implemented).
 - **Insurance vertical** — first **vertical config package** (string field keys, config-driven forms and HITL).
 - **Agent dashboard** — org queue, session detail, field review from config, reporting overview (replace demo data as APIs land).
+- **Settings (in app)** — Dashboard **Settings** includes **CRM integrations** and related surfaces; org profile and deeper onboarding UX still expanding (see **Soon**).
+- **Form catalog assist (API)** — Authenticated **`POST /api/intake/form-catalog/analyze-pdf`** returns a draft catalog from a blank PDF (Claude); productizes “carrier documents → preset” when wired end-to-end.
 - **Foundation** — `IntakeSession` model (vertical-agnostic), BFF to `apps/api`, bilingual shell. **`apps/web`** is deployable to **Vercel** with **Clerk** (production DNS + env per [`apps/web/DEPLOY-PRODUCTION.md`](apps/web/DEPLOY-PRODUCTION.md)); keep **GitHub `main`** in sync with what you expect to run in production.
 
 ---
@@ -27,6 +30,7 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 
 - **Audience:** **Agents** and **agency admins** (org-scoped; permission model TBD — align with Clerk org roles per [DECISIONS.md](DECISIONS.md) / [ARCHITECTURE.md](ARCHITECTURE.md) as those harden).
 - **Purpose:** Ongoing in-app configuration: org profile, **products / forms** mappings, **CRM** integrations, user and invite management as appropriate, voice numbers / environments, feature toggles, and the rest of what the dashboard **Settings** shell should own—aligned with [PLATFORM_BUILD_PLAN.md](docs/specs/PLATFORM_BUILD_PLAN.md) as dashboard IA evolves.
+- **Status:** **CRM integrations** (and related UI) are **shipped in skeleton/product form**; org profile, invites, and voice/env management remain **[PLANNED]** or partial — keep this item until day-two admin is complete end-to-end.
 - **Org profile (in progress):** Dashboard **Settings → Organization** captures **display name**, **website**, and **logo** (upload to blob storage or **fetch from website** with explicit user approval). Name and metadata live on the **Clerk organization**; logo URL is suitable for **applicant microsites**, forms, and other branded surfaces once those routes read from the same source.
 - **Relationship to onboarding:** **Settings** is the **day-two admin surface** after initial setup; onboarding should **pre-fill or hand off** into Organization (and related settings); microsites and embedded flows **consume** org profile fields when wired.
 
@@ -64,5 +68,5 @@ Use this as the **practical ladder** when standing up a new agency (voice + engi
 1. **Single number + sandbox** — Twilio number → dev/staging API URL; test calls create `Call` / session records; CRM optional or sandbox. **Product demos:** use **`+1 430-300-3049`** with [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo) unless testing a dedicated agency number.
 2. **Tenant mapping** — Bind number(s) to `organizationId` + default vertical/config package; verify webhook **signature** and **media stream** health.
 3. **Production cutover** — Point production number to prod `publicBaseUrl`; enable **status callbacks** and CRM sync per org.
-4. **Forwarding level** — Choose direct-to-engine vs IVR-first per number; add conference / warm handoff only when needed.
+4. **Forwarding level** — Choose direct-to-engine vs IVR-first per number; optional **`voiceAgentForwardNumber`** on `AgencyConfig` for **dial-out / conference** to an agent line; add IVR / warm handoff only when needed.
 5. **Dashboard access** — Clerk users for org; **agent voice** uses **application JWT** for WebSocket (two-auth flow — see [DECISIONS.md](DECISIONS.md)).

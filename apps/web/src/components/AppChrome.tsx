@@ -6,11 +6,17 @@ import { UserButton } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { SiteFooter } from "@/components/SiteFooter";
+import { useClientSuperAdmin } from "@/lib/auth/useClientSuperAdmin";
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
   const locale = useLocale();
   const pathname = usePathname();
+  const isSuperAdmin = useClientSuperAdmin();
+  const voiceHrefSegment = isSuperAdmin ? "live-demo" : "live-call";
+  const voiceNavActive =
+    pathname.startsWith(`/${locale}/dashboard/live-demo`) ||
+    pathname.startsWith(`/${locale}/dashboard/live-call`);
 
   const prefix = `/${locale}`;
 
@@ -58,14 +64,12 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
                 {t("intakeQueue")}
               </Link>
               <Link
-                href={`${prefix}/dashboard/live-demo`}
+                href={`${prefix}/dashboard/${voiceHrefSegment}`}
                 className={`hover:text-foreground ${
-                  pathname.startsWith(`${prefix}/dashboard/live-demo`)
-                    ? "text-primary"
-                    : "text-foreground/70"
+                  voiceNavActive ? "text-primary" : "text-foreground/70"
                 }`}
               >
-                {t("liveDemo")}
+                {isSuperAdmin ? t("liveDemo") : t("liveCall")}
               </Link>
               <Link
                 href={`${prefix}/dashboard/settings`}

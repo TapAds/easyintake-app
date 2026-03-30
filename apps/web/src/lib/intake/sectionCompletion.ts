@@ -3,15 +3,13 @@ import type {
   VerticalFieldDefinition,
   VerticalSection,
 } from "@easy-intake/shared";
+import {
+  isFieldApplicable,
+  isVerticalFieldValueFilled,
+} from "@easy-intake/shared";
 
 /** True if the entity value counts as collected for completion bars. */
-export function isFieldValueFilled(value: unknown): boolean {
-  if (value === undefined || value === null) return false;
-  if (typeof value === "boolean") return true;
-  if (typeof value === "string") return value.trim().length > 0;
-  if (typeof value === "number") return !Number.isNaN(value);
-  return true;
-}
+export const isFieldValueFilled = isVerticalFieldValueFilled;
 
 export type SectionCompletionRow = {
   sectionId: string;
@@ -23,7 +21,8 @@ export type SectionCompletionRow = {
 
 /** Sections in catalog order, each with fields ordered within the section. */
 export function groupFieldsBySection(
-  cfg: VerticalConfig
+  cfg: VerticalConfig,
+  entities?: Record<string, unknown>
 ): Array<{ section: VerticalSection; fields: VerticalFieldDefinition[] }> {
   const sortedSections = [...cfg.sections].sort((a, b) => a.order - b.order);
   return sortedSections
@@ -31,6 +30,9 @@ export function groupFieldsBySection(
       section,
       fields: cfg.fields
         .filter((f) => f.sectionId === section.id)
+        .filter((f) =>
+          entities === undefined ? true : isFieldApplicable(f.visibility, entities)
+        )
         .sort((a, b) => a.order - b.order),
     }))
     .filter((g) => g.fields.length > 0);
@@ -48,7 +50,10 @@ export function computeSectionCompletion(
   const rows: SectionCompletionRow[] = [];
 
   for (const sec of sortedSections) {
-    const fieldsInSection = cfg.fields.filter((f) => f.sectionId === sec.id);
+    const fieldsInSection = cfg.fields.filter(
+      (f) =>
+        f.sectionId === sec.id && isFieldApplicable(f.visibility, entities)
+    );
     if (fieldsInSection.length === 0) continue;
 
     let filled = 0;

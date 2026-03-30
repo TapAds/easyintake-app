@@ -68,6 +68,20 @@ export interface VerticalSection {
   hitl?: SectionHitlFlags;
 }
 
+/** One condition: field must equal this value (after trim for strings). */
+export interface VisibilityCondition {
+  fieldKey: FieldKey;
+  equals: unknown;
+}
+
+/**
+ * All conditions must hold for the field to be applicable in the UI and completeness.
+ * Omit or leave empty for fields that are always shown.
+ */
+export interface FieldVisibilityRule {
+  allOf?: VisibilityCondition[];
+}
+
 /** Single field in a vertical catalog. */
 export interface VerticalFieldDefinition {
   key: FieldKey;
@@ -84,12 +98,24 @@ export interface VerticalFieldDefinition {
   weight?: number;
   /** Flow hint (e.g. quote vs application) — vertical-defined strings. */
   stage?: string;
+  /** When set, field counts for completeness and lists only if conditions hold. */
+  visibility?: FieldVisibilityRule;
+  /** Trace to official form (e.g. N-400 Part / item). */
+  sourceRef?: string;
+  /** Declared output bindings for this logical field (destinationKey is under this field). */
+  outputMappings?: VerticalFieldOutputMapping[];
 }
 
-/** Stub for mapping logical keys to CRM, PDF, REST, or DB columns. */
+/** Per-field destination (see `VerticalFieldDefinition.outputMappings`). */
+export interface VerticalFieldOutputMapping {
+  destinationKey: string;
+  destinationKind?: "crm" | "pdf" | "rest" | "database";
+}
+
+/** Mapping at catalog level (optionalaggregate list). */
 export interface OutputMappingStub {
   fieldKey: FieldKey;
-  /** Destination identifier (GHL custom field id, Anvil field id, JSON path, etc.). */
+  /** Destination identifier (GHL custom field id, Anvil `data` key, JSON path, etc.). */
   destinationKey: string;
   destinationKind?: "crm" | "pdf" | "rest" | "database";
 }

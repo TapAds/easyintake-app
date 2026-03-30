@@ -1,17 +1,10 @@
-import { getLocale, getTranslations } from "next-intl/server";
-import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { AppChrome } from "@/components/AppChrome";
 import { LiveDemoClient } from "@/components/demo/LiveDemoClient";
-import { userHasSuperAdminRole } from "@/lib/auth/roles";
 
-/** Product demo surface: universal demo line copy, super admins only. Others use `/dashboard/live-call`. */
-export default async function LiveDemoPage() {
-  const locale = await getLocale();
-  if (!(await userHasSuperAdminRole())) {
-    redirect(`/${locale}/dashboard/live-call`);
-  }
-
-  const t = await getTranslations("demo.live");
+/** Voice intake console for org agents (non–super-admin label: “Live call”). */
+export default async function LiveCallPage() {
+  const t = await getTranslations("demo.liveCall");
   const apiBase =
     process.env.NEXT_PUBLIC_API_URL ?? process.env.NEXT_PUBLIC_AGENT_HTML_URL ?? "";
 
@@ -24,7 +17,7 @@ export default async function LiveDemoPage() {
           </h1>
           <p className="mt-1 text-sm text-foreground/70 max-w-3xl">{t("subtitle")}</p>
         </div>
-        <LiveDemoClient apiBaseUrl={apiBase} uiMode="demo" />
+        <LiveDemoClient apiBaseUrl={apiBase} uiMode="liveCall" />
       </main>
     </AppChrome>
   );

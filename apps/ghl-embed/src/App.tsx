@@ -228,7 +228,7 @@ export function App() {
   return (
     <div className="shell">
       <h1>Easy Intake</h1>
-      <p className="subtitle">Command center — session, live transcript, and field snapshot</p>
+      <p className="subtitle">Live call — session, transcript, and field snapshot</p>
 
       <div className="card">
         <h2>GHL context</h2>
