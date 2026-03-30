@@ -4,10 +4,21 @@ import jwt from "jsonwebtoken";
 import { URL } from "url";
 import { config } from "../config";
 import { callEvents } from "../lib/callEvents";
-import { getEntityCache, stageToScope, getMissingFieldsByStage } from "../services/stageManager";
+import {
+  getEntityCache,
+  getEntityFieldSources,
+  initEntityCache,
+  mergeIntoEntityCache,
+  applyAgentFieldConfirm,
+  applyAgentFieldEdit,
+  stageToScope,
+  getMissingFieldsByStage,
+} from "../services/stageManager";
 import { computeCompletenessScore } from "../services/scoring";
-import { generateAgentGuidance } from "../services/claude";
-import { extractEntities } from "../services/claude";
+import { generateAgentGuidance, extractEntities } from "../services/claude";
+import { buildV2CurrentStateForPrompt } from "../services/extractionTransform";
+import { appendCallFieldChangeLog, agentActor } from "../services/fieldChangeLog";
+import { FIELD_CONFIG, EntityFieldName } from "../config/fieldStages";
 import { FlowStage } from "@prisma/client";
 import { prisma } from "../db/prisma";
 import { scheduleDebouncedEntitySnapshot } from "../services/entitySnapshotPersistence";
@@ -73,6 +84,20 @@ function verifyToken(token: string): boolean {
   }
 }
 
+function decodeJwtSub(token: string | null): string {
+  if (!token) return "unknown_agent";
+  try {
+    const p = jwt.decode(token) as { sub?: string } | null;
+    return typeof p?.sub === "string" ? p.sub : "unknown_agent";
+  } catch {
+    return "unknown_agent";
+  }
+}
+
+function isEntityFieldName(s: string): s is EntityFieldName {
+  return Object.prototype.hasOwnProperty.call(FIELD_CONFIG, s);
+}
+
 // ─── callEvents listeners ─────────────────────────────────────────────────────
 //
 // Wired once when agentHub.ts is first imported. All call events fan out to
@@ -118,11 +143,22 @@ callEvents.on(
           { speaker: event.speaker, text: event.text, languageCode: event.languageCode },
         ];
 
+        initEntityCache(callSid);
+        const entitySnapshot = getEntityCache(callSid);
+        const sourcesSnapshot = getEntityFieldSources(callSid);
+        const currentState = buildV2CurrentStateForPrompt({
+          entity: entitySnapshot,
+          sources: sourcesSnapshot,
+        });
+
         console.log(`[agentHub] calling extractEntities for ${callSid}`);
-        const extracted = await extractEntities(utterances, scope);
+        const extracted = await extractEntities(utterances, scope, {
+          currentState,
+          selectedProduct: call.selectedProduct,
+          scope,
+        });
         console.log(`[agentHub] extractEntities done for ${callSid}`);
 
-        const { mergeIntoEntityCache } = await import("../services/stageManager");
         const fullEntity = mergeIntoEntityCache(callSid, extracted);
 
         const scoreResult = computeCompletenessScore(fullEntity);
@@ -213,6 +249,8 @@ export function handleAgentConnection(
     return;
   }
 
+  const agentSubject = decodeJwtSub(token);
+
   // Optionally subscribe to a callSid from the query string immediately
   try {
     const url = new URL(req.url ?? "", "ws://localhost");
@@ -227,7 +265,12 @@ export function handleAgentConnection(
 
   ws.on("message", (data) => {
     try {
-      const msg = JSON.parse(String(data)) as { type: string; callSid?: string };
+      const msg = JSON.parse(String(data)) as {
+        type: string;
+        callSid?: string;
+        field?: string;
+        value?: unknown;
+      };
 
       if (msg.type === "subscribe" && msg.callSid) {
         subscribe(msg.callSid, ws);
@@ -241,6 +284,90 @@ export function handleAgentConnection(
         const set = subscribers.get(msg.callSid);
         set?.delete(ws);
         if (set?.size === 0) subscribers.delete(msg.callSid);
+      }
+
+      if (
+        msg.type === "field_confirm" &&
+        msg.callSid &&
+        msg.field &&
+        isEntityFieldName(msg.field)
+      ) {
+        void (async () => {
+          try {
+            initEntityCache(msg.callSid!);
+            const prev = getEntityCache(msg.callSid!)[msg.field as EntityFieldName];
+            applyAgentFieldConfirm(msg.callSid!, msg.field as EntityFieldName);
+            const call = await prisma.call.findUnique({
+              where: { callSid: msg.callSid },
+              select: { id: true, intakeSessionId: true },
+            });
+            if (call) {
+              await appendCallFieldChangeLog(call.id, {
+                fieldKey: msg.field!,
+                oldValue: prev,
+                newValue: prev,
+                reason: "agent_confirm",
+                actor: agentActor(agentSubject),
+                evidence: { callSid: msg.callSid },
+              });
+            }
+            const fullEntity = getEntityCache(msg.callSid!);
+            const scoreResult = computeCompletenessScore(fullEntity);
+            broadcast(msg.callSid!, {
+              type: "entity_update",
+              callSid: msg.callSid!,
+              entities: fullEntity as Record<string, unknown>,
+              score: { overall: scoreResult.overall, tier: scoreResult.tier },
+            });
+            scheduleDebouncedEntitySnapshot(msg.callSid!);
+          } catch (e) {
+            console.error("[agentHub] field_confirm:", e);
+          }
+        })();
+      }
+
+      if (
+        msg.type === "field_edit" &&
+        msg.callSid &&
+        msg.field &&
+        isEntityFieldName(msg.field) &&
+        msg.value !== undefined
+      ) {
+        void (async () => {
+          try {
+            initEntityCache(msg.callSid!);
+            const prev = getEntityCache(msg.callSid!)[msg.field as EntityFieldName];
+            const fullEntity = applyAgentFieldEdit(
+              msg.callSid!,
+              msg.field as EntityFieldName,
+              msg.value
+            );
+            const call = await prisma.call.findUnique({
+              where: { callSid: msg.callSid },
+              select: { id: true, intakeSessionId: true },
+            });
+            if (call) {
+              await appendCallFieldChangeLog(call.id, {
+                fieldKey: msg.field!,
+                oldValue: prev,
+                newValue: msg.value,
+                reason: "agent_edit",
+                actor: agentActor(agentSubject),
+                evidence: { callSid: msg.callSid },
+              });
+            }
+            const scoreResult = computeCompletenessScore(fullEntity);
+            broadcast(msg.callSid!, {
+              type: "entity_update",
+              callSid: msg.callSid!,
+              entities: fullEntity as Record<string, unknown>,
+              score: { overall: scoreResult.overall, tier: scoreResult.tier },
+            });
+            scheduleDebouncedEntitySnapshot(msg.callSid!);
+          } catch (e) {
+            console.error("[agentHub] field_edit:", e);
+          }
+        })();
       }
     } catch {
       // ignore malformed frames

@@ -18,7 +18,7 @@ export interface V2ExtractionResult {
 }
 
 /** Maps V2 snake_case field names to Easy Intake camelCase EntityFieldName. */
-const V2_TO_EASY_INTAKE_FIELD: Record<string, EntityFieldName> = {
+export const V2_TO_EASY_INTAKE_FIELD: Record<string, EntityFieldName> = {
   first_name: "firstName",
   last_name: "lastName",
   dob: "dateOfBirth",
@@ -44,6 +44,54 @@ const V2_TO_EASY_INTAKE_FIELD: Record<string, EntityFieldName> = {
   height: "heightFeet", // may need special handling for feet+inches
   weight: "weightLbs",
 };
+
+/** Easy Intake → V2 prompt keys (one entity field may map to multiple V2 keys). */
+export const EASY_INTAKE_TO_V2_KEYS: Partial<Record<EntityFieldName, string[]>> = (() => {
+  const out: Partial<Record<EntityFieldName, string[]>> = {};
+  for (const [v2, ei] of Object.entries(V2_TO_EASY_INTAKE_FIELD) as [string, EntityFieldName][]) {
+    const arr = out[ei] ?? [];
+    if (!arr.includes(v2)) arr.push(v2);
+    out[ei] = arr;
+  }
+  return out;
+})();
+
+/**
+ * V2 schema keys to prioritize for extraction given a set of entity fields (product / stage scope).
+ */
+export function getV2KeysForEntityFields(fields: EntityFieldName[]): string[] {
+  const s = new Set<string>();
+  for (const f of fields) {
+    const keys = EASY_INTAKE_TO_V2_KEYS[f];
+    if (keys) keys.forEach((k) => s.add(k));
+  }
+  return [...s];
+}
+
+export type EntityFieldValueSource = "ai" | "agent_confirmed" | "agent_edited";
+
+/**
+ * Builds `currentState` for the extraction user prompt: only agent-locked V2 keys.
+ */
+export function buildV2CurrentStateForPrompt(args: {
+  entity: Partial<Record<EntityFieldName, unknown>>;
+  sources: Partial<Record<EntityFieldName, EntityFieldValueSource>>;
+}): Record<string, { value: string; source: string }> {
+  const { entity, sources } = args;
+  const out: Record<string, { value: string; source: string }> = {};
+  for (const field of Object.keys(entity) as EntityFieldName[]) {
+    const src = sources[field];
+    if (src !== "agent_confirmed" && src !== "agent_edited") continue;
+    const val = entity[field];
+    if (val === null || val === undefined) continue;
+    const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+    const v2keys = EASY_INTAKE_TO_V2_KEYS[field] ?? [];
+    for (const v2k of v2keys) {
+      out[v2k] = { value: strVal, source: src };
+    }
+  }
+  return out;
+}
 
 /**
  * Normalizes a value for Easy Intake schema.

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "EasyAppIntake",
+  title: "EasyIntake App",
   description: "Intake, validation, and handoff — localized operations shell.",
 };
 

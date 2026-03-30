@@ -178,7 +178,7 @@ export async function runTranscriptExtractAndPersist(
   let extracted: ExtractedEntities = {};
 
   for (const chunk of chunks) {
-    const part = await extractEntities(chunk, "all");
+    const part = await extractEntities(chunk, "all", { scope: "all" });
     extracted = mergeChunkExtractions(extracted, part);
   }
 

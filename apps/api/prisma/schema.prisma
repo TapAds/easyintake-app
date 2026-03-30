@@ -57,6 +57,8 @@ model Call {
   detectedLanguages  String[]   @default([]) // ISO-639-1 codes detected during call
   primaryLanguage    String?    // ISO-639-1 code of dominant language
   intakeSessionId    String?
+  /// Append-only JSON array of field-level edits (see FieldChangeEventV1 in apps/api)
+  fieldChangeLog     Json       @default("[]")
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
@@ -81,6 +83,8 @@ model IntakeSession {
   channels           Json     @default("[]")
   hitl               Json     @default("{}")
   externalIds        Json?
+  /// Append-only JSON array of field-level edits (cross-channel audit)
+  fieldChangeLog     Json     @default("[]")
   configTemplateId   String?
 
   template IntakeFieldTemplate? @relation(fields: [configTemplateId], references: [id], onDelete: SetNull)

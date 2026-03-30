@@ -2,13 +2,21 @@
 
 Complete these **in order** where dependencies apply. For deep detail, use the linked docs.
 
-**Reference docs:** [GHL-MARKETPLACE-SETUP.md](GHL-MARKETPLACE-SETUP.md) · [GHL_INTEGRATION_CHECKLIST.md](GHL_INTEGRATION_CHECKLIST.md) · [RAILWAY-DEPLOY.md](RAILWAY-DEPLOY.md) · [api-contract/WEBHOOK_SPEC.md](api-contract/WEBHOOK_SPEC.md)
+**Reference docs:** [GHL-MARKETPLACE-SETUP.md](GHL-MARKETPLACE-SETUP.md) · [GHL_INTEGRATION_CHECKLIST.md](GHL_INTEGRATION_CHECKLIST.md) · [RAILWAY-DEPLOY.md](RAILWAY-DEPLOY.md) · [api-contract/WEBHOOK_SPEC.md](api-contract/WEBHOOK_SPEC.md) · **[Phase J runbook](docs/ghl/PHASE_J_MARKETPLACE_SUBMIT.md)** · **[Customer install guide](docs/ghl/CUSTOMER_INSTALL_GUIDE.md)**
+
+---
+
+## Resolved — do not re-decide unless strategy changes
+
+- **Dashboard / brand (Next.js + Clerk):** Production URL is **`https://app.easyintakeapp.com/`** (EasyAppIntake). See [ARCHITECTURE.md](ARCHITECTURE.md) and [`apps/web/DEPLOY-PRODUCTION.md`](apps/web/DEPLOY-PRODUCTION.md). This hostname is **not** `PUBLIC_BASE_URL`.
+- **API / integrations (`PUBLIC_BASE_URL`):** Production custom domain on Railway is **`https://api.easyintakeapp.com`** (no trailing slash). Set Railway **`PUBLIC_BASE_URL`** and Vercel **`NEXT_PUBLIC_API_URL`** to that origin. GHL OAuth, GHL webhooks, Twilio, `/ghl/custom`, and `agent.html` all use this host (the default **`*.up.railway.app`** hostname remains valid but avoid mixing hosts in GHL/Twilio). See [GHL-MARKETPLACE-SETUP.md §2](GHL-MARKETPLACE-SETUP.md).
+- **Hosted product demo (docs):** [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo) and universal voice line **`+1 430-300-3049`** are described in [CONTEXT.md](CONTEXT.md), [RAILWAY-DEPLOY.md](RAILWAY-DEPLOY.md), and [docs/demo/LIVE_CALL_DEMO.md](docs/demo/LIVE_CALL_DEMO.md). If your environment matches that stack, treat **Phase B** and **Phase D** (for that number) as **verify / confirm** rather than greenfield setup—still confirm `PUBLIC_BASE_URL` and Twilio webhooks match the API you run.
 
 ---
 
 ## Phase A — Product, legal, and accounts (before wiring URLs)
 
-1. [ ] **Domain / brand:** Decide public API hostname (e.g. Railway default domain or custom domain) — must be **HTTPS** and stable before OAuth redirect and webhooks.
+1. [x] **Domain / brand:** **Dashboard:** `https://app.easyintakeapp.com/`. **API (`PUBLIC_BASE_URL`):** **`https://api.easyintakeapp.com`** — verified in Railway Public Networking; ensure **`PUBLIC_BASE_URL`** in Railway variables and integration URLs (GHL, Twilio) use this origin, not only `*.up.railway.app`.
 2. [ ] **Support & compliance (marketplace listing):** Prepare URLs and contacts you will show in the GHL app listing: website, support email, support URL, privacy policy, terms (see [GHL-MARKETPLACE-SETUP.md §4](GHL-MARKETPLACE-SETUP.md)).
 3. [ ] **Vendor accounts:** Active subscriptions/logins for **Twilio**, **Deepgram**, **Anthropic**, **Railway** (or your host), **PostgreSQL**, and **GoHighLevel developer** ([marketplace.gohighlevel.com](https://marketplace.gohighlevel.com)).
 4. [ ] **Secrets inventory:** Plan generation/storage of `API_JWT_SECRET`, `COTIZARAHORA_WEBHOOK_SECRET` (if used), and GHL client secret — never commit to git.
@@ -17,10 +25,12 @@ Complete these **in order** where dependencies apply. For deep detail, use the l
 
 ## Phase B — Backend deploy and database
 
+_If the API is already deployed and wired to production web (`NEXT_PUBLIC_API_URL`), work through these as **verification** and skip duplication._
+
 5. [ ] **Source control:** Push `easy-intake-app` to GitHub (or CI source) per [RAILWAY-DEPLOY.md §1](RAILWAY-DEPLOY.md).
 6. [ ] **Railway project:** Create project, connect repo, add **PostgreSQL**, reference `DATABASE_URL` on the API service [RAILWAY-DEPLOY.md §2–4](RAILWAY-DEPLOY.md).
 7. [ ] **Build:** Configure service root if needed (monorepo: often `apps/api` or root with workspace scripts) [RAILWAY-DEPLOY.md §6](RAILWAY-DEPLOY.md).
-8. [ ] **Generate public URL:** Railway **Networking** → domain → set `PUBLIC_BASE_URL` to that origin **with no trailing slash** [RAILWAY-DEPLOY.md §7](RAILWAY-DEPLOY.md).
+8. [x] **Public API URL:** Railway **Networking** — custom domain **`api.easyintakeapp.com`** verified; set **`PUBLIC_BASE_URL`** = **`https://api.easyintakeapp.com`** (no trailing slash) [RAILWAY-DEPLOY.md §7](RAILWAY-DEPLOY.md). The default **`*.up.railway.app`** URL can remain for debugging; do not mix origins in GHL or Twilio.
 9. [ ] **Environment variables on API** — set all **required** vars (see § “Master env checklist” below), redeploy.
 10. [ ] **Migrations:** Confirm deploy runs `prisma migrate deploy` (Railway `start` in [apps/api/package.json](apps/api/package.json)) or run manually once against production `DATABASE_URL`.
 11. [ ] **Smoke test API:** `GET /api/health` (or your health route) on `PUBLIC_BASE_URL`.
@@ -48,6 +58,8 @@ Complete these **in order** where dependencies apply. For deep detail, use the l
 ---
 
 ## Phase D — Twilio (voice path)
+
+_The universal demo line **`+1 430-300-3049`** in repo docs is for the hosted Live demo; agency-specific installs use their own numbers. If demo Twilio is already routed to your production `PUBLIC_BASE_URL`, confirm webhooks below rather than re-purchasing._
 
 20. [ ] **Phone number:** Purchase/configure **E.164** number; note **Account SID**, **Auth Token**, and number.
 21. [ ] **Voice webhook:** Point to `https://<PUBLIC_BASE_URL>/webhooks/twilio/voice`.
@@ -94,8 +106,10 @@ Complete these **in order** where dependencies apply. For deep detail, use the l
 
 ## Phase I — End-to-end verification (go / no-go)
 
+_**SMS deferral:** You can move ahead **voice-first** and skip **#41** (and follow-up **#43** if it only matters after SMS works) during **private** installs. **Before GHL Marketplace public launch (Phase J)**, complete **#41** (and **#40** for a real **`InboundMessage`**) if your listing or support promises SMS / conversation intake—see **Phase J → Pre-submit confirmation**._
+
 40. [ ] **Webhook delivery:** GHL Webhook Logs show **200** from `/api/webhooks/ghl` for a test event; no persistent **401** (signature) failures.
-41. [ ] **Inbound SMS:** Reply or new message updates **`IntakeSession`** (`channels`, `lastInboundChannel`) [GHL_INTEGRATION_CHECKLIST.md §6](GHL_INTEGRATION_CHECKLIST.md).
+41. [ ] **Inbound SMS:** Reply or new message updates **`IntakeSession`** (`channels`, `lastInboundChannel`) [GHL_INTEGRATION_CHECKLIST.md §6](GHL_INTEGRATION_CHECKLIST.md). _(Required before public launch if messaging is in scope; see Phase J.)_
 42. [ ] **Voice call:** Complete a test call → **`LifeInsuranceEntity`** / scores as designed → **GHL contact** (and opportunity if configured) [GHL-MARKETPLACE-SETUP.md §7](GHL-MARKETPLACE-SETUP.md).
 43. [ ] **Follow-up:** Poller or `POST /internal/sms/send` sends via expected provider (GHL vs Twilio) [GHL_INTEGRATION_CHECKLIST.md §7](GHL_INTEGRATION_CHECKLIST.md).
 44. [ ] **Attachment (Phase 3):** Send **PDF or image** via SMS/WhatsApp/email → **`IntakeAttachment`** rows and merged **fieldValues** / HITL document flag [GHL_INTEGRATION_CHECKLIST.md §8](GHL_INTEGRATION_CHECKLIST.md).
@@ -106,8 +120,20 @@ Complete these **in order** where dependencies apply. For deep detail, use the l
 
 ## Phase J — Marketplace “public” launch (when listing beyond private testing)
 
-47. [ ] **GHL review:** Submit / publish per current **Marketplace** requirements (screenshots, changelog, category, etc.) — follow GHL’s live checklist for your app type.
-48. [ ] **Documentation:** Publish or update customer-facing install guide and support contact.
+**Operator runbook (step-by-step + GHL links):** [docs/ghl/PHASE_J_MARKETPLACE_SUBMIT.md](docs/ghl/PHASE_J_MARKETPLACE_SUBMIT.md)
+
+**Pre-submit confirmation**
+
+- [ ] **Loopback test:** Trigger a GHL webhook to **`https://api.easyintakeapp.com/api/webhooks/ghl`** (console test replay and/or a real inbound event); in **Railway → API → Logs**, confirm **200 OK** (no persistent **401** signature failures). Proves production networking after custom domain / `PUBLIC_BASE_URL` cutover; does not replace Phase I product checks. See [docs/ghl/PHASE_J_MARKETPLACE_SUBMIT.md](docs/ghl/PHASE_J_MARKETPLACE_SUBMIT.md).
+
+**(Do not skip the next items if the product includes GHL messaging.)**
+
+- [ ] **Inbound SMS / `InboundMessage`:** From a real phone, send SMS **inbound** to the GHL sub-account’s messaging line; confirm **Phase I #40** shows **200** on `/api/webhooks/ghl` and **Phase I #41** — **`IntakeSession`** updates (`channels`, `lastInboundChannel`) per [GHL_INTEGRATION_CHECKLIST.md §6](GHL_INTEGRATION_CHECKLIST.md).
+- [ ] **Voice path** still green after any URL or env changes (Phase I **#42**).
+- Optional but recommended before public listing: **#43–#46** if you document those capabilities.
+
+47. [ ] **GHL review / submit:** In [marketplace.gohighlevel.com](https://marketplace.gohighlevel.com) → **My Apps**, complete **listing** (icon, descriptions, category, pricing, legal URLs) and any **review artifacts** GHL currently requires (e.g. demo recordings — see [Marketplace review changelog](https://ideas.gohighlevel.com/changelog/marketplace-stronger-app-review-process-for-new-apps)). Submit for **review** / **publication** when the UI allows. *Cannot be done from this repo; you must click through in GHL.*
+48. [ ] **Documentation:** Repo source for agencies: [docs/ghl/CUSTOMER_INSTALL_GUIDE.md](docs/ghl/CUSTOMER_INSTALL_GUIDE.md). **Publish** that content (or a link to it) on your **public support** URL used in the Marketplace listing so customers are not sent to GitHub.
 49. [ ] **Monitor:** Webhook Insights / logs, Railway metrics, and DB growth; plan Redis/queues if webhook volume spikes ([GHL_INTEGRATION_CHECKLIST.md §10](GHL_INTEGRATION_CHECKLIST.md)).
 
 ---
@@ -154,7 +180,9 @@ Use this as a copy-paste reference; **required** items must be set before OAuth 
 
 | Purpose | URL |
 |--------|-----|
-| GHL OAuth redirect | `https://<PUBLIC_BASE_URL>/oauth/callback` |
+| Dashboard (Next.js / Clerk — not for GHL OAuth) | `https://app.easyintakeapp.com` — **`NEXT_PUBLIC_API_URL`** = **`https://api.easyintakeapp.com`** |
+| Production API (`PUBLIC_BASE_URL`) | `https://api.easyintakeapp.com` |
+| GHL OAuth redirect | `https://api.easyintakeapp.com/oauth/callback` (or `https://<PUBLIC_BASE_URL>/oauth/callback`) |
 | GHL webhooks | `https://<PUBLIC_BASE_URL>/api/webhooks/ghl` |
 | Twilio voice | `https://<PUBLIC_BASE_URL>/webhooks/twilio/voice` |
 | Twilio status | `https://<PUBLIC_BASE_URL>/webhooks/twilio/call-status` |
@@ -166,8 +194,8 @@ Use this as a copy-paste reference; **required** items must be set before OAuth 
 
 ## Not in this checklist
 
-Deploying the separate **Next.js agent shell** (`apps/web` on Vercel, **Clerk**, bilingual routes) is **not** required to run the **GHL Marketplace app** + **voice/intake API** on Railway. If you need that product surface live too, follow [apps/web/DEPLOY-PRODUCTION.md](apps/web/DEPLOY-PRODUCTION.md) and keep `API_JWT_SECRET` aligned with the API.
+Deploying the separate **Next.js shell** (`apps/web` on Vercel, **Clerk**, bilingual routes) is **not** required to run the **GHL Marketplace app** + **voice/intake API** on Railway. **It is already the canonical product dashboard** at **`https://app.easyintakeapp.com/`** per [ARCHITECTURE.md](ARCHITECTURE.md). For env and Clerk, use [apps/web/DEPLOY-PRODUCTION.md](apps/web/DEPLOY-PRODUCTION.md) and keep **`API_JWT_SECRET`** aligned with the API.
 
 ---
 
-*Last updated to reflect Phases 0–4 (including GHL template send, signature webhooks, reminders). Update this file when GHL or your hosting steps change.*
+*Last updated: Phase J runbook and customer install guide in `docs/ghl/`. Phase I SMS deferral for private testing; complete Pre-submit confirmation before public listing when messaging is in scope. Production API `api.easyintakeapp.com`; dashboard `app.easyintakeapp.com`.*

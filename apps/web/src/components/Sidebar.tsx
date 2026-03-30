@@ -31,7 +31,7 @@ export function Sidebar({
     >
       <div className="p-4 border-b border-foreground/10">
         <Link href={logoHref} className="text-lg font-bold text-primary">
-          {logo ?? "EasyAppIntake"}
+          {logo ?? "EasyIntake App"}
         </Link>
       </div>
       <nav className="flex-1 p-2">

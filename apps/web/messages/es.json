@@ -3,10 +3,12 @@
     "home": "Inicio",
     "overview": "Resumen",
     "intakeQueue": "Cola de captación",
-    "liveDemo": "Demo en vivo"
+    "liveDemo": "Demo en vivo",
+    "brand": "EasyIntake App",
+    "settings": "Configuración"
   },
   "home": {
-    "title": "EasyAppIntake",
+    "title": "EasyIntake App",
     "intro": "Captación asistida por conversación con datos estructurados, validación y entrega a tus sistemas.",
     "goToDashboard": "Abrir panel",
     "signedInBlurb": "Usa el panel para el embudo, la confiabilidad de entrega y KPIs operativos en todos los canales."
@@ -218,6 +220,43 @@
       "crmLabelAlienNumber": "Número A",
       "crmLabelSession": "Sesión (Call SID)",
       "crmValueEmpty": "—"
+    }
+  },
+  "settings": {
+    "pageTitle": "Configuración",
+    "pageSubtitle": "Conecta tu CRM para recibir leads automáticamente.",
+    "crm": {
+      "sectionTitle": "Integraciones CRM",
+      "sectionHint": "Conecta Pipedrive o GoHighLevel para enviar leads y solicitudes automáticamente.",
+      "statusNotConnected": "No conectado",
+      "connectNamed": "Conectar {name}",
+      "names": {
+        "pipedrive": "Pipedrive",
+        "gohighlevel": "GoHighLevel",
+        "hubspot": "HubSpot",
+        "salesforce": "Salesforce",
+        "attio": "Attio",
+        "exlynx": "EXLynx",
+        "agencyzoom": "AgencyZoom",
+        "agentcrm": "Agent CRM"
+      }
+    },
+    "addForm": {
+      "button": "+Añadir formulario/solicitud",
+      "dialogTitle": "Añadir formulario o solicitud",
+      "uploadTab": "Subir PDF",
+      "manualTab": "Introducir campos manualmente",
+      "pdfLabel": "Archivo PDF",
+      "pdfHint": "Selecciona un PDF de solicitud para mapear campos.",
+      "pdfChoose": "Toca para elegir archivo",
+      "manualHint": "Añade las etiquetas de campo que tus agentes deben capturar.",
+      "applicationName": "Nombre de la solicitud",
+      "fieldLabelPlaceholder": "Etiqueta del campo {index}",
+      "addFieldRow": "Añadir campo",
+      "removeField": "Quitar campo",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "saveNote": "El guardado en tu organización aún no está conectado; este cuadro es una vista previa del flujo."
     }
   }
 }

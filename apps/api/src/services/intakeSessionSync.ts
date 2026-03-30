@@ -60,6 +60,42 @@ function flatStateToFieldValues(
   return out;
 }
 
+/**
+ * Merges a voice end snapshot into existing session.fieldValues without wiping
+ * messaging-acquired data. Agent-sourced keys are never overwritten by voice AI.
+ */
+function mergeFieldValuesVoiceSnapshot(
+  existingFv: Record<string, unknown>,
+  voiceFields: Record<string, unknown>
+): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...existingFv };
+  for (const [k, wrap] of Object.entries(voiceFields)) {
+    if (!wrap || typeof wrap !== "object" || !("value" in wrap)) continue;
+    const v = (wrap as { value: unknown }).value;
+    if (v === undefined || v === null) continue;
+
+    const prev = out[k];
+    const prevIsObj =
+      prev && typeof prev === "object" && prev !== null && "value" in prev;
+    const prevVal = prevIsObj ? (prev as { value: unknown }).value : undefined;
+    const prevSource = prevIsObj
+      ? (prev as { provenance?: { source?: string } }).provenance?.source
+      : undefined;
+    const prevEmpty =
+      prevVal === undefined ||
+      prevVal === null ||
+      (typeof prevVal === "string" && String(prevVal).trim() === "");
+
+    if (prevEmpty) {
+      out[k] = wrap;
+      continue;
+    }
+    if (prevSource === "agent") continue;
+    out[k] = wrap;
+  }
+  return out;
+}
+
 function engineStatusFromCall(callStatus: CallStatus, score: number): string {
   if (callStatus === "FAILED") return "failed";
   if (callStatus === "NO_ANSWER") return "cancelled";
@@ -114,7 +150,7 @@ export async function syncIntakeSessionAfterCallEnd(args: {
 
   const sessionRow = await prisma.intakeSession.findUnique({
     where: { id: sessionId },
-    select: { channels: true, externalIds: true },
+    select: { channels: true, externalIds: true, fieldValues: true },
   });
   const prevChannels = Array.isArray(sessionRow?.channels)
     ? [...(sessionRow.channels as unknown[])]
@@ -143,7 +179,15 @@ export async function syncIntakeSessionAfterCallEnd(args: {
     prevChannels.push(voicePatch);
   }
 
-  const fv = flatStateToFieldValues(flatEntity);
+  const existingFv =
+    sessionRow?.fieldValues &&
+    typeof sessionRow.fieldValues === "object" &&
+    !Array.isArray(sessionRow.fieldValues)
+      ? { ...(sessionRow.fieldValues as Record<string, unknown>) }
+      : {};
+
+  const voiceSnapshot = flatStateToFieldValues(flatEntity);
+  const fv = mergeFieldValuesVoiceSnapshot(existingFv, voiceSnapshot);
   const status = engineStatusFromCall(callStatus, completenessScore);
   const hitl = {
     pendingAgentReview: completenessScore < 0.85 && completenessScore > 0,

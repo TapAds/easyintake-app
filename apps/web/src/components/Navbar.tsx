@@ -35,7 +35,7 @@ export function Navbar({
     >
       <div className="flex items-center gap-6">
         <Link href={logoHref} className="text-xl font-bold text-primary">
-          {logo ?? "EasyAppIntake"}
+          {logo ?? "EasyIntake App"}
         </Link>
         <div className="hidden md:flex items-center gap-4">
           {navLinks.map((link) => (

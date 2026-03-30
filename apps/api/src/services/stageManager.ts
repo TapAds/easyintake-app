@@ -1,5 +1,6 @@
 import { FlowStage } from "@prisma/client";
 import { prisma } from "../db/prisma";
+import type { EntityFieldValueSource } from "./extractionTransform";
 import {
   EntityFieldName,
   QUOTE_FIELDS,
@@ -30,33 +31,83 @@ export type EntityState = Partial<Record<EntityFieldName, unknown>>;
 
 const callEntityCache = new Map<string, EntityState>();
 
+/** Per-field provenance for agent locks and prompt wiring (parallel to callEntityCache). */
+const callFieldSourceCache = new Map<
+  string,
+  Partial<Record<EntityFieldName, EntityFieldValueSource>>
+>();
+
 export function initEntityCache(callSid: string): void {
   if (!callEntityCache.has(callSid)) {
     callEntityCache.set(callSid, {});
   }
+  if (!callFieldSourceCache.has(callSid)) {
+    callFieldSourceCache.set(callSid, {});
+  }
+}
+
+/**
+ * Per-field source map for the active call (ai vs agent-confirmed / agent-edited).
+ */
+export function getEntityFieldSources(
+  callSid: string
+): Partial<Record<EntityFieldName, EntityFieldValueSource>> {
+  return { ...(callFieldSourceCache.get(callSid) ?? {}) };
 }
 
 /**
  * Merges newly extracted fields into the in-memory entity cache for a call.
- * Existing non-null values are never overwritten by null — only by a new
- * non-null value. This prevents a missed extraction from erasing known data.
+ * Does not overwrite agent_confirmed / agent_edited fields.
  */
 export function mergeIntoEntityCache(
   callSid: string,
   extracted: EntityState
 ): EntityState {
   const current = callEntityCache.get(callSid) ?? {};
+  const sources = callFieldSourceCache.get(callSid) ?? {};
 
   console.log(`[extraction] mergeIntoEntityCache ${callSid} — incoming:`, JSON.stringify(extracted, null, 2));
 
   for (const [key, value] of Object.entries(extracted)) {
-    if (value !== null && value !== undefined) {
-      (current as Record<string, unknown>)[key] = value;
-    }
+    if (value === null || value === undefined) continue;
+    const k = key as EntityFieldName;
+    const src = sources[k];
+    if (src === "agent_confirmed" || src === "agent_edited") continue;
+    (current as Record<string, unknown>)[k] = value;
+    sources[k] = "ai";
   }
 
+  callFieldSourceCache.set(callSid, sources);
   callEntityCache.set(callSid, current);
   console.log(`[extraction] mergeIntoEntityCache ${callSid} — after merge:`, JSON.stringify(current, null, 2));
+  return current;
+}
+
+/** Agent confirms the current cached value (locks against AI overwrites). */
+export function applyAgentFieldConfirm(
+  callSid: string,
+  field: EntityFieldName
+): EntityState {
+  const current = callEntityCache.get(callSid) ?? {};
+  if (current[field] === null || current[field] === undefined) return current;
+  const sources = { ...(callFieldSourceCache.get(callSid) ?? {}) };
+  sources[field] = "agent_confirmed";
+  callFieldSourceCache.set(callSid, sources);
+  return current;
+}
+
+/** Agent manually sets a value (locks as agent_edited). */
+export function applyAgentFieldEdit(
+  callSid: string,
+  field: EntityFieldName,
+  value: unknown
+): EntityState {
+  const current = { ...(callEntityCache.get(callSid) ?? {}) };
+  const sources = { ...(callFieldSourceCache.get(callSid) ?? {}) };
+  (current as Record<string, unknown>)[field] = value;
+  sources[field] = "agent_edited";
+  callEntityCache.set(callSid, current);
+  callFieldSourceCache.set(callSid, sources);
   return current;
 }
 
@@ -66,6 +117,7 @@ export function getEntityCache(callSid: string): EntityState {
 
 export function clearEntityCache(callSid: string): void {
   callEntityCache.delete(callSid);
+  callFieldSourceCache.delete(callSid);
 }
 
 // ─── Missing fields ───────────────────────────────────────────────────────────

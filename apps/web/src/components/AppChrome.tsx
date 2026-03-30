@@ -26,7 +26,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
               href={prefix}
               className="text-lg font-semibold text-primary shrink-0"
             >
-              EasyAppIntake
+              {t("brand")}
             </Link>
             <nav className="flex flex-wrap items-center gap-3 sm:gap-5 text-sm font-medium">
               <Link
@@ -69,6 +69,16 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
                 }`}
               >
                 {t("liveDemo")}
+              </Link>
+              <Link
+                href={`${prefix}/dashboard/settings`}
+                className={`hover:text-foreground ${
+                  pathname.startsWith(`${prefix}/dashboard/settings`)
+                    ? "text-primary"
+                    : "text-foreground/70"
+                }`}
+              >
+                {t("settings")}
               </Link>
             </nav>
           </div>

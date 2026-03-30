@@ -3,10 +3,12 @@
     "home": "Home",
     "overview": "Overview",
     "intakeQueue": "Intake queue",
-    "liveDemo": "Live demo"
+    "liveDemo": "Live demo",
+    "brand": "EasyIntake App",
+    "settings": "Settings"
   },
   "home": {
-    "title": "EasyAppIntake",
+    "title": "EasyIntake App",
     "intro": "Conversation-powered intake with structured data, validation, and handoff to your systems.",
     "goToDashboard": "Open dashboard",
     "signedInBlurb": "Use the dashboard for funnel health, handoff reliability, and operational KPIs across channels."
@@ -218,6 +220,43 @@
       "crmLabelAlienNumber": "A-Number",
       "crmLabelSession": "Session (Call SID)",
       "crmValueEmpty": "—"
+    }
+  },
+  "settings": {
+    "pageTitle": "Settings",
+    "pageSubtitle": "Connect your CRM to receive leads automatically.",
+    "crm": {
+      "sectionTitle": "CRM Integrations",
+      "sectionHint": "Connect Pipedrive or GoHighLevel to automatically send leads and applications.",
+      "statusNotConnected": "Not connected",
+      "connectNamed": "Connect {name}",
+      "names": {
+        "pipedrive": "Pipedrive",
+        "gohighlevel": "GoHighLevel",
+        "hubspot": "HubSpot",
+        "salesforce": "Salesforce",
+        "attio": "Attio",
+        "exlynx": "EXLynx",
+        "agencyzoom": "AgencyZoom",
+        "agentcrm": "Agent CRM"
+      }
+    },
+    "addForm": {
+      "button": "+Add Form/Application",
+      "dialogTitle": "Add form or application",
+      "uploadTab": "Upload PDF",
+      "manualTab": "Enter fields manually",
+      "pdfLabel": "PDF file",
+      "pdfHint": "Select an application PDF to map fields from.",
+      "pdfChoose": "Tap to choose a file",
+      "manualHint": "Add field labels your agents should capture for this application.",
+      "applicationName": "Application name",
+      "fieldLabelPlaceholder": "Field label {index}",
+      "addFieldRow": "Add field",
+      "removeField": "Remove field",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saveNote": "Saving to your organization is not wired yet; this dialog previews the workflow."
     }
   }
 }

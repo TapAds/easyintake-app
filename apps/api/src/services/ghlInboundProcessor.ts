@@ -1,9 +1,14 @@
-import type { EntityFieldName } from "../config/fieldStages";
+import { EntityFieldName, FIELD_CONFIG } from "../config/fieldStages";
 import { prisma } from "../db/prisma";
 import { extractEntities } from "./claude";
 import { processInboundAttachments } from "./intakeDocumentPipeline";
 import { computeCompletenessScore } from "./scoring";
 import type { EntityState } from "./stageManager";
+import {
+  buildV2CurrentStateForPrompt,
+  type EntityFieldValueSource,
+} from "./extractionTransform";
+import { appendIntakeSessionFieldChangeLog, systemActor } from "./fieldChangeLog";
 import type { InboundCanonicalChannel } from "../types/ghlInbound";
 import { isGhlSignatureSignedEvent, processGhlSignatureWebhook } from "./ghlSignature";
 import { scheduleGapChaserIfNeeded } from "./smartChaser";
@@ -110,6 +115,30 @@ function fieldValuesToEntityState(fv: Record<string, unknown>): EntityState {
   return out;
 }
 
+function isEntityFieldNameKey(s: string): s is EntityFieldName {
+  return Object.prototype.hasOwnProperty.call(FIELD_CONFIG, s);
+}
+
+function inferInboundLanguage(text: string): string {
+  if (/[áéíóúñü¿¡]/i.test(text)) return "es";
+  return "en";
+}
+
+function fieldValuesToExtractionSources(
+  fv: Record<string, unknown>
+): Partial<Record<EntityFieldName, EntityFieldValueSource>> {
+  const out: Partial<Record<EntityFieldName, EntityFieldValueSource>> = {};
+  for (const [k, v] of Object.entries(fv)) {
+    if (!isEntityFieldNameKey(k)) continue;
+    if (v && typeof v === "object" && "provenance" in v) {
+      const src = (v as { provenance?: { source?: string } }).provenance?.source;
+      if (src === "agent") out[k] = "agent_edited";
+    }
+  }
+  return out;
+}
+
+/** Fills empty fields, overwrites prior AI values (applicant corrections), never overwrites agent-sourced keys. */
 function mergeExtractedIntoFieldValues(
   existing: Record<string, unknown>,
   extracted: Partial<Record<EntityFieldName, unknown>>,
@@ -121,13 +150,20 @@ function mergeExtractedIntoFieldValues(
   for (const [k, v] of Object.entries(extracted)) {
     if (v === undefined || v === null) continue;
     const prev = out[k];
-    const prevVal =
-      prev && typeof prev === "object" && prev !== null && "value" in prev
-        ? (prev as { value: unknown }).value
-        : undefined;
-    if (prevVal !== undefined && prevVal !== null && String(prevVal).trim() !== "") {
-      continue;
-    }
+    const prevIsObj =
+      prev && typeof prev === "object" && prev !== null && "value" in prev;
+    const prevVal = prevIsObj ? (prev as { value: unknown }).value : undefined;
+    const prevSource = prevIsObj
+      ? (prev as { provenance?: { source?: string } }).provenance?.source
+      : undefined;
+    const prevEmpty =
+      prevVal === undefined ||
+      prevVal === null ||
+      (typeof prevVal === "string" && String(prevVal).trim() === "");
+
+    if (prevSource === "agent") continue;
+    if (!prevEmpty && prevSource !== "ai" && prevSource !== undefined) continue;
+
     out[k] = {
       value: v,
       provenance: { source: "ai", channel: provenanceChannel, updatedAt: now },
@@ -275,20 +311,55 @@ export async function processGhlInboundMessage(
   let extractedText: Partial<Record<EntityFieldName, unknown>> = {};
   if (hasText) {
     try {
+      const entityBefore = fieldValuesToEntityState(mergedFv);
+      const sources = fieldValuesToExtractionSources(mergedFv);
+      const currentState = buildV2CurrentStateForPrompt({
+        entity: entityBefore,
+        sources,
+      });
+      const lang = inferInboundLanguage(inbound.bodyText);
       extractedText = await extractEntities(
         [
           {
             speaker: "caller",
             text: inbound.bodyText,
-            languageCode: "es",
+            languageCode: lang,
           },
         ],
-        "all"
+        "all",
+        { currentState, scope: "all" }
       );
+      const beforeSnap = { ...fieldValuesToEntityState(mergedFv) };
+      mergedFv = mergeExtractedIntoFieldValues(
+        mergedFv,
+        extractedText,
+        textProvenance
+      );
+      const afterSnap = fieldValuesToEntityState(mergedFv);
+      for (const key of Object.keys(extractedText)) {
+        if (!isEntityFieldNameKey(key)) continue;
+        const oldV = beforeSnap[key];
+        const newV = afterSnap[key];
+        if (oldV !== newV && newV !== undefined && newV !== null) {
+          try {
+            await appendIntakeSessionFieldChangeLog(session.id, {
+              fieldKey: key,
+              oldValue: oldV ?? null,
+              newValue: newV,
+              reason: "ai_extraction",
+              actor: systemActor(),
+              evidence: {
+                ghlMessageId: inbound.messageId ?? undefined,
+              },
+            });
+          } catch (e) {
+            console.error("[ghl-inbound] fieldChangeLog append failed:", e);
+          }
+        }
+      }
     } catch (err) {
       console.error("[ghl-inbound] text extraction failed:", err);
     }
-    mergedFv = mergeExtractedIntoFieldValues(mergedFv, extractedText, textProvenance);
   }
 
   let extractedDocs: Partial<Record<EntityFieldName, unknown>> = {};

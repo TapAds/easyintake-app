@@ -24,3 +24,22 @@ export async function userHasSuperAdminRole(): Promise<boolean> {
   const pm = user?.publicMetadata as Record<string, unknown> | undefined;
   return pm?.role === "super_admin";
 }
+
+/**
+ * Agents and agency admins configure CRM sync and forms; applicants do not.
+ * Uses session claims / public metadata `role` when present.
+ */
+export async function userCanConfigureIntake(): Promise<boolean> {
+  const a = await auth();
+  if (!a.userId) return false;
+
+  const claims = (a.sessionClaims ?? {}) as Record<string, unknown>;
+  if (claims.role === "super_admin") return true;
+  if (claims.role === "applicant") return false;
+
+  const user = await currentUser();
+  const pm = user?.publicMetadata as Record<string, unknown> | undefined;
+  if (pm?.role === "applicant") return false;
+
+  return true;
+}

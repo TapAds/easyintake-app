@@ -79,10 +79,14 @@ In your app service → **Variables**, add these:
 ## Step 7: Get Your App URL and Set PUBLIC_BASE_URL
 
 1. App service → **Settings** tab
-2. Scroll to **Networking** → **Generate Domain**
-3. Copy the URL (e.g. `https://easyintake-app-production.up.railway.app`)
-4. Go to **Variables** → add or edit `PUBLIC_BASE_URL` = that URL (no trailing slash)
+2. Scroll to **Networking** → **Generate Domain** (you get a default `https://*.up.railway.app` URL)
+3. **Custom domain (production):** In **Public Networking**, add **`api.yourdomain.com`** (example: **`api.easyintakeapp.com`**), add the CNAME + TXT records your DNS host shows, wait until Railway shows the domain verified (green check).
+4. Go to **Variables** → set **`PUBLIC_BASE_URL`** to your **public API origin** with **no trailing slash**:
+   - Prefer the custom domain once verified, e.g. `https://api.easyintakeapp.com`
+   - Or the generated Railway URL, e.g. `https://easyintake-app-production.up.railway.app`
 5. Redeploy: **Deployments** tab → three dots on latest → **Redeploy**
+
+**Plan limit:** Some Railway plans allow only **one** custom domain per service; using **`api.*` on Railway** and **`app.*` on Vercel** (for `apps/web`) avoids needing two custom domains on Railway.
 
 ---
 
@@ -125,4 +129,4 @@ Your app is live. Call your Twilio number (from `TWILIO_PHONE_NUMBER`) to test.
 
 **Easy Intake product demo:** the hosted web app uses universal demo voice **`+1 430-300-3049`** with [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo) (confirm **Product / Form** in the UI, then dial). That number must terminate on the same `apps/api` you deploy if prospects should hit your Railway stack.
 
-- **Agent UI**: `https://YOUR-RAILWAY-URL/public/agent.html`
+- **Agent UI**: `https://api.easyintakeapp.com/public/agent.html` (or your `PUBLIC_BASE_URL` + `/public/agent.html`)

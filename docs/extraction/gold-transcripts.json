@@ -1,0 +1,75 @@
+[
+  {
+    "id": "en_readback_confirm",
+    "notes": "Agent monologue + short confirm; exercises read-back/confirm path and SPEAKER_0 labeling.",
+    "utterances": [
+      {
+        "speaker": "speaker_0",
+        "languageCode": "en",
+        "text": "I would like to confirm that your name is Sam Smith. Your date of birth is 02/02/1950. You are a female. In San Francisco, California at 123 Main Street, ZIP code 60091. You want $500,000 worth of coverage. And you are six foot one. You weigh two hundred and fifty pounds. You have no existing coverage. Is that correct?"
+      },
+      { "speaker": "caller", "languageCode": "en", "text": "Yes." }
+    ],
+    "expectedEntityFields": {
+      "firstName": "Sam",
+      "lastName": "Smith",
+      "dateOfBirth": "1950-02-02",
+      "gender": "FEMALE",
+      "address": "123 Main Street",
+      "city": "San Francisco",
+      "state": "CA",
+      "zip": "60091",
+      "coverageAmountDesired": 500000,
+      "heightFeet": 6,
+      "heightInches": 1,
+      "weightLbs": 250,
+      "existingCoverage": false
+    }
+  },
+  {
+    "id": "es_direct_applicant",
+    "notes": "Spanish direct responses.",
+    "utterances": [
+      {
+        "speaker": "caller",
+        "languageCode": "es",
+        "text": "Mi nombre es Carlos Rivera Mendoza."
+      },
+      {
+        "speaker": "caller",
+        "languageCode": "es",
+        "text": "Nací el catorce de marzo de mil novecientos ochenta y cinco."
+      }
+    ],
+    "expectedEntityFields": {
+      "firstName": "Carlos",
+      "lastName": "Mendoza",
+      "dateOfBirth": "1985-03-14"
+    }
+  },
+  {
+    "id": "en_direct_applicant",
+    "notes": "English direct address line.",
+    "utterances": [
+      {
+        "speaker": "applicant",
+        "languageCode": "en",
+        "text": "I live at 4521 Maple Avenue, San Antonio, Texas 78201."
+      }
+    ],
+    "expectedEntityFields": {
+      "address": "4521 Maple Avenue",
+      "city": "San Antonio",
+      "state": "TX",
+      "zip": "78201"
+    }
+  },
+  {
+    "id": "noise_no_hallucination",
+    "notes": "Non-answer should not invent DOB or face amount.",
+    "utterances": [
+      { "speaker": "caller", "languageCode": "es", "text": "No estoy seguro." }
+    ],
+    "expectedEntityFields": {}
+  }
+]

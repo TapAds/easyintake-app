@@ -29,7 +29,7 @@ In **Vercel → Project → Settings → Environment Variables**, add the same k
 | `CLERK_SECRET_KEY` | **Production** secret key from Clerk | Matching instance |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/en/sign-in` | Same (locale-relative paths work on any host) |
 | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/en/sign-up` | Same |
-| `NEXT_PUBLIC_API_URL` | HTTPS origin of **`apps/api`** on Railway (e.g. `https://your-api.up.railway.app`) | Staging API if needed |
+| `NEXT_PUBLIC_API_URL` | HTTPS origin of **`apps/api`** (production: `https://api.easyintakeapp.com`; or `https://your-api.up.railway.app`) | Staging API if needed |
 | `NEXT_PUBLIC_AGENT_HTML_URL` | Optional; same as API origin if agent static files are served there | Same |
 | `API_JWT_SECRET` | **Same value as** `API_JWT_SECRET` on **`apps/api`** — used by Route Handlers to mint WebSocket JWTs for the agent console | Never expose to the browser; server-only on Vercel |
 

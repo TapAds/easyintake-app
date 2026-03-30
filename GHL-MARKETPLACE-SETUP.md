@@ -31,7 +31,8 @@ Steps to create and configure the Easy Intake app in the GoHighLevel Marketplace
    - **Documents & Contracts / Proposals** (Phase 4) — scopes required for `GET /proposals/templates` and `POST /proposals/templates/send` per current docs; re-install after enabling.
 3. **Redirect URLs** — Add:
    - `https://YOUR_APP_DOMAIN/oauth/callback`
-   - Example: `https://easyintake-app-production.up.railway.app/oauth/callback`
+   - Production example: `https://api.easyintakeapp.com/oauth/callback`
+   - Railway default (dev / fallback): `https://easyintake-app-production.up.railway.app/oauth/callback`
 4. **Client Keys** — Add a key pair → copy **Client ID** and **Client Secret**
 5. Add to your deployment (Railway, etc.):
    - `GHL_CLIENT_ID`
@@ -121,6 +122,18 @@ If more than one GHL location is connected to the same API, send **`X-GHL-Locati
 - Optionally set `GHL_PIPELINE_ID` and `GHL_PIPELINE_STAGE_ID` for qualified leads (score ≥ 0.70)
 
 **Get Pipeline IDs:** Settings → Pipelines in the GHL location. Copy the IDs from the table.
+
+---
+
+## 8. Public Marketplace launch (Phase J)
+
+When the app is ready for **public** listing beyond private testing, follow:
+
+**[docs/ghl/PHASE_J_MARKETPLACE_SUBMIT.md](docs/ghl/PHASE_J_MARKETPLACE_SUBMIT.md)** — submission checklist, listing copy, screenshot ideas, GHL review links.
+
+**Customer-facing install** (host on your support site; do not require GitHub):
+
+**[docs/ghl/CUSTOMER_INSTALL_GUIDE.md](docs/ghl/CUSTOMER_INSTALL_GUIDE.md)**
 
 ---
 
