@@ -46,7 +46,6 @@ type TwilioRow = {
   sid: string;
   status: string;
   from: string;
-  to: string;
   dateCreated: string | null;
   duration: string | number | null;
 };
@@ -918,7 +917,6 @@ export function LiveDemoClient({
                     <tr className="text-left text-foreground/60 border-b border-foreground/10">
                       <th className="p-2 font-normal w-[1%]" />
                       <th className="p-2 font-normal">{t("colCallFrom")}</th>
-                      <th className="p-2 font-normal">{t("colCalledNumber")}</th>
                       <th className="p-2 font-normal">{t("colStatus")}</th>
                       <th className="p-2 font-normal">{t("colWhen")}</th>
                     </tr>
@@ -940,9 +938,6 @@ export function LiveDemoClient({
                         </td>
                         <td className="p-2 align-top tabular-nums">
                           {String(row.from ?? "").trim() || "—"}
-                        </td>
-                        <td className="p-2 align-top tabular-nums">
-                          {String(row.to ?? "").trim() || "—"}
                         </td>
                         <td className="p-2 align-top">{row.status}</td>
                         <td className="p-2 text-foreground/70 align-top">
