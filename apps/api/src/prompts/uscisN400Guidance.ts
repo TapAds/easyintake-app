@@ -46,5 +46,5 @@ export function buildN400GuidanceUserMessage(
 ${collected || "(none)"}
 
 Missing applicable fields:
-${missing.length ? missing.map((k) => `- ${k}`).join("\n") : "(none — may advance or confirm)"}`;
+${missing.length ? missing.map((k: string) => `- ${k}`).join("\n") : "(none — may advance or confirm)"}`;
 }
