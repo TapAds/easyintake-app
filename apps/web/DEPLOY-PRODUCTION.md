@@ -32,6 +32,8 @@ In **Vercel → Project → Settings → Environment Variables**, add the same k
 | `NEXT_PUBLIC_API_URL` | HTTPS origin of **`apps/api`** (production: `https://api.easyintakeapp.com`; or `https://your-api.up.railway.app`) | Staging API if needed |
 | `NEXT_PUBLIC_AGENT_HTML_URL` | Optional; same as API origin if agent static files are served there | Same |
 | `API_JWT_SECRET` | **Same value as** `API_JWT_SECRET` on **`apps/api`** — used by Route Handlers to mint WebSocket JWTs for the agent console | Never expose to the browser; server-only on Vercel |
+| `BLOB_READ_WRITE_TOKEN` | From **[Vercel Blob](https://vercel.com/docs/storage/vercel-blob)** linked to this project — **required** for **Settings → Organization** logo uploads and for rehosting logos fetched from a website | Server-only; without it, uploads return 503 |
+| `NEXT_PUBLIC_APP_URL` | Optional but recommended — production origin (e.g. `https://app.easyintakeapp.com`) for stable absolute URLs in invites and similar | Public |
 
 - **Never** commit real keys. Set them only in Vercel (and local `.env` / `.env.local` for dev).
 - After changing env vars, **redeploy** (or trigger a new deployment) so the build picks them up.
@@ -62,7 +64,7 @@ In **Vercel → Project → Settings → Environment Variables**, add the same k
 2. Sign in with a test user created in the **Production** Clerk instance (or sign up if allowed).
 3. Confirm redirect to `/en/dashboard/queue` (or `/es/...` after switching locale).
 4. Confirm sign-out returns to the localized sign-in URL.
-5. **Live demo (optional):** Open `/en/dashboard/live-demo`, confirm **Before you connect** lists **`+1 430-300-3049`**, choose a **Product / Form (demo)** preset, call the number from another phone, refresh **Recent Twilio calls**, connect stream, and verify transcript/fields (requires `NEXT_PUBLIC_API_URL`, `API_JWT_SECRET`, and API/Twilio configured per [LIVE_CALL_DEMO.md](../../docs/demo/LIVE_CALL_DEMO.md)).
+5. **Live demo (optional):** Open `/en/dashboard/live-demo`, confirm **Before you connect** lists **`+1 430-300-3049`**, choose a **Product / Form (demo)** line (selects the vertical package), call the number from another phone, refresh **Recent Twilio calls**, connect stream, and verify transcript plus **application fields** on the right (**all sections** from the catalog; requires `NEXT_PUBLIC_API_URL`, `API_JWT_SECRET`, and API/Twilio configured per [LIVE_CALL_DEMO.md](../../docs/demo/LIVE_CALL_DEMO.md)).
 
 ---
 

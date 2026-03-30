@@ -43,3 +43,33 @@ export async function userCanConfigureIntake(): Promise<boolean> {
 
   return true;
 }
+
+/**
+ * Settings "Users" section: platform super-admins and organization admins only.
+ * Uses Clerk `orgRole` when an organization is active, plus session/public metadata fallbacks
+ * (`org_role` / `role`) — align claims in Clerk Dashboard with your JWT template.
+ */
+export async function userCanViewSettingsUsers(): Promise<boolean> {
+  const a = await auth();
+  if (!a.userId) return false;
+
+  const claims = (a.sessionClaims ?? {}) as Record<string, unknown>;
+  if (claims.role === "super_admin") return true;
+  if (claims.role === "org:admin") return true;
+  if (claims.org_role === "org:admin") return true;
+
+  if (a.orgRole === "org:admin") return true;
+
+  const user = await currentUser();
+  const pm = user?.publicMetadata as Record<string, unknown> | undefined;
+  if (pm?.role === "super_admin") return true;
+  if (pm?.role === "org:admin") return true;
+  if (pm?.org_role === "org:admin") return true;
+
+  return false;
+}
+
+/** Org branding in Settings (name, website, logo): same gate as Users invites. */
+export async function userCanEditOrganizationProfile(): Promise<boolean> {
+  return userCanViewSettingsUsers();
+}

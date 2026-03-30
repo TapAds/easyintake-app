@@ -1,0 +1,459 @@
+{
+  "pageTitle": "Privacy Policy",
+  "productName": "EasyIntake App",
+  "lastUpdated": "Last Updated: March 30, 2026",
+  "intro": [
+    "This Privacy Policy describes how PropSWOT LLC, doing business as EasyIntake App (\"EasyIntake\", \"we\", \"our\", or \"us\") collects, uses, discloses, and protects information when you access or use the EasyIntake App website, software platform, APIs, and related services (collectively, the \"Service\").",
+    "By using the Service, you agree to the collection and use of information in accordance with this Privacy Policy."
+  ],
+  "sections": [
+    {
+      "heading": "1. Overview",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake App is a workflow automation and data intake platform used by businesses, professionals, and organizations to collect and manage information from their customers, clients, or applicants."
+        },
+        {
+          "type": "paragraph",
+          "text": "Because the platform operates in a B2B2C model, there are two types of users:"
+        },
+        {
+          "type": "subheading",
+          "text": "Business Users"
+        },
+        {
+          "type": "paragraph",
+          "text": "Organizations or professionals who use EasyIntake to collect information."
+        },
+        {
+          "type": "subheading",
+          "text": "End Users"
+        },
+        {
+          "type": "paragraph",
+          "text": "Individuals who provide information through forms or workflows created by Business Users."
+        },
+        {
+          "type": "paragraph",
+          "text": "Business Users control how they collect and use End User data. EasyIntake processes that data on behalf of Business Users."
+        }
+      ]
+    },
+    {
+      "heading": "2. Information We Collect",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "We may collect several types of information."
+        },
+        {
+          "type": "subheading",
+          "text": "Information You Provide"
+        },
+        {
+          "type": "paragraph",
+          "text": "Information you voluntarily provide may include:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "name",
+            "email address",
+            "phone number",
+            "company information",
+            "account login credentials",
+            "billing information",
+            "form responses submitted through workflows",
+            "documents uploaded through the platform",
+            "messages or communications sent through the Service"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Business Users determine what information they collect from End Users."
+        },
+        {
+          "type": "subheading",
+          "text": "Automatically Collected Information"
+        },
+        {
+          "type": "paragraph",
+          "text": "When you use the Service, we may automatically collect certain technical information, including:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "IP address",
+            "device type",
+            "browser type",
+            "operating system",
+            "access times",
+            "pages viewed",
+            "interaction with the Service",
+            "referral URLs"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "This information helps us maintain security and improve the Service."
+        },
+        {
+          "type": "subheading",
+          "text": "Cookies and Tracking Technologies"
+        },
+        {
+          "type": "paragraph",
+          "text": "We may use cookies, local storage, and similar technologies to:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "remember user preferences",
+            "authenticate users",
+            "analyze platform usage",
+            "improve service performance"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Users may control cookie preferences through browser settings."
+        }
+      ]
+    },
+    {
+      "heading": "3. How We Use Information",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "We use collected information to:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "provide and operate the Service",
+            "maintain system security",
+            "authenticate users",
+            "process transactions",
+            "respond to inquiries",
+            "improve platform functionality",
+            "develop new features",
+            "analyze system performance",
+            "comply with legal obligations"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "We may also use aggregated and anonymized data to improve the platform."
+        }
+      ]
+    },
+    {
+      "heading": "4. AI and Automated Processing",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Certain EasyIntake features may include automated technologies designed to:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "extract information from documents",
+            "structure data for forms",
+            "automate workflow steps",
+            "assist with data entry"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "These systems may involve automated processing of submitted data."
+        },
+        {
+          "type": "paragraph",
+          "text": "Users remain responsible for verifying the accuracy of any automated outputs."
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake does not use customer data to train generalized AI models without authorization."
+        }
+      ]
+    },
+    {
+      "heading": "5. Business User Responsibilities",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Business Users are responsible for:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "obtaining necessary consent from End Users",
+            "complying with applicable privacy laws",
+            "determining what data is collected",
+            "ensuring lawful processing of End User information"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake acts as a data processor on behalf of Business Users."
+        },
+        {
+          "type": "paragraph",
+          "text": "Business Users are typically the data controllers responsible for their privacy obligations."
+        }
+      ]
+    },
+    {
+      "heading": "6. How We Share Information",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "We do not sell personal information."
+        },
+        {
+          "type": "paragraph",
+          "text": "We may share information in the following circumstances:"
+        },
+        {
+          "type": "subheading",
+          "text": "With Service Providers"
+        },
+        {
+          "type": "paragraph",
+          "text": "We may share information with trusted third-party providers that assist in operating the Service, including:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "cloud hosting providers",
+            "payment processors",
+            "analytics providers",
+            "communication services",
+            "infrastructure providers"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "These providers are required to safeguard information."
+        },
+        {
+          "type": "subheading",
+          "text": "Legal Requirements"
+        },
+        {
+          "type": "paragraph",
+          "text": "We may disclose information if required to:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "comply with legal obligations",
+            "respond to lawful requests",
+            "enforce our Terms of Service",
+            "protect our rights or safety"
+          ]
+        },
+        {
+          "type": "subheading",
+          "text": "Business Transfers"
+        },
+        {
+          "type": "paragraph",
+          "text": "If EasyIntake is involved in a merger, acquisition, or asset sale, information may be transferred as part of that transaction."
+        }
+      ]
+    },
+    {
+      "heading": "7. Data Retention",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "We retain information only for as long as necessary to:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "provide the Service",
+            "comply with legal obligations",
+            "resolve disputes",
+            "enforce agreements"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Business Users control how long their End User data is retained."
+        }
+      ]
+    },
+    {
+      "heading": "8. Data Security",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake implements commercially reasonable security measures designed to protect information, including:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "encryption",
+            "secure infrastructure",
+            "access controls",
+            "monitoring systems"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "However, no internet transmission or storage system is completely secure."
+        },
+        {
+          "type": "paragraph",
+          "text": "Users are responsible for protecting their account credentials."
+        }
+      ]
+    },
+    {
+      "heading": "9. International Data Transfers",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "The Service may store or process information in countries other than where users reside."
+        },
+        {
+          "type": "paragraph",
+          "text": "By using the Service, you consent to such transfers."
+        },
+        {
+          "type": "paragraph",
+          "text": "We take reasonable steps to ensure appropriate safeguards are in place."
+        }
+      ]
+    },
+    {
+      "heading": "10. Your Privacy Rights",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Depending on your location, you may have rights regarding your personal information."
+        },
+        {
+          "type": "paragraph",
+          "text": "These may include:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "access to personal data",
+            "correction of inaccurate data",
+            "deletion of personal information",
+            "restriction of processing",
+            "data portability",
+            "objection to certain uses"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Requests regarding data collected by a Business User should be directed to that Business User."
+        }
+      ]
+    },
+    {
+      "heading": "11. California Privacy Rights (CCPA / CPRA)",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "California residents may have the right to:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "request access to personal information",
+            "request deletion of personal information",
+            "request correction of inaccurate information",
+            "opt out of certain data sharing"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake does not sell personal information."
+        },
+        {
+          "type": "paragraph",
+          "text": "Requests may be submitted through the contact information listed below."
+        }
+      ]
+    },
+    {
+      "heading": "12. Children's Privacy",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "The Service is not intended for individuals under the age of 18."
+        },
+        {
+          "type": "paragraph",
+          "text": "We do not knowingly collect information from children."
+        },
+        {
+          "type": "paragraph",
+          "text": "If we become aware that personal information from a child has been collected, we will delete it."
+        }
+      ]
+    },
+    {
+      "heading": "13. Third-Party Websites",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "The Service may contain links to third-party websites."
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake is not responsible for the privacy practices of those websites."
+        },
+        {
+          "type": "paragraph",
+          "text": "Users should review the privacy policies of external sites."
+        }
+      ]
+    },
+    {
+      "heading": "14. Updates to This Privacy Policy",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "We may update this Privacy Policy periodically."
+        },
+        {
+          "type": "paragraph",
+          "text": "Updates will be posted on this page with a revised effective date."
+        },
+        {
+          "type": "paragraph",
+          "text": "Continued use of the Service after updates constitutes acceptance of the revised policy."
+        }
+      ]
+    },
+    {
+      "heading": "15. Contact Information",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "If you have questions about this Privacy Policy or our data practices, you may contact us at:"
+        },
+        {
+          "type": "paragraph",
+          "text": "PropSWOT LLC dba EasyIntake App"
+        },
+        {
+          "type": "paragraph",
+          "text": "Email: support@easyintakeapp.com"
+        },
+        {
+          "type": "paragraph",
+          "text": " Website: https://www.easyintakeapp.com"
+        }
+      ]
+    }
+  ]
+}

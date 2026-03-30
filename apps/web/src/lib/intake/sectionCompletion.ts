@@ -1,4 +1,8 @@
-import type { VerticalConfig } from "@easy-intake/shared";
+import type {
+  VerticalConfig,
+  VerticalFieldDefinition,
+  VerticalSection,
+} from "@easy-intake/shared";
 
 /** True if the entity value counts as collected for completion bars. */
 export function isFieldValueFilled(value: unknown): boolean {
@@ -17,23 +21,34 @@ export type SectionCompletionRow = {
   total: number;
 };
 
+/** Sections in catalog order, each with fields ordered within the section. */
+export function groupFieldsBySection(
+  cfg: VerticalConfig
+): Array<{ section: VerticalSection; fields: VerticalFieldDefinition[] }> {
+  const sortedSections = [...cfg.sections].sort((a, b) => a.order - b.order);
+  return sortedSections
+    .map((section) => ({
+      section,
+      fields: cfg.fields
+        .filter((f) => f.sectionId === section.id)
+        .sort((a, b) => a.order - b.order),
+    }))
+    .filter((g) => g.fields.length > 0);
+}
+
 /**
- * Per-section fill ratio for fields that appear in the live demo preset for this package.
+ * Per-section fill ratio for every field in the vertical catalog (all application fields).
  */
 export function computeSectionCompletion(
   cfg: VerticalConfig,
-  visibleFieldKeys: string[],
   entities: Record<string, unknown>,
   locale: string
 ): SectionCompletionRow[] {
-  const visible = new Set(visibleFieldKeys);
   const sortedSections = [...cfg.sections].sort((a, b) => a.order - b.order);
   const rows: SectionCompletionRow[] = [];
 
   for (const sec of sortedSections) {
-    const fieldsInSection = cfg.fields.filter(
-      (f) => visible.has(f.key) && f.sectionId === sec.id
-    );
+    const fieldsInSection = cfg.fields.filter((f) => f.sectionId === sec.id);
     if (fieldsInSection.length === 0) continue;
 
     let filled = 0;

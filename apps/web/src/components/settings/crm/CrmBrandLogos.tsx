@@ -1,21 +1,11 @@
+import Image from "next/image";
+
 /**
- * Logos clipped from `public/settings/crm-integrations-reference.png` (1024×460)
- * so glyphs match the design reference.
+ * Raster marks: `public/settings/crm/*.png`.
+ * Other CRMs: sprite `public/settings/crm-integrations-reference.png`.
  */
 const REF_W = 1024;
 const REF_H = 460;
-
-/** Top-left of each 40×40 logo inside the reference image (source pixels). */
-const CLIP: Record<CrmId, { x: number; y: number }> = {
-  pipedrive: { x: 46, y: 154 },
-  gohighlevel: { x: 534, y: 154 },
-  hubspot: { x: 46, y: 238 },
-  salesforce: { x: 534, y: 238 },
-  attio: { x: 46, y: 322 },
-  exlynx: { x: 534, y: 322 },
-  agencyzoom: { x: 46, y: 388 },
-  agentcrm: { x: 520, y: 382 },
-};
 
 export type CrmId =
   | "pipedrive"
@@ -27,7 +17,26 @@ export type CrmId =
   | "agencyzoom"
   | "agentcrm";
 
+const RASTER_SRC: Partial<Record<CrmId, string>> = {
+  pipedrive: "/settings/crm/pipedrive.png",
+  gohighlevel: "/settings/crm/gohighlevel.png",
+  hubspot: "/settings/crm/hubspot.png",
+  salesforce: "/settings/crm/salesforce.png",
+  attio: "/settings/crm/attio.png",
+};
+
+/** Top-left of each 40×40 logo inside the reference sprite (source pixels). */
+const SPRITE_CLIP: Partial<Record<CrmId, { x: number; y: number }>> = {
+  exlynx: { x: 534, y: 322 },
+  agencyzoom: { x: 46, y: 388 },
+  agentcrm: { x: 520, y: 382 },
+};
+
 const SPRITE_SRC = "/settings/crm-integrations-reference.png";
+
+function rasterPath(id: CrmId): string | undefined {
+  return RASTER_SRC[id];
+}
 
 export function CrmLogo({
   id,
@@ -38,7 +47,24 @@ export function CrmLogo({
   className?: string;
   size?: number;
 }) {
-  const p = CLIP[id];
+  const raster = rasterPath(id);
+  if (raster) {
+    return (
+      <Image
+        src={raster}
+        alt=""
+        width={size}
+        height={size}
+        className={`shrink-0 rounded-md object-contain ${className ?? ""}`}
+        sizes={`${size}px`}
+      />
+    );
+  }
+
+  const p = SPRITE_CLIP[id];
+  if (!p) {
+    return null;
+  }
   const scale = size / 40;
   return (
     <span

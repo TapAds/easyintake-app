@@ -66,9 +66,8 @@ export function CrmIntegrationsSection() {
                   </div>
                   <button
                     type="button"
-                    className="inline-flex w-full shrink-0 items-center justify-center gap-1.5 rounded-full bg-[#111827] px-3 py-2 text-xs font-medium text-white hover:bg-[#1f2937] sm:w-auto sm:justify-center dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
+                    className="inline-flex w-full shrink-0 items-center justify-center rounded-full bg-[#111827] px-3 py-2 text-xs font-medium text-white hover:bg-[#1f2937] sm:w-auto sm:justify-center dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
                   >
-                    <CrmLogo id={id} size={18} className="rounded-sm" />
                     {t("connectNamed", { name: displayName })}
                   </button>
                 </li>

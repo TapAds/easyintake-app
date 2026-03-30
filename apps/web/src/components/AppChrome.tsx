@@ -4,16 +4,13 @@ import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { UserButton } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
+import { SiteFooter } from "@/components/SiteFooter";
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
   const t = useTranslations("nav");
   const locale = useLocale();
   const pathname = usePathname();
-
-  const switchLocale = (next: string) => {
-    const stripped = pathname.replace(/^\/(en|es)/, "") || "/";
-    return `/${next}${stripped === "/" ? "" : stripped}`;
-  };
 
   const prefix = `/${locale}`;
 
@@ -83,28 +80,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
             </nav>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            <div className="flex rounded-lg border border-foreground/15 overflow-hidden text-xs font-medium">
-              <Link
-                href={switchLocale("en")}
-                className={`px-2.5 py-1.5 ${
-                  locale === "en"
-                    ? "bg-primary text-white"
-                    : "text-foreground/70 hover:bg-foreground/5"
-                }`}
-              >
-                EN
-              </Link>
-              <Link
-                href={switchLocale("es")}
-                className={`px-2.5 py-1.5 ${
-                  locale === "es"
-                    ? "bg-primary text-white"
-                    : "text-foreground/70 hover:bg-foreground/5"
-                }`}
-              >
-                ES
-              </Link>
-            </div>
+            <LocaleSwitcher />
             <UserButton
               afterSignOutUrl={`/${locale}/sign-in`}
               appearance={{ baseTheme: undefined }}
@@ -113,6 +89,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
         </div>
       </header>
       {children}
+      <SiteFooter />
     </div>
   );
 }

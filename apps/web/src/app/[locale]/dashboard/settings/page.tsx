@@ -1,12 +1,37 @@
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { getTranslations } from "next-intl/server";
 import { AppChrome } from "@/components/AppChrome";
 import { AddFormApplicationDialog } from "@/components/settings/AddFormApplicationDialog";
 import { CrmIntegrationsSection } from "@/components/settings/crm/CrmIntegrationsSection";
-import { userCanConfigureIntake } from "@/lib/auth/roles";
+import type { OrganizationInitial } from "@/components/settings/OrganizationSection";
+import { OrganizationSection } from "@/components/settings/OrganizationSection";
+import { UsersSection } from "@/components/settings/UsersSection";
+import {
+  userCanConfigureIntake,
+  userCanEditOrganizationProfile,
+  userCanViewSettingsUsers,
+} from "@/lib/auth/roles";
+import { ORG_PUBLIC_LOGO_URL, ORG_PUBLIC_WEBSITE_URL } from "@/lib/settings/orgProfile";
 
 export default async function DashboardSettingsPage() {
   const t = await getTranslations("settings");
   const canConfigure = await userCanConfigureIntake();
+  const showUsers = await userCanViewSettingsUsers();
+  const canEditOrg = await userCanEditOrganizationProfile();
+  const { orgId } = await auth();
+
+  let organizationInitial: OrganizationInitial | null = null;
+  if (canEditOrg && orgId) {
+    const client = await clerkClient();
+    const org = await client.organizations.getOrganization({ organizationId: orgId });
+    const pm = (org.publicMetadata ?? {}) as Record<string, unknown>;
+    organizationInitial = {
+      name: org.name,
+      websiteUrl:
+        typeof pm[ORG_PUBLIC_WEBSITE_URL] === "string" ? pm[ORG_PUBLIC_WEBSITE_URL] : "",
+      logoUrl: typeof pm[ORG_PUBLIC_LOGO_URL] === "string" ? pm[ORG_PUBLIC_LOGO_URL] : "",
+    };
+  }
 
   return (
     <AppChrome>
@@ -24,6 +49,12 @@ export default async function DashboardSettingsPage() {
             </div>
           ) : null}
         </div>
+
+        {canEditOrg ? (
+          <OrganizationSection initial={organizationInitial} hasOrgId={Boolean(orgId)} />
+        ) : null}
+
+        {showUsers ? <UsersSection /> : null}
 
         <CrmIntegrationsSection />
       </main>

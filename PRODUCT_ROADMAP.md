@@ -6,7 +6,7 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 
 ## Now
 
-- **Universal voice demo** — Single product demo line **`+1 430-300-3049`** for [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo): operator confirms **Product / Form (demo)** in the UI, prospect calls the number; fields populate per selected preset. Documented in [docs/demo/LIVE_CALL_DEMO.md](docs/demo/LIVE_CALL_DEMO.md).
+- **Universal voice demo** — Single product demo line **`+1 430-300-3049`** for [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo): operator confirms **Product / Form (demo)** in the UI, prospect calls the number; **Application fields (live)** shows the **full catalog by section** for that package as values stream in. Documented in [docs/demo/LIVE_CALL_DEMO.md](docs/demo/LIVE_CALL_DEMO.md).
 - **Insurance vertical** — first **vertical config package** (string field keys, config-driven forms and HITL).
 - **Agent dashboard** — org queue, session detail, field review from config, reporting overview (replace demo data as APIs land).
 - **Foundation** — `IntakeSession` model (vertical-agnostic), BFF to `apps/api`, bilingual shell. **`apps/web`** is deployable to **Vercel** with **Clerk** (production DNS + env per [`apps/web/DEPLOY-PRODUCTION.md`](apps/web/DEPLOY-PRODUCTION.md)); keep **GitHub `main`** in sync with what you expect to run in production.
@@ -27,7 +27,8 @@ High-level sequencing for the platform and major clients. Detailed engineering l
 
 - **Audience:** **Agents** and **agency admins** (org-scoped; permission model TBD — align with Clerk org roles per [DECISIONS.md](DECISIONS.md) / [ARCHITECTURE.md](ARCHITECTURE.md) as those harden).
 - **Purpose:** Ongoing in-app configuration: org profile, **products / forms** mappings, **CRM** integrations, user and invite management as appropriate, voice numbers / environments, feature toggles, and the rest of what the dashboard **Settings** shell should own—aligned with [PLATFORM_BUILD_PLAN.md](docs/specs/PLATFORM_BUILD_PLAN.md) as dashboard IA evolves.
-- **Relationship to onboarding:** **Settings** is the **day-two admin surface** after initial setup; onboarding may **deep-link** or hand off here for advanced edits.
+- **Org profile (in progress):** Dashboard **Settings → Organization** captures **display name**, **website**, and **logo** (upload to blob storage or **fetch from website** with explicit user approval). Name and metadata live on the **Clerk organization**; logo URL is suitable for **applicant microsites**, forms, and other branded surfaces once those routes read from the same source.
+- **Relationship to onboarding:** **Settings** is the **day-two admin surface** after initial setup; onboarding should **pre-fill or hand off** into Organization (and related settings); microsites and embedded flows **consume** org profile fields when wired.
 
 - **Customer onboarding — carrier documents** — ingest **PDFs and blank application forms** (e.g. carrier-specific apps, underwriting guides) to bootstrap **vertical presets**, field ordering, and org-specific mappings; delivery TBD (**in-product wizard**, **embedded agent**, **Cursor skill**, or **operator playbook**). Not the same as agency **voice** onboarding below.
 - **inmigracioningreso.com** — separate Next.js product that **webhooks** into Easy Intake (`apps/api`), similar in boundary to cotizarahora.

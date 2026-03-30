@@ -1,0 +1,726 @@
+{
+  "pageTitle": "Términos del servicio",
+  "productName": "EasyIntake App",
+  "lastUpdated": "Última actualización: 30 de marzo de 2026",
+  "intro": [
+    "Estos Términos del servicio (\"Términos\") rigen su acceso y uso del sitio web, la plataforma de software, las API y los servicios relacionados de EasyIntake App (en conjunto, el \"Servicio\") operados por PropSWOT LLC, que comercializa como EasyIntake App (\"EasyIntake\", \"nosotros\", \"nuestro\" o \"nos\").",
+    "Al acceder o usar el Servicio, usted acepta quedar legalmente vinculado por estos Términos.",
+    "Si no está de acuerdo con estos Términos, debe dejar de usar el Servicio de inmediato."
+  ],
+  "contactHeading": "30. Información de contacto",
+  "contactBlocks": [
+    {
+      "type": "paragraph",
+      "text": "EasyIntake"
+    },
+    {
+      "type": "paragraph",
+      "text": "PropSWOT LLC, en nombre comercial EasyIntake App"
+    },
+    {
+      "type": "paragraph",
+      "text": "1401 21st ST #STE R"
+    },
+    {
+      "type": "paragraph",
+      "text": "Sacramento, CA, 95811, EE. UU."
+    },
+    {
+      "type": "paragraph",
+      "text": "support@easyintakeapp.com"
+    },
+    {
+      "type": "paragraph",
+      "text": "www.easyintakeapp.com"
+    }
+  ],
+  "sections": [
+    {
+      "heading": "1. Descripción del Servicio",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake App ofrece una plataforma de software en la nube diseñada para ayudar a las organizaciones a recopilar, estructurar, procesar y administrar información mediante flujos de trabajo automatizados, formularios digitales de captación y sistemas de solicitudes estructurados."
+        },
+        {
+          "type": "paragraph",
+          "text": "El Servicio puede incluir:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "formularios digitales de captación",
+            "automatización de flujos de trabajo",
+            "extracción estructurada de datos",
+            "orquestación de solicitudes",
+            "generación de documentos",
+            "procesamiento de datos asistido por IA",
+            "analíticas e informes",
+            "herramientas de comunicación",
+            "API e integraciones"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake opera únicamente como plataforma de infraestructura de software."
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no proporciona asesoramiento legal, financiero, médico, de seguros, fiscal, de cumplimiento normativo ni profesional."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios son los únicos responsables de verificar la exactitud e integridad de toda la información procesada a través del Servicio."
+        }
+      ]
+    },
+    {
+      "heading": "2. Arquitectura de la plataforma (modelo B2B2C)",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "El Servicio permite que empresas, agencias, profesionales y organizaciones (\"Usuarios comerciales\") recopilen información de personas físicas o jurídicas (\"Usuarios finales\")."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los Usuarios comerciales son los únicos responsables de:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "sus interacciones con los Usuarios finales",
+            "la licitud de la recopilación de datos",
+            "obtener el consentimiento del usuario cuando corresponda",
+            "el cumplimiento de la normativa aplicable",
+            "la verificación de la información enviada",
+            "las decisiones tomadas con base en la información recopilada"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake actúa únicamente como proveedor de tecnología y no participa en las transacciones entre Usuarios comerciales y Usuarios finales."
+        }
+      ]
+    },
+    {
+      "heading": "3. Elegibilidad",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Solo puede usar el Servicio si:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "tiene al menos 18 años",
+            "tiene capacidad para celebrar acuerdos legalmente vinculantes",
+            "cumple todas las leyes aplicables"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Si usa el Servicio en nombre de una organización, declara que tiene autoridad para obligar a dicha organización con arreglo a estos Términos."
+        }
+      ]
+    },
+    {
+      "heading": "4. Comunicaciones y firmas electrónicas",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Al usar el Servicio, usted consiente recibir comunicaciones por medios electrónicos, entre ellos:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "correo electrónico",
+            "SMS",
+            "notificaciones automáticas",
+            "alertas del sistema"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Las firmas electrónicas recogidas a través del Servicio son legalmente vinculantes y equivalentes a firmas físicas."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios reconocen que pueden generarse mensajes automatizados mediante los sistemas de la plataforma."
+        }
+      ]
+    },
+    {
+      "heading": "5. Cuentas y seguridad",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Puede ser necesario crear una cuenta para acceder a determinadas funciones."
+        },
+        {
+          "type": "paragraph",
+          "text": "Usted se compromete a:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "mantener la información de la cuenta actualizada",
+            "mantener la confidencialidad de las credenciales",
+            "notificar a EasyIntake cualquier acceso no autorizado"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios son responsables de toda actividad que ocurra bajo su cuenta."
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no es responsable de pérdidas derivadas de credenciales comprometidas."
+        }
+      ]
+    },
+    {
+      "heading": "6. Uso aceptable",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Usted se compromete a no usar el Servicio para:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "violar cualquier ley o normativa",
+            "recopilar información sin la autorización adecuada",
+            "enviar información fraudulenta o engañosa",
+            "distribuir malware",
+            "extraer datos de la plataforma (scraping)",
+            "realizar ingeniería inversa de los sistemas de la plataforma",
+            "interferir en la infraestructura",
+            "eludir las protecciones de seguridad",
+            "sobrecargar el Servicio mediante actividad automatizada"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake puede aplicar límites de uso y suspender cuentas que infrinjan esta sección."
+        }
+      ]
+    },
+    {
+      "heading": "7. Propiedad y tratamiento de los datos",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Los Usuarios comerciales conservan la titularidad de la información que envían a la plataforma (\"Datos del cliente\")."
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake trata los Datos del cliente únicamente con fines de:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "operar el Servicio",
+            "mejorar la funcionalidad del sistema",
+            "garantizar la seguridad de la plataforma"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no vende los Datos del cliente."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los Usuarios comerciales son responsables de garantizar que tienen derechos lícitos para enviar y tratar todos los Datos del cliente."
+        }
+      ]
+    },
+    {
+      "heading": "8. Privacidad y protección de datos",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Los Usuarios comerciales son responsables del cumplimiento de todas las leyes de protección de datos aplicables, entre ellas:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "RGPD (GDPR)",
+            "CCPA",
+            "GLBA",
+            "HIPAA (cuando corresponda)",
+            "leyes de protección al consumidor"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake actúa como encargado del tratamiento en nombre de los Usuarios comerciales."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los Usuarios comerciales se consideran responsables del tratamiento (controladores) de la licitud de sus prácticas de datos."
+        }
+      ]
+    },
+    {
+      "heading": "9. Inteligencia artificial y automatización",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "El Servicio puede incluir herramientas asistidas por IA utilizadas para:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "extraer información",
+            "estructurar datos",
+            "automatizar flujos de trabajo",
+            "generar resultados"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Los sistemas de IA pueden producir resultados incorrectos o incompletos."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios deben verificar de forma independiente todos los resultados antes de confiar en ellos."
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no garantiza la exactitud de los resultados generados por IA."
+        }
+      ]
+    },
+    {
+      "heading": "10. Entrenamiento de IA y uso de modelos",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no utiliza los Datos del cliente para entrenar modelos de IA generalizados sin autorización explícita."
+        },
+        {
+          "type": "paragraph",
+          "text": "No obstante, los datos operativos anonimizados o agregados pueden utilizarse para:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "mejorar el rendimiento de la plataforma",
+            "aumentar la fiabilidad del sistema",
+            "entrenar sistemas internos de automatización"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Los datos confidenciales específicos del cliente no se utilizarán para entrenar modelos disponibles públicamente sin consentimiento."
+        }
+      ]
+    },
+    {
+      "heading": "11. Integraciones de terceros",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "El Servicio puede integrarse con proveedores terceros, entre ellos:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "CRM",
+            "almacenamiento en la nube",
+            "servicios de mensajería",
+            "servicios de documentos",
+            "procesadores de pago"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no controla los servicios de terceros ni es responsable de su rendimiento o políticas."
+        }
+      ]
+    },
+    {
+      "heading": "12. API y automatización",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Si usa las API o funciones de automatización de EasyIntake:"
+        },
+        {
+          "type": "paragraph",
+          "text": "Usted se compromete a no:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "superar los límites de velocidad",
+            "acceder a datos no autorizados",
+            "replicar la plataforma",
+            "interferir en el rendimiento del sistema"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake puede modificar el acceso a las API en cualquier momento."
+        }
+      ]
+    },
+    {
+      "heading": "13. Funciones beta",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Algunas funciones pueden etiquetarse como:"
+        },
+        {
+          "type": "list",
+          "items": ["beta", "vista previa", "experimental"]
+        },
+        {
+          "type": "paragraph",
+          "text": "Esas funciones pueden contener errores y se ofrecen sin garantía."
+        }
+      ]
+    },
+    {
+      "heading": "14. Propiedad intelectual",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Toda la propiedad intelectual relacionada con el Servicio pertenece a EasyIntake o a sus licenciantes."
+        },
+        {
+          "type": "paragraph",
+          "text": "Esto incluye:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "software de la plataforma",
+            "flujos de trabajo",
+            "algoritmos",
+            "modelos de IA",
+            "arquitectura del sistema"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios no pueden copiar, distribuir, modificar ni realizar ingeniería inversa del Servicio."
+        }
+      ]
+    },
+    {
+      "heading": "15. Comentarios",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Toda sugerencia o comentario facilitado a EasyIntake podrá utilizarse sin compensación ni restricción."
+        }
+      ]
+    },
+    {
+      "heading": "16. Confidencialidad",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Los usuarios se comprometen a no divulgar información confidencial relacionada con:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "arquitectura de la plataforma",
+            "tecnología propietaria",
+            "documentación interna"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "17. Seguridad",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake aplica medidas de seguridad comercialmente razonables para proteger la seguridad del sistema."
+        },
+        {
+          "type": "paragraph",
+          "text": "No obstante:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "ningún sistema es totalmente seguro",
+            "las transmisiones por Internet pueden ser interceptadas",
+            "los usuarios comparten la responsabilidad de proteger sus cuentas"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "18. Disponibilidad del Servicio",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "El Servicio se ofrece según disponibilidad (\"tal cual esté disponible\")."
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no garantiza:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "servicio ininterrumpido",
+            "tiempo de actividad del 100%",
+            "funcionamiento sin errores"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "19. Subencargados",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake puede contratar subencargados terceros, entre ellos:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "proveedores de alojamiento en la nube",
+            "proveedores de infraestructura de datos",
+            "servicios de analíticas"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake se reserva el derecho de actualizar los subencargados según sea necesario."
+        }
+      ]
+    },
+    {
+      "heading": "20. Tarifas y pago",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Algunas funciones pueden requerir pago."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios autorizan a EasyIntake o a sus procesadores de pago a cobrar las tarifas aplicables."
+        },
+        {
+          "type": "paragraph",
+          "text": "Las tarifas no son reembolsables salvo que se indique lo contrario."
+        }
+      ]
+    },
+    {
+      "heading": "21. Cumplimiento en sectores regulados",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "El Servicio puede usarse en sectores sujetos a regulación, entre ellos:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "servicios financieros",
+            "atención sanitaria",
+            "seguros",
+            "servicios jurídicos"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no garantiza el cumplimiento normativo."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios siguen siendo los únicos responsables del cumplimiento de las leyes sectoriales aplicables."
+        }
+      ]
+    },
+    {
+      "heading": "22. Controles de exportación y sanciones",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "No podrá usarse el Servicio:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "en países sujetos a sanciones de EE. UU.",
+            "por personas incluidas en listas de partes restringidas",
+            "en violación de las leyes de exportación"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "23. Antifraude y abuso de la plataforma",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake puede supervisar la actividad del sistema para detectar:"
+        },
+        {
+          "type": "list",
+          "items": ["fraude", "abuso", "actividad ilícita"]
+        },
+        {
+          "type": "paragraph",
+          "text": "Las cuentas implicadas en conductas ilícitas pueden suspenderse o denunciarse a las autoridades."
+        }
+      ]
+    },
+    {
+      "heading": "24. Exención de garantías",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EL SERVICIO SE OFRECE \"TAL CUAL\"."
+        },
+        {
+          "type": "paragraph",
+          "text": "EASYINTAKE RENUNCIA A TODAS LAS GARANTÍAS, INCLUIDAS:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "COMERCIABILIDAD",
+            "IDONEIDAD PARA UN FIN DETERMINADO",
+            "EXACTITUD DE LOS DATOS",
+            "FIABILIDAD DEL SERVICIO"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "25. Limitación de responsabilidad",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EN LA MÁXIMA MEDIDA PERMITIDA POR LA LEY:"
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no será responsable de:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "daños indirectos",
+            "lucro cesante",
+            "sanciones regulatorias",
+            "pérdida de datos",
+            "interrupciones del servicio"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "La responsabilidad total no superará las tarifas abonadas durante los doce meses anteriores."
+        }
+      ]
+    },
+    {
+      "heading": "26. Indemnización",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Usted se compromete a defender e indemnizar a EasyIntake frente a reclamaciones derivadas de:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "su uso del Servicio",
+            "uso indebido de los datos",
+            "incumplimientos regulatorios",
+            "litigios entre Usuarios comerciales y Usuarios finales"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "27. Arbitraje y resolución de controversias",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Las controversias se resolverán mediante arbitraje vinculante."
+        },
+        {
+          "type": "paragraph",
+          "text": "Usted renuncia a:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "juicios con jurado",
+            "acciones colectivas"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "El arbitraje será administrado por la American Arbitration Association."
+        }
+      ]
+    },
+    {
+      "heading": "28. Ley aplicable",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Estos Términos se rigen por las leyes de California."
+        }
+      ]
+    },
+    {
+      "heading": "29. Terminación",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake puede suspender o terminar el acceso por:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "incumplimiento de estos Términos",
+            "actividad ilícita",
+            "abuso del sistema"
+          ]
+        }
+      ]
+    },
+    {
+      "heading": "30. Cesión",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake puede ceder estos Términos en relación con:"
+        },
+        {
+          "type": "list",
+          "items": ["fusiones", "adquisiciones", "transferencias de activos"]
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios no pueden ceder sus derechos sin consentimiento."
+        }
+      ]
+    },
+    {
+      "heading": "31. Acuerdo completo",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Estos Términos constituyen el acuerdo completo que rige el uso del Servicio."
+        },
+        {
+          "type": "paragraph",
+          "text": "Si alguna disposición resultara inaplicable, el resto sigue siendo válido."
+        }
+      ]
+    }
+  ]
+}

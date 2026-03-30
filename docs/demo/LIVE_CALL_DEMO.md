@@ -2,7 +2,7 @@
 
 Use this with the **`/[locale]/dashboard/live-demo`** page in `apps/web` (production: [app.easyintakeapp.com/…/live-demo](https://app.easyintakeapp.com/en/dashboard/live-demo)) and a running **`apps/api`** (e.g. Railway).
 
-**Universal product demo number (voice):** **`+1 430-300-3049`**. Prospects and operators use this single number for live demos: choose **Product / Form (demo)** on the Live demo page, then dial this number. Transcription and field filling follow the selected preset.
+**Universal product demo number (voice):** **`+1 430-300-3049`**. Prospects and operators use this single number for live demos: choose **Product / Form (demo)** on the Live demo page, then dial this number. That dropdown picks the **vertical config package** (e.g. insurance vs N-400): **Application fields (live)** shows the **full field catalog**, **grouped by section**, and values update as the call is processed.
 
 ---
 
@@ -22,7 +22,7 @@ Forwarding the caller to your cell is a **Twilio configuration** concern (TwiML 
 
 - **Connect stream** — Paste a **`callSid`** from the live leg (or pick from **Recent Twilio calls** after refresh). Requires **`NEXT_PUBLIC_API_URL`** in the browser and **`API_JWT_SECRET`** on Vercel matching the API.
 - **After hang-up** — The demo reloads transcript and fields from the API via **`/api/demo/call-details`** (BFF → `GET /api/calls/:callSid` + transcript). If the status callback is configured, data reappears within a few seconds (retries handle orchestrator lag).
-- **Carrier / product** — Demo presets filter which insurance fields are highlighted; extraction still uses the full engine entity cache.
+- **Product / Form (demo)** — Selects which vertical catalog (and PDF/extract behavior where applicable). The UI lists **all** catalog fields by section; the realtime engine may still populate a subset per call until extraction fills more keys.
 - **Twilio list** — Server calls Twilio REST via **`GET /api/operator/twilio/recent-calls`** (JWT); the web app uses a BFF at **`/api/demo/twilio-calls`**.
 
 ---
@@ -34,7 +34,7 @@ Forwarding the caller to your cell is a **Twilio configuration** concern (TwiML 
 3. From a second phone, **call `+1 430-300-3049`** (universal product demo); keep the call active.
 4. Click **Refresh** on recent Twilio calls; **select the row** to fill `callSid`.
 5. Click **Connect stream**; speak as the caller; show **transcript** and **application fields** updating.
-6. Switch **Carrier / product** to show how the highlighted field set changes (config-driven demo).
+6. Switch **Product / Form (demo)** to show how the **sectioned catalog** and labels change for another product line or vertical (config-driven demo).
 
 ### Failure modes (what to say)
 

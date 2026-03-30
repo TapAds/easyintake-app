@@ -1,4 +1,12 @@
 {
+  "footer": {
+    "terms": "Términos del servicio",
+    "privacy": "Política de privacidad",
+    "copyright": "© {year} PropSWOT LLC. Todos los derechos reservados."
+  },
+  "public": {
+    "signIn": "Iniciar sesión"
+  },
   "nav": {
     "home": "Inicio",
     "overview": "Resumen",
@@ -157,7 +165,7 @@
       "agentInstructionTitle": "Antes de conectar",
       "agentStepConfirmProduct": "Confirma Producto / formulario (demo) y llama al +1 430-300-3049.",
       "agentStepConnectStream": "Conecta la transmisión.",
-      "agentInstructionHint": "El menú Producto / formulario define qué campos se cargan en Campos de solicitud (en vivo).",
+      "agentInstructionHint": "El menú Producto / formulario elige la línea demo y el catálogo completo de la solicitud (secciones a la derecha).",
       "callSidLabel": "Call SID",
       "connect": "Conectar transmisión",
       "connecting": "Conectando…",
@@ -180,7 +188,8 @@
       "transcriptEmpty": "La transcripción aparece al conectar y procesar el habla.",
       "scoreLabel": "Completitud",
       "applicationTitle": "Campos de solicitud (en vivo)",
-      "applicationPanelHint": "Los valores se actualizan a medida que se procesa la transcripción mientras estás conectado.",
+      "applicationPanelHint": "Catálogo completo por sección. Los valores se actualizan a medida que se procesa la transcripción mientras estás conectado.",
+      "applicationEmpty": "No hay catálogo de campos para esta selección.",
       "voiceDiagnosticsSummary": "Diagnóstico del canal de voz (soporte)",
       "voiceHealthTitle": "Canal de voz",
       "voiceHealthLoading": "Cargando estado del canal de voz…",
@@ -225,6 +234,70 @@
   "settings": {
     "pageTitle": "Configuración",
     "pageSubtitle": "Conecta tu CRM para recibir leads automáticamente.",
+    "organization": {
+      "sectionTitle": "Organización",
+      "sectionHint": "Este perfil puede alimentar tu panel y futuras experiencias para solicitantes. Los logos se almacenan de forma segura; se guarda un enlace público en tu organización de Clerk.",
+      "noOrgHint": "Selecciona una organización en el menú de tu cuenta y vuelve aquí para editar el perfil.",
+      "nameLabel": "Nombre de la organización",
+      "websiteLabel": "Sitio web",
+      "websitePlaceholder": "https://ejemplo.com",
+      "logoHeading": "Logo",
+      "logoEmpty": "Aún no hay logo. Sube una imagen o obtén una desde tu sitio web.",
+      "uploadLogo": "Subir logo",
+      "uploading": "Subiendo…",
+      "fetchLogoFromWebsite": "Obtener logo del sitio web",
+      "fetching": "Obteniendo…",
+      "fetchLogoHint": "Usa la URL del sitio web de arriba. Buscamos iconos habituales e imágenes Open Graph; luego puedes aprobar antes de guardar.",
+      "removeLogo": "Quitar logo",
+      "previewHeading": "Logo obtenido",
+      "previewAria": "Vista previa del logo del sitio",
+      "useThisLogo": "Usar este logo",
+      "cancelPreview": "Cancelar",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Organización guardada.",
+      "errors": {
+        "NO_ORG": "Elige una organización en el menú de tu cuenta e inténtalo de nuevo.",
+        "FORBIDDEN": "No tienes permiso para editar la organización.",
+        "VALIDATION": "Revisa la URL del sitio (https) y el tipo de archivo del logo (PNG, JPEG, WebP o GIF).",
+        "UNAUTHORIZED": "Vuelve a iniciar sesión e inténtalo de nuevo.",
+        "CLERK": "No se pudieron guardar los datos de la organización. Inténtalo de nuevo.",
+        "SAVE_FAILED": "No se pudo guardar. Inténtalo de nuevo.",
+        "UPLOAD_FAILED": "Falló la subida del logo. Prueba con un archivo más pequeño.",
+        "BLOB_NOT_CONFIGURED": "El almacenamiento de archivos no está configurado (falta BLOB_READ_WRITE_TOKEN).",
+        "NETWORK": "Error de red. Comprueba tu conexión e inténtalo de nuevo.",
+        "FETCH_FAILED": "No encontramos un logo adecuado en ese sitio. Prueba subiendo un archivo.",
+        "FETCH_NOT_HTML": "Esa URL no devolvió una página web que pudiéramos leer."
+      }
+    },
+    "users": {
+      "sectionTitle": "Usuarios",
+      "sectionHint": "Añade personas a tu organización en Clerk. Recibirán un correo con un enlace para aceptar e iniciar sesión.",
+      "invite": {
+        "addUserButton": "Añadir usuario",
+        "dialogTitle": "Invitar usuario",
+        "dialogHint": "Enviaremos un enlace por correo para que se una a tu organización actual.",
+        "nameLabel": "Nombre completo",
+        "namePlaceholder": "Jordan Smith",
+        "emailLabel": "Correo",
+        "emailPlaceholder": "nombre@empresa.com",
+        "roleLabel": "Rol en la organización",
+        "roleMember": "Miembro",
+        "roleAdmin": "Administrador",
+        "sendInvite": "Enviar invitación",
+        "sending": "Enviando…",
+        "cancel": "Cancelar",
+        "success": "Invitación enviada. Recibirán un correo en breve.",
+        "errors": {
+          "NO_ORG": "Elige una organización en el menú de tu cuenta e inténtalo de nuevo.",
+          "FORBIDDEN": "No tienes permiso para invitar usuarios.",
+          "VALIDATION": "Introduce un nombre y un correo válidos.",
+          "CLERK": "No se pudo enviar la invitación. Comprueba el correo o inténtalo de nuevo.",
+          "UNAUTHORIZED": "Vuelve a iniciar sesión e inténtalo de nuevo.",
+          "NETWORK": "Error de red. Comprueba tu conexión e inténtalo de nuevo."
+        }
+      }
+    },
     "crm": {
       "sectionTitle": "Integraciones CRM",
       "sectionHint": "Conecta Pipedrive o GoHighLevel para enviar leads y solicitudes automáticamente.",
@@ -256,7 +329,15 @@
       "removeField": "Quitar campo",
       "cancel": "Cancelar",
       "save": "Guardar",
-      "saveNote": "El guardado en tu organización aún no está conectado; este cuadro es una vista previa del flujo."
+      "saveNote": "El guardado en tu organización aún no está conectado; este cuadro es una vista previa del flujo.",
+      "contextSectionTitle": "Contexto e instrucciones",
+      "contextDocsPrompt": "Sube cualquier documento con instrucciones para el solicitante, o información sobre el formulario o la solicitud que pueda ser útil.",
+      "contextDocsDecisionHint": "Estos materiales dan contexto al sistema sobre el formulario y respaldarán flujos automatizados futuros, como árboles de decisión y reglas si/entonces, cuando la generación esté activada para tu organización.",
+      "contextDocsLabel": "Documentos instructivos o de apoyo",
+      "contextDocsChoose": "Añadir documentos",
+      "contextDocsEmpty": "Aún no hay documentos de contexto.",
+      "contextDocsAcceptHint": "Puedes adjuntar PDF, Word (.doc, .docx), texto plano o Markdown, e imágenes (PNG, JPEG, WebP).",
+      "contextDocsRemoveFile": "Quitar {fileName}"
     }
   }
 }

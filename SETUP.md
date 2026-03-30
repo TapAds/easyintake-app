@@ -114,7 +114,7 @@ Without the agent UI, extraction still runs and populates the entity cache for e
 
 ## 8. Test the Flow
 
-**Hosted product demo:** [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo) — universal demo line **`+1 430-300-3049`**: pick **Product / Form (demo)** in the UI, then place the call from a second phone.
+**Hosted product demo:** [Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo) — universal demo line **`+1 430-300-3049`**: pick **Product / Form (demo)** in the UI, then place the call from a second phone; the **Application** column lists the full catalog **by section** for that package.
 
 1. **Start a call** — Call your Twilio number (local/dev) or the demo line above (production demo). Twilio connects to the Media Stream; Deepgram transcribes; extraction runs on each utterance.
 2. **Speak sample intake** — e.g. *"Hi, I'm John, 35, California, want 500k term life, 20 years, non-smoker."*

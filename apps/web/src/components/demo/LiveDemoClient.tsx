@@ -13,6 +13,7 @@ import {
 } from "@/lib/intake/fieldLabels";
 import {
   computeSectionCompletion,
+  groupFieldsBySection,
   isFieldValueFilled,
   overallCompletionPercent,
 } from "@/lib/intake/sectionCompletion";
@@ -125,10 +126,6 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   );
 
   const preset = LIVE_DEMO_PRESETS.find((p) => p.id === presetId);
-  const visibleKeys = useMemo(
-    () => preset?.visibleFieldKeys ?? [],
-    [preset]
-  );
 
   /** Life-insurance demo presets use LifeInsuranceEntity + V2 extraction; immigration uses another vertical. */
   const canExtractWithInsuranceModel = presetId !== "imm_n400";
@@ -143,15 +140,20 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
     preset?.configPackageId ?? DEFAULT_LIVE_DEMO_CONFIG_PACKAGE_ID;
   const verticalCfg = useMemo(() => getVerticalConfigForPackage(pkg), [pkg]);
 
+  const applicationFieldKeys = useMemo(
+    () => (verticalCfg?.fields ?? []).map((f) => f.key),
+    [verticalCfg]
+  );
+
+  const sectionFieldGroups = useMemo(() => {
+    if (!verticalCfg) return [];
+    return groupFieldsBySection(verticalCfg);
+  }, [verticalCfg]);
+
   const sectionRows = useMemo(() => {
     if (!verticalCfg) return [];
-    return computeSectionCompletion(
-      verticalCfg,
-      visibleKeys,
-      entities,
-      locale
-    );
-  }, [verticalCfg, visibleKeys, entities, locale]);
+    return computeSectionCompletion(verticalCfg, entities, locale);
+  }, [verticalCfg, entities, locale]);
 
   const overallPct = useMemo(
     () => overallCompletionPercent(sectionRows, score?.overall),
@@ -183,8 +185,9 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
   }, [entities]);
 
   const clientVisibleMissingKeys = useMemo(
-    () => visibleKeys.filter((k) => !isFieldValueFilled(entities[k])),
-    [visibleKeys, entities]
+    () =>
+      applicationFieldKeys.filter((k) => !isFieldValueFilled(entities[k])),
+    [applicationFieldKeys, entities]
   );
 
   const missingKeysForDisplay = useMemo(() => {
@@ -228,7 +231,7 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
 
   useEffect(() => {
     const prev = prevEntitiesRef.current;
-    for (const key of visibleKeys) {
+    for (const key of applicationFieldKeys) {
       if (
         entityValueFingerprint(prev[key]) !==
         entityValueFingerprint(entities[key])
@@ -248,7 +251,7 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
       }
     }
     prevEntitiesRef.current = { ...entities };
-  }, [entities, visibleKeys]);
+  }, [entities, applicationFieldKeys]);
 
   const loadTwilioCalls = useCallback(() => {
     setTwilioError(null);
@@ -795,8 +798,8 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
         </aside>
       </div>
 
-      <div className="grid gap-2 lg:grid-cols-2">
-        <section className="space-y-2">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        <section className="space-y-2 min-w-0">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               {t("productFormLabel")}
@@ -982,46 +985,79 @@ export function LiveDemoClient({ apiBaseUrl }: { apiBaseUrl: string }) {
           </div>
         </section>
 
-        <section>
-          <h3 className="text-sm font-semibold text-foreground mb-1">
-            {t("applicationTitle")}
-          </h3>
-          <p className="text-xs text-foreground/65 mb-2 max-w-prose">
-            {t("applicationPanelHint")}
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 rounded-xl border border-foreground/10 overflow-hidden">
-            {visibleKeys.map((key, index) => {
-              const raw = entities[key];
-              const display =
-                raw === undefined || raw === null
-                  ? "—"
-                  : typeof raw === "object"
-                    ? JSON.stringify(raw)
-                    : String(raw);
-              const flash = flashingKeys.has(key);
-              const spanFull =
-                visibleKeys.length % 2 === 1 &&
-                index === visibleKeys.length - 1;
-              return (
+        <section
+          className="min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5rem)] flex flex-col gap-3"
+          aria-label={t("applicationTitle")}
+        >
+          <div className="shrink-0">
+            <h3 className="text-sm font-semibold text-foreground mb-1">
+              {t("applicationTitle")}
+            </h3>
+            <p className="text-xs text-foreground/65 max-w-prose">
+              {t("applicationPanelHint")}
+            </p>
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto pr-1 space-y-3 -mr-1">
+            {sectionFieldGroups.length === 0 ? (
+              <p className="text-xs text-foreground/55">{t("applicationEmpty")}</p>
+            ) : (
+              sectionFieldGroups.map(({ section, fields }) => (
                 <div
-                  key={key}
-                  className={`px-3 py-2 flex flex-col gap-0.5 sm:flex-row sm:items-start sm:gap-2 transition-colors duration-500 border-b border-foreground/10 min-w-0 ${
-                    spanFull ? "md:col-span-2 md:border-r-0" : "md:odd:border-r md:odd:border-foreground/10"
-                  } ${
-                    flash
-                      ? "bg-primary/[0.12] dark:bg-primary/[0.18]"
-                      : ""
-                  }`}
+                  key={section.id}
+                  className="rounded-xl border border-foreground/10 overflow-hidden bg-foreground/[0.02]"
                 >
-                  <span className="text-xs font-medium text-foreground/70 shrink-0 sm:max-w-[42%] sm:min-w-0">
-                    {fieldLabelForLocale(key, locale, pkg)}
-                  </span>
-                  <span className="text-sm text-foreground break-words flex-1 min-w-0">
-                    {display}
-                  </span>
+                  <div className="px-3 py-2 border-b border-foreground/10 bg-foreground/[0.04]">
+                    <h4 className="text-xs font-semibold text-foreground tracking-wide">
+                      {locale === "es" ? section.labels.es : section.labels.en}
+                    </h4>
+                    {section.description ? (
+                      <p className="text-[10px] text-foreground/55 mt-0.5 leading-snug">
+                        {locale === "es"
+                          ? section.description.es
+                          : section.description.en}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2">
+                    {fields.map((field, index) => {
+                      const key = field.key;
+                      const raw = entities[key];
+                      const display =
+                        raw === undefined || raw === null
+                          ? "—"
+                          : typeof raw === "object"
+                            ? JSON.stringify(raw)
+                            : String(raw);
+                      const flash = flashingKeys.has(key);
+                      const spanFull =
+                        fields.length % 2 === 1 &&
+                        index === fields.length - 1;
+                      return (
+                        <div
+                          key={key}
+                          className={`px-3 py-2 flex flex-col gap-0.5 sm:flex-row sm:items-start sm:gap-2 transition-colors duration-500 border-b border-foreground/10 min-w-0 ${
+                            spanFull
+                              ? "sm:col-span-2 sm:border-r-0"
+                              : "sm:odd:border-r sm:odd:border-foreground/10"
+                          } ${
+                            flash
+                              ? "bg-primary/[0.12] dark:bg-primary/[0.18]"
+                              : ""
+                          }`}
+                        >
+                          <span className="text-xs font-medium text-foreground/70 shrink-0 sm:max-w-[42%] sm:min-w-0">
+                            {fieldLabelForLocale(key, locale, pkg)}
+                          </span>
+                          <span className="text-sm text-foreground break-words flex-1 min-w-0">
+                            {display}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
         </section>
       </div>

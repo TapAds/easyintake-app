@@ -23,6 +23,14 @@ const isPublicAuthRoute = createRouteMatcher([
   "/es/sign-up(.*)",
 ]);
 
+/** Legal pages reachable without an account. */
+const isPublicLegalRoute = createRouteMatcher([
+  "/en/terms(.*)",
+  "/es/terms(.*)",
+  "/en/privacy(.*)",
+  "/es/privacy(.*)",
+]);
+
 /**
  * Clerk recommends returning next-intl from inside clerkMiddleware so locale handling
  * runs on the same response chain as auth (see Clerk "Combine Middleware" docs).
@@ -35,7 +43,11 @@ const middleware = clerkMiddleware(async (auth, req) => {
   if (pathname.startsWith("/api") || pathname.startsWith("/trpc")) {
     return NextResponse.next();
   }
-  if (!isPublicAuthRoute(req) && isProtectedRoute(req)) {
+  if (
+    !isPublicAuthRoute(req) &&
+    !isPublicLegalRoute(req) &&
+    isProtectedRoute(req)
+  ) {
     await auth.protect();
   }
   return intlMiddleware(req);

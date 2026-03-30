@@ -1,4 +1,12 @@
 {
+  "footer": {
+    "terms": "Terms of Service",
+    "privacy": "Privacy Policy",
+    "copyright": "© {year} PropSWOT LLC. All rights reserved."
+  },
+  "public": {
+    "signIn": "Sign in"
+  },
   "nav": {
     "home": "Home",
     "overview": "Overview",
@@ -157,7 +165,7 @@
       "agentInstructionTitle": "Before you connect",
       "agentStepConfirmProduct": "Confirm Product / Form (demo), and call +1 430-300-3049.",
       "agentStepConnectStream": "Connect stream.",
-      "agentInstructionHint": "The Product / Form dropdown sets which fields load in Application fields (live).",
+      "agentInstructionHint": "The Product / Form dropdown picks the demo line and the full application catalog (sections on the right).",
       "callSidLabel": "Call SID",
       "connect": "Connect stream",
       "connecting": "Connecting…",
@@ -180,7 +188,8 @@
       "transcriptEmpty": "Transcript appears after you connect and speech is processed.",
       "scoreLabel": "Completeness",
       "applicationTitle": "Application fields (live)",
-      "applicationPanelHint": "Values update as the transcript is processed while you are connected.",
+      "applicationPanelHint": "Full catalog by section. Values update as the transcript is processed while you are connected.",
+      "applicationEmpty": "No field catalog is available for this selection.",
       "voiceDiagnosticsSummary": "Voice pipeline diagnostics (troubleshooting)",
       "voiceHealthTitle": "Voice pipeline",
       "voiceHealthLoading": "Loading voice health…",
@@ -225,6 +234,70 @@
   "settings": {
     "pageTitle": "Settings",
     "pageSubtitle": "Connect your CRM to receive leads automatically.",
+    "organization": {
+      "sectionTitle": "Organization",
+      "sectionHint": "This profile can power your dashboard and future applicant experiences. Logo files are stored securely; a public link is saved on your Clerk organization.",
+      "noOrgHint": "Select an organization from your account menu, then return here to edit your organization profile.",
+      "nameLabel": "Organization name",
+      "websiteLabel": "Website",
+      "websitePlaceholder": "https://example.com",
+      "logoHeading": "Logo",
+      "logoEmpty": "No logo yet. Upload an image or fetch one from your website.",
+      "uploadLogo": "Upload logo",
+      "uploading": "Uploading…",
+      "fetchLogoFromWebsite": "Fetch logo from website",
+      "fetching": "Fetching…",
+      "fetchLogoHint": "Uses the website URL above. We look for common icons and Open Graph images, then you can approve before it is stored.",
+      "removeLogo": "Remove logo",
+      "previewHeading": "Fetched logo",
+      "previewAria": "Logo preview from website",
+      "useThisLogo": "Use this logo",
+      "cancelPreview": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Organization saved.",
+      "errors": {
+        "NO_ORG": "Choose an organization in your account menu, then try again.",
+        "FORBIDDEN": "You don’t have permission to edit organization settings.",
+        "VALIDATION": "Check the website URL (https) and logo file type (PNG, JPEG, WebP, or GIF).",
+        "UNAUTHORIZED": "Sign in again, then retry.",
+        "CLERK": "Could not save organization settings. Try again.",
+        "SAVE_FAILED": "Could not save. Try again.",
+        "UPLOAD_FAILED": "Logo upload failed. Try again or pick a smaller file.",
+        "BLOB_NOT_CONFIGURED": "File storage is not configured (missing BLOB_READ_WRITE_TOKEN).",
+        "NETWORK": "Network error. Check your connection and try again.",
+        "FETCH_FAILED": "Could not find a suitable logo on that site. Try uploading a file instead.",
+        "FETCH_NOT_HTML": "That URL did not return a web page we could read."
+      }
+    },
+    "users": {
+      "sectionTitle": "Users",
+      "sectionHint": "Add people to your Clerk organization. They receive an email with a link to accept and sign in.",
+      "invite": {
+        "addUserButton": "Add user",
+        "dialogTitle": "Invite user",
+        "dialogHint": "We will email an invitation link so they can join your current organization.",
+        "nameLabel": "Full name",
+        "namePlaceholder": "Jordan Smith",
+        "emailLabel": "Email",
+        "emailPlaceholder": "name@company.com",
+        "roleLabel": "Organization role",
+        "roleMember": "Member",
+        "roleAdmin": "Admin",
+        "sendInvite": "Send invite",
+        "sending": "Sending…",
+        "cancel": "Cancel",
+        "success": "Invitation sent. They will get an email shortly.",
+        "errors": {
+          "NO_ORG": "Choose an organization in your account menu, then try again.",
+          "FORBIDDEN": "You don’t have permission to invite users.",
+          "VALIDATION": "Enter a valid name and email.",
+          "CLERK": "Could not send invitation. Check the email address or try again.",
+          "UNAUTHORIZED": "Sign in again, then retry.",
+          "NETWORK": "Network error. Check your connection and try again."
+        }
+      }
+    },
     "crm": {
       "sectionTitle": "CRM Integrations",
       "sectionHint": "Connect Pipedrive or GoHighLevel to automatically send leads and applications.",
@@ -256,7 +329,15 @@
       "removeField": "Remove field",
       "cancel": "Cancel",
       "save": "Save",
-      "saveNote": "Saving to your organization is not wired yet; this dialog previews the workflow."
+      "saveNote": "Saving to your organization is not wired yet; this dialog previews the workflow.",
+      "contextSectionTitle": "Context & instructions",
+      "contextDocsPrompt": "Please upload any documents with applicant instructions, or information about the form/application that could be helpful.",
+      "contextDocsDecisionHint": "These materials give our systems context for the form and will support future automated flows—such as decision trees and if/then rules—when generation is enabled for your workspace.",
+      "contextDocsLabel": "Instructional or supporting documents",
+      "contextDocsChoose": "Add documents",
+      "contextDocsEmpty": "No context documents added yet.",
+      "contextDocsAcceptHint": "You can attach PDF, Word (.doc, .docx), plain text or Markdown, and images (PNG, JPEG, WebP).",
+      "contextDocsRemoveFile": "Remove {fileName}"
     }
   }
 }

@@ -1,0 +1,459 @@
+{
+  "pageTitle": "Política de privacidad",
+  "productName": "EasyIntake App",
+  "lastUpdated": "Última actualización: 30 de marzo de 2026",
+  "intro": [
+    "Esta Política de privacidad describe cómo PropSWOT LLC, que comercializa como EasyIntake App (\"EasyIntake\", \"nosotros\", \"nuestro\" o \"nos\"), recopila, usa, divulga y protege la información cuando usted accede o usa el sitio web, la plataforma de software, las API y los servicios relacionados de EasyIntake App (en conjunto, el \"Servicio\").",
+    "Al usar el Servicio, usted acepta la recopilación y el uso de la información de acuerdo con esta Política de privacidad."
+  ],
+  "sections": [
+    {
+      "heading": "1. Descripción general",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake App es una plataforma de automatización de flujos de trabajo y captación de datos que utilizan empresas, profesionales y organizaciones para recopilar y administrar información de sus clientes, consumidores o solicitantes."
+        },
+        {
+          "type": "paragraph",
+          "text": "Dado que la plataforma opera en un modelo B2B2C, hay dos tipos de usuarios:"
+        },
+        {
+          "type": "subheading",
+          "text": "Usuarios comerciales"
+        },
+        {
+          "type": "paragraph",
+          "text": "Organizaciones o profesionales que usan EasyIntake para recopilar información."
+        },
+        {
+          "type": "subheading",
+          "text": "Usuarios finales"
+        },
+        {
+          "type": "paragraph",
+          "text": "Personas que facilitan información mediante formularios o flujos de trabajo creados por Usuarios comerciales."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los Usuarios comerciales controlan cómo recopilan y usan los datos de los Usuarios finales. EasyIntake trata esos datos en nombre de los Usuarios comerciales."
+        }
+      ]
+    },
+    {
+      "heading": "2. Información que recopilamos",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Podemos recopilar varios tipos de información."
+        },
+        {
+          "type": "subheading",
+          "text": "Información que usted proporciona"
+        },
+        {
+          "type": "paragraph",
+          "text": "La información que usted facilita voluntariamente puede incluir:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "nombre",
+            "dirección de correo electrónico",
+            "número de teléfono",
+            "información de la empresa",
+            "credenciales de acceso a la cuenta",
+            "información de facturación",
+            "respuestas de formularios enviadas a través de flujos de trabajo",
+            "documentos cargados en la plataforma",
+            "mensajes o comunicaciones enviados a través del Servicio"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Los Usuarios comerciales determinan qué información recopilan de los Usuarios finales."
+        },
+        {
+          "type": "subheading",
+          "text": "Información recopilada automáticamente"
+        },
+        {
+          "type": "paragraph",
+          "text": "Cuando usa el Servicio, podemos recopilar automáticamente determinada información técnica, entre ella:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "dirección IP",
+            "tipo de dispositivo",
+            "tipo de navegador",
+            "sistema operativo",
+            "horarios de acceso",
+            "páginas vistas",
+            "interacción con el Servicio",
+            "URL de referencia"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Esta información nos ayuda a mantener la seguridad y mejorar el Servicio."
+        },
+        {
+          "type": "subheading",
+          "text": "Cookies y tecnologías similares"
+        },
+        {
+          "type": "paragraph",
+          "text": "Podemos usar cookies, almacenamiento local y tecnologías similares para:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "recordar preferencias del usuario",
+            "autenticar usuarios",
+            "analizar el uso de la plataforma",
+            "mejorar el rendimiento del servicio"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios pueden controlar las preferencias de cookies en la configuración del navegador."
+        }
+      ]
+    },
+    {
+      "heading": "3. Cómo usamos la información",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Usamos la información recopilada para:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "prestar y operar el Servicio",
+            "mantener la seguridad del sistema",
+            "autenticar usuarios",
+            "procesar transacciones",
+            "responder a consultas",
+            "mejorar la funcionalidad de la plataforma",
+            "desarrollar nuevas funciones",
+            "analizar el rendimiento del sistema",
+            "cumplir obligaciones legales"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "También podemos usar datos agregados y anonimizados para mejorar la plataforma."
+        }
+      ]
+    },
+    {
+      "heading": "4. IA y tratamiento automatizado",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Algunas funciones de EasyIntake pueden incluir tecnologías automatizadas diseñadas para:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "extraer información de documentos",
+            "estructurar datos para formularios",
+            "automatizar pasos de flujo de trabajo",
+            "ayudar con la introducción de datos"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Esos sistemas pueden implicar el tratamiento automatizado de los datos enviados."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios siguen siendo responsables de verificar la exactitud de cualquier resultado automatizado."
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no usa datos de clientes para entrenar modelos de IA generalizados sin autorización."
+        }
+      ]
+    },
+    {
+      "heading": "5. Responsabilidades de los Usuarios comerciales",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Los Usuarios comerciales son responsables de:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "obtener el consentimiento necesario de los Usuarios finales",
+            "cumplir las leyes de privacidad aplicables",
+            "determinar qué datos se recopilan",
+            "garantizar el tratamiento lícito de la información de los Usuarios finales"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake actúa como encargado del tratamiento en nombre de los Usuarios comerciales."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los Usuarios comerciales suelen ser los responsables del tratamiento (controladores) de sus obligaciones de privacidad."
+        }
+      ]
+    },
+    {
+      "heading": "6. Cómo compartimos la información",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "No vendemos información personal."
+        },
+        {
+          "type": "paragraph",
+          "text": "Podemos compartir información en las siguientes circunstancias:"
+        },
+        {
+          "type": "subheading",
+          "text": "Con proveedores de servicios"
+        },
+        {
+          "type": "paragraph",
+          "text": "Podemos compartir información con proveedores externos de confianza que ayudan a operar el Servicio, entre ellos:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "proveedores de alojamiento en la nube",
+            "procesadores de pago",
+            "proveedores de analíticas",
+            "servicios de comunicación",
+            "proveedores de infraestructura"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Esos proveedores están obligados a proteger la información."
+        },
+        {
+          "type": "subheading",
+          "text": "Requisitos legales"
+        },
+        {
+          "type": "paragraph",
+          "text": "Podemos divulgar información si es necesario para:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "cumplir obligaciones legales",
+            "responder a solicitudes legales",
+            "hacer cumplir nuestros Términos del servicio",
+            "proteger nuestros derechos o nuestra seguridad"
+          ]
+        },
+        {
+          "type": "subheading",
+          "text": "Operaciones societarias"
+        },
+        {
+          "type": "paragraph",
+          "text": "Si EasyIntake participa en una fusión, adquisición o venta de activos, la información puede transferirse como parte de esa operación."
+        }
+      ]
+    },
+    {
+      "heading": "7. Conservación de datos",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Conservamos la información solo el tiempo necesario para:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "prestar el Servicio",
+            "cumplir obligaciones legales",
+            "resolver disputas",
+            "hacer cumplir los acuerdos"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Los Usuarios comerciales controlan cuánto tiempo se conservan los datos de sus Usuarios finales."
+        }
+      ]
+    },
+    {
+      "heading": "8. Seguridad de los datos",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "EasyIntake aplica medidas de seguridad comercialmente razonables destinadas a proteger la información, entre ellas:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "cifrado",
+            "infraestructura segura",
+            "controles de acceso",
+            "sistemas de supervisión"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "No obstante, ninguna transmisión por Internet ni sistema de almacenamiento es totalmente seguro."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios son responsables de proteger las credenciales de su cuenta."
+        }
+      ]
+    },
+    {
+      "heading": "9. Transferencias internacionales de datos",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "El Servicio puede almacenar o tratar información en países distintos del lugar de residencia de los usuarios."
+        },
+        {
+          "type": "paragraph",
+          "text": "Al usar el Servicio, usted consiente dichas transferencias."
+        },
+        {
+          "type": "paragraph",
+          "text": "Adoptamos medidas razonables para garantizar las salvaguardas adecuadas."
+        }
+      ]
+    },
+    {
+      "heading": "10. Sus derechos de privacidad",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Según su ubicación, puede tener derechos respecto a su información personal."
+        },
+        {
+          "type": "paragraph",
+          "text": "Pueden incluir:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "acceso a datos personales",
+            "rectificación de datos inexactos",
+            "supresión de información personal",
+            "limitación del tratamiento",
+            "portabilidad de los datos",
+            "oposición a determinados usos"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "Las solicitudes relativas a datos recopilados por un Usuario comercial deben dirigirse a ese Usuario comercial."
+        }
+      ]
+    },
+    {
+      "heading": "11. Derechos de privacidad en California (CCPA / CPRA)",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Los residentes de California pueden tener derecho a:"
+        },
+        {
+          "type": "list",
+          "items": [
+            "solicitar acceso a la información personal",
+            "solicitar la supresión de la información personal",
+            "solicitar la rectificación de información inexacta",
+            "optar por no participar en determinados intercambios de datos"
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no vende información personal."
+        },
+        {
+          "type": "paragraph",
+          "text": "Las solicitudes pueden enviarse a través de la información de contacto que figura a continuación."
+        }
+      ]
+    },
+    {
+      "heading": "12. Privacidad de los menores",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "El Servicio no está dirigido a personas menores de 18 años."
+        },
+        {
+          "type": "paragraph",
+          "text": "No recopilamos a sabiendas información de menores."
+        },
+        {
+          "type": "paragraph",
+          "text": "Si tomamos conocimiento de que se ha recopilado información personal de un menor, la eliminaremos."
+        }
+      ]
+    },
+    {
+      "heading": "13. Sitios web de terceros",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "El Servicio puede contener enlaces a sitios web de terceros."
+        },
+        {
+          "type": "paragraph",
+          "text": "EasyIntake no es responsable de las prácticas de privacidad de esos sitios."
+        },
+        {
+          "type": "paragraph",
+          "text": "Los usuarios deben revisar las políticas de privacidad de los sitios externos."
+        }
+      ]
+    },
+    {
+      "heading": "14. Actualizaciones de esta Política de privacidad",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Podemos actualizar esta Política de privacidad periódicamente."
+        },
+        {
+          "type": "paragraph",
+          "text": "Las actualizaciones se publicarán en esta página con una nueva fecha de vigencia."
+        },
+        {
+          "type": "paragraph",
+          "text": "El uso continuado del Servicio tras las actualizaciones implica la aceptación de la política revisada."
+        }
+      ]
+    },
+    {
+      "heading": "15. Información de contacto",
+      "content": [
+        {
+          "type": "paragraph",
+          "text": "Si tiene preguntas sobre esta Política de privacidad o nuestras prácticas de datos, puede contactarnos en:"
+        },
+        {
+          "type": "paragraph",
+          "text": "PropSWOT LLC dba EasyIntake App"
+        },
+        {
+          "type": "paragraph",
+          "text": "Correo electrónico: support@easyintakeapp.com"
+        },
+        {
+          "type": "paragraph",
+          "text": " Sitio web: https://www.easyintakeapp.com"
+        }
+      ]
+    }
+  ]
+}

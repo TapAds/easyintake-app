@@ -2,6 +2,7 @@
 
 import { useCallback, useId, useState } from "react";
 import { useTranslations } from "next-intl";
+import { FormContextDocumentsSection } from "./FormContextDocumentsSection";
 
 type FieldRow = { id: string; label: string };
 
@@ -16,6 +17,7 @@ export function AddFormApplicationDialog() {
   const [tab, setTab] = useState<"pdf" | "manual">("pdf");
   const [applicationName, setApplicationName] = useState("");
   const [fileName, setFileName] = useState<string | null>(null);
+  const [contextFiles, setContextFiles] = useState<File[]>([]);
   const [fields, setFields] = useState<FieldRow[]>([newRow()]);
 
   const close = useCallback(() => {
@@ -23,6 +25,7 @@ export function AddFormApplicationDialog() {
     setTab("pdf");
     setApplicationName("");
     setFileName(null);
+    setContextFiles([]);
     setFields([newRow()]);
   }, []);
 
@@ -150,6 +153,16 @@ export function AddFormApplicationDialog() {
                 </button>
               </div>
             )}
+
+            <FormContextDocumentsSection
+              files={contextFiles}
+              onFilesAdded={(incoming) =>
+                setContextFiles((prev) => [...prev, ...incoming])
+              }
+              onRemoveAt={(index) =>
+                setContextFiles((prev) => prev.filter((_, i) => i !== index))
+              }
+            />
 
             <p className="mt-4 text-xs text-foreground/55">{t("saveNote")}</p>
 

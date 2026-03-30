@@ -72,7 +72,7 @@
 
 **Build:** Org-scoped **queue** and **session detail** (`sessionId`): timeline, field review from **config**, HITL actions, document queue, completeness. **Reporting** overview replaces demo [`snapshot`](../../apps/web/src/lib/dashboard/snapshot.ts) when APIs exist. **Voice:** link/embed **`agent.html`** with API-issued token.
 
-**Exists today:** Localized dashboard with **demo data**, [`AppChrome`](../../apps/web/src/components/AppChrome.tsx), reusable field/transcript components. **Live demo** at `/[locale]/dashboard/live-demo` uses universal voice **`+1 430-300-3049`** (confirm Product/Form in UI, then dial).
+**Exists today:** Localized dashboard with **demo data**, [`AppChrome`](../../apps/web/src/components/AppChrome.tsx), reusable field/transcript components. **Live demo** at `/[locale]/dashboard/live-demo` uses universal voice **`+1 430-300-3049`** (confirm Product/Form in UI, then dial); **Application fields** shows the **full vertical catalog by section**.
 
 **Dependencies:** Sections 1–2, BFF contract; Insurance config for field review.
 
