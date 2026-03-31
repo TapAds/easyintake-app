@@ -1,4 +1,5 @@
 import type { VerticalConfig } from "../../verticalConfig";
+import { attachN400FieldDescriptions } from "./fieldDescriptions";
 import { buildN400Fields } from "./fields";
 import { N400_SECTIONS } from "./sections";
 
@@ -12,7 +13,7 @@ export const USCIS_N400_VERTICAL_CONFIG: VerticalConfig = {
   vertical: "immigration",
   configPackageId: "uscis-n400",
   sections: N400_SECTIONS,
-  fields: buildN400Fields(),
+  fields: attachN400FieldDescriptions(buildN400Fields()),
   requiredFieldKeys: [
     "firstName",
     "lastName",

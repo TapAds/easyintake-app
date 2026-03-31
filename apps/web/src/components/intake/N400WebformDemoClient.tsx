@@ -4,8 +4,10 @@ import { fieldLabelForLocale } from "@/lib/intake/fieldLabels";
 import {
   computeSectionCompletion,
   groupFieldsBySection,
+  isFieldValueFilled,
   overallCompletionPercent,
 } from "@/lib/intake/sectionCompletion";
+import { FieldHelpIcon } from "@/components/ui/FieldHelpIcon";
 import { USCIS_N400_VERTICAL_CONFIG } from "@easy-intake/shared";
 import type { VerticalFieldDefinition } from "@easy-intake/shared";
 import Link from "next/link";
@@ -184,20 +186,38 @@ export function N400WebformDemoClient() {
               ) : null}
             </div>
             <div className="p-3 grid gap-3 sm:grid-cols-2">
-              {fields.map((field) => (
-                <label key={field.key} className="block text-xs space-y-1">
-                  <span className="font-medium text-foreground/80">
-                    {fieldLabelForLocale(field.key, locale, pkg)}
-                  </span>
-                  {fieldControl(
-                    field,
-                    values[field.key],
-                    (v) => setField(field.key, v),
-                    (k) => tEnum(k),
-                    t("enumPlaceholder")
-                  )}
-                </label>
-              ))}
+              {fields.map((field) => {
+                const filled = isFieldValueFilled(values[field.key]);
+                const ring = filled
+                  ? "ring-2 ring-emerald-600/45 border-emerald-600/28 dark:ring-emerald-500/45 dark:border-emerald-500/25"
+                  : "border-foreground/15";
+                const labelText = fieldLabelForLocale(field.key, locale, pkg);
+                const helpText =
+                  field.description &&
+                  (locale === "es" ? field.description.es : field.description.en);
+                return (
+                  <div
+                    key={field.key}
+                    className={`rounded-lg border bg-background/50 p-3 space-y-2 ${ring}`}
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-medium text-foreground/80">
+                        {labelText}
+                      </span>
+                      {helpText ? (
+                        <FieldHelpIcon text={helpText} label={labelText} />
+                      ) : null}
+                    </div>
+                    {fieldControl(
+                      field,
+                      values[field.key],
+                      (v) => setField(field.key, v),
+                      (k) => tEnum(k),
+                      t("enumPlaceholder")
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         ))}

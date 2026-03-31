@@ -4,8 +4,10 @@ import { fieldLabelForLocale } from "@/lib/intake/fieldLabels";
 import {
   computeSectionCompletion,
   groupFieldsBySection,
+  isFieldValueFilled,
   overallCompletionPercent,
 } from "@/lib/intake/sectionCompletion";
+import { FieldHelpIcon } from "@/components/ui/FieldHelpIcon";
 import type { FieldChangeEventV1, VerticalFieldDefinition } from "@easy-intake/shared";
 import {
   computeCompletenessSnapshot,
@@ -312,14 +314,20 @@ export function ApplicantMicrositeClient({ token }: { token: string }) {
               {fields.map((field) => {
                 const miss = missingRequired.has(field.key);
                 const req = requestedSet.has(field.key);
-                const ring =
-                  miss || req
+                const filled = isFieldValueFilled(values[field.key]);
+                const ring = filled
+                  ? "ring-2 ring-emerald-600/45 border-emerald-600/28 dark:ring-emerald-500/45 dark:border-emerald-500/25"
+                  : miss || req
                     ? miss && req
                       ? "ring-2 ring-amber-500/70 border-amber-500/40"
                       : miss
                         ? "ring-2 ring-red-500/50 border-red-500/30"
                         : "ring-2 ring-sky-500/50 border-sky-500/30"
                     : "border-foreground/15";
+                const labelText = fieldLabelForLocale(field.key, locale, pkg);
+                const helpText =
+                  field.description &&
+                  (locale === "es" ? field.description.es : field.description.en);
 
                 return (
                   <div
@@ -328,8 +336,11 @@ export function ApplicantMicrositeClient({ token }: { token: string }) {
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-medium text-foreground">
-                        {fieldLabelForLocale(field.key, locale, pkg)}
+                        {labelText}
                       </span>
+                      {helpText ? (
+                        <FieldHelpIcon text={helpText} label={labelText} />
+                      ) : null}
                       {miss ? (
                         <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-red-500/15 text-red-700 dark:text-red-300">
                           {t("missingBadge")}

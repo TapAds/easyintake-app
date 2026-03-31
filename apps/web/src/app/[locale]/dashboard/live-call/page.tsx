@@ -15,7 +15,6 @@ export default async function LiveCallPage() {
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             {t("title")}
           </h1>
-          <p className="mt-1 text-sm text-foreground/70 max-w-3xl">{t("subtitle")}</p>
         </div>
         <LiveDemoClient apiBaseUrl={apiBase} uiMode="liveCall" />
       </main>

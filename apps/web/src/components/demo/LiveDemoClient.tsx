@@ -19,6 +19,7 @@ import {
   isFieldValueFilled,
   overallCompletionPercent,
 } from "@/lib/intake/sectionCompletion";
+import { FieldHelpIcon } from "@/components/ui/FieldHelpIcon";
 
 function entityValueFingerprint(value: unknown): string {
   if (value === undefined || value === null) return "";
@@ -88,6 +89,17 @@ function rowMatchesCallerLast4(row: TwilioRow, callerLast4: string): boolean {
   const from = String(row.from ?? "").trim();
   if (!from || from === "—") return false;
   return digitsTail4(from) === callerLast4;
+}
+
+/** When several legs share the same last 4, prefer the most recently started call. */
+function pickNewestMatchingSid(matches: TwilioRow[]): string {
+  if (matches.length === 0) return "";
+  const sorted = [...matches].sort((a, b) => {
+    const ta = a.dateCreated ? new Date(a.dateCreated).getTime() : 0;
+    const tb = b.dateCreated ? new Date(b.dateCreated).getTime() : 0;
+    return tb - ta;
+  });
+  return sorted[0].sid;
 }
 
 function FieldConfidenceInline({
@@ -197,7 +209,6 @@ export function LiveDemoClient({
   const [voiceHealth, setVoiceHealth] = useState<VoiceHealthPayload | null>(
     null
   );
-  const [twilioRows, setTwilioRows] = useState<TwilioRow[]>([]);
   const [twilioError, setTwilioError] = useState<string | null>(null);
   const [twilioLoading, setTwilioLoading] = useState(false);
   const [callerLastFour, setCallerLastFour] = useState("");
@@ -303,6 +314,18 @@ export function LiveDemoClient({
 
   const hasMissingAttention = missingKeysForDisplay.length > 0;
 
+  const setEntityFieldFromAgent = useCallback((key: string, value: string) => {
+    setEntities((prev) => {
+      const next = { ...prev };
+      if (value.trim() === "") {
+        delete next[key];
+      } else {
+        next[key] = value;
+      }
+      return next;
+    });
+  }, []);
+
   /**
    * Demo placeholder URL. Production applicant links are minted from
    * Dashboard → Session → “Create applicant link” (portal token + /[locale]/apply/...).
@@ -374,15 +397,12 @@ export function LiveDemoClient({
         setTwilioError(
           (data as { error?: string }).error ?? t("twilioLoadError")
         );
-        setTwilioRows([]);
         return { ok: false, calls: [] };
       }
       const calls = (data as { calls?: TwilioRow[] }).calls ?? [];
-      setTwilioRows(calls);
       return { ok: true, calls };
     } catch {
       setTwilioError(t("twilioLoadError"));
-      setTwilioRows([]);
       return { ok: false, calls: [] };
     } finally {
       setTwilioLoading(false);
@@ -415,11 +435,7 @@ export function LiveDemoClient({
         );
         setLastFourMatchSids(matches.map((r) => r.sid));
         setTwilioLast4NotFound(matches.length === 0);
-        if (matches.length === 1) {
-          setCallSid(matches[0].sid);
-        } else {
-          setCallSid("");
-        }
+        setCallSid(matches.length > 0 ? pickNewestMatchingSid(matches) : "");
       })();
     }, 300);
     return () => {
@@ -442,10 +458,6 @@ export function LiveDemoClient({
       alive = false;
     };
   }, []);
-
-  useEffect(() => {
-    void loadTwilioCalls();
-  }, [loadTwilioCalls]);
 
   const disconnect = useCallback(() => {
     wsRef.current?.close();
@@ -874,17 +886,6 @@ export function LiveDemoClient({
             )}
           </aside>
         </div>
-
-        <aside
-          className="flex min-h-0 flex-col rounded-lg border border-primary/30 bg-primary/[0.06] px-4 py-3 text-sm text-foreground shadow-sm"
-          aria-label={t("agentInstructionAriaLabel")}
-        >
-          <ol className="list-decimal list-inside space-y-1.5 text-foreground/95">
-            <li>{t("agentInstructionStep1")}</li>
-            <li>{t("agentInstructionStep2")}</li>
-            <li>{t("agentInstructionStep3")}</li>
-          </ol>
-        </aside>
       </div>
 
       <div className="flex flex-col items-end gap-1">
@@ -945,7 +946,7 @@ export function LiveDemoClient({
         ) : null}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+      <div className="grid gap-4 grid-cols-1 lg:items-start">
         <section className="space-y-2 min-w-0">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
@@ -982,12 +983,13 @@ export function LiveDemoClient({
                 setCallerLastFour(e.target.value.replace(/\D/g, "").slice(0, 4))
               }
               placeholder="1234"
-              className="w-full max-w-[8rem] rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm font-mono tracking-widest"
-              aria-describedby="callerLastFour-hint"
+              className="w-full max-w-[10rem] rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm font-mono tracking-widest"
             />
-            <p id="callerLastFour-hint" className="mt-1 text-xs text-foreground/60">
-              {t("callerLastFourHint")}
-            </p>
+            {twilioError ? (
+              <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
+                {twilioError}
+              </p>
+            ) : null}
             {twilioLast4NotFound && !twilioError && callerLastFourDigits.length === 4 ? (
               <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
                 {t("twilioLast4NotFound")}
@@ -995,144 +997,62 @@ export function LiveDemoClient({
             ) : null}
           </div>
 
-          <div>
-            <label
-              htmlFor="callSid"
-              className="block text-sm font-medium text-foreground mb-1"
-            >
-              {t("callSidLabel")}
-            </label>
-            <input
-              id="callSid"
-              type="text"
-              value={callSid}
-              onChange={(e) => setCallSid(e.target.value)}
-              placeholder="CAxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-              className="w-full rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm font-mono"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <button
               type="button"
-              onClick={() => void connect()}
-              disabled={busy || connected}
-              className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
+              disabled={
+                callerLastFourDigits.length !== 4 ||
+                twilioLoading ||
+                lastFourMatchSids.length === 0 ||
+                !callSid.trim() ||
+                busy
+              }
+              title={
+                callerLastFourDigits.length === 4 &&
+                lastFourMatchSids.length === 0 &&
+                !twilioLoading
+                  ? t("connectToCallDataCollectionDisabledHint")
+                  : undefined
+              }
+              onClick={() => void connect(callSid.trim())}
+              aria-label={t("connectToCallDataCollectionAria", {
+                sid: callSid.trim() || "…",
+              })}
+              className="group inline-flex max-w-md min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border border-primary/40 bg-gradient-to-b from-primary/10 to-primary/[0.06] px-4 py-3 text-center text-xs font-semibold leading-tight text-primary shadow-sm transition-colors hover:border-primary/60 hover:from-primary/[0.14] hover:to-primary/10 disabled:pointer-events-none disabled:opacity-45 dark:border-primary/35 dark:from-primary/15 dark:to-primary/[0.08] sm:flex-initial"
             >
-              {busy ? t("connecting") : t("connect")}
+              <Sparkles className="size-4 shrink-0 text-primary opacity-90" aria-hidden />
+              <span className="min-w-0 text-balance">{t("connectToCallDataCollection")}</span>
+              <Sparkles className="size-4 shrink-0 text-primary opacity-90" aria-hidden />
             </button>
             <button
               type="button"
               onClick={disconnect}
               disabled={!connected && !busy}
-              className="px-4 py-2 rounded-lg border border-foreground/20 text-sm font-medium hover:bg-foreground/5 disabled:opacity-50"
+              className="px-4 py-3 rounded-lg border border-foreground/20 text-sm font-medium hover:bg-foreground/5 disabled:opacity-50 sm:py-2"
             >
               {t("disconnect")}
             </button>
           </div>
+          {twilioLoading && callerLastFourDigits.length === 4 ? (
+            <p className="text-xs text-foreground/60">{t("lookingUpCaller")}</p>
+          ) : null}
           {error ? (
             <p className="text-sm text-red-600 dark:text-red-400" role="alert">
               {error}
             </p>
           ) : null}
 
-          <div className="rounded-lg border border-foreground/10 overflow-hidden">
-            <div className="flex items-center justify-between px-3 py-2 bg-foreground/[0.04] border-b border-foreground/10">
-              <span className="text-xs font-medium text-foreground/80">
-                {t("twilioTitle")}
-              </span>
-              <button
-                type="button"
-                onClick={() => void loadTwilioCalls()}
-                disabled={twilioLoading}
-                className="text-xs text-primary hover:underline disabled:opacity-50"
-              >
-                {twilioLoading ? t("refreshing") : t("refreshTwilio")}
-              </button>
-            </div>
-            {twilioError ? (
-              <p className="p-3 text-xs text-red-600">{twilioError}</p>
-            ) : twilioRows.length === 0 ? (
-              <p className="p-3 text-xs text-foreground/60">{t("twilioEmpty")}</p>
-            ) : (
-              <div className="max-h-48 overflow-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-left text-foreground/60 border-b border-foreground/10">
-                      <th className="p-2 font-normal w-[1%]" />
-                      <th className="p-2 font-normal">{t("colCallFrom")}</th>
-                      <th className="p-2 font-normal">{t("colStatus")}</th>
-                      <th className="p-2 font-normal">{t("colWhen")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {twilioRows.map((row) => {
-                      const ctaEnabled =
-                        callerLastFourDigits.length === 4 &&
-                        !twilioLoading &&
-                        !busy &&
-                        lastFourMatchSids.includes(row.sid);
-                      return (
-                      <tr key={row.sid} className="border-t border-foreground/10">
-                        <td className="p-2 align-top min-w-0 max-w-[12rem] sm:max-w-none">
-                          <button
-                            type="button"
-                            disabled={!ctaEnabled}
-                            title={
-                              ctaEnabled
-                                ? undefined
-                                : t("connectToCallDataCollectionDisabledHint")
-                            }
-                            onClick={() => {
-                              setCallSid(row.sid);
-                              void connect(row.sid);
-                            }}
-                            aria-label={t("connectToCallDataCollectionAria", {
-                              sid: row.sid,
-                            })}
-                            className="group flex w-full min-w-0 items-center justify-center gap-1.5 rounded-lg border border-primary/40 bg-gradient-to-b from-primary/10 to-primary/[0.06] px-2 py-2 text-center text-[10px] font-semibold leading-tight text-primary shadow-sm transition-colors hover:border-primary/60 hover:from-primary/[0.14] hover:to-primary/10 disabled:pointer-events-none disabled:opacity-45 dark:border-primary/35 dark:from-primary/15 dark:to-primary/[0.08]"
-                          >
-                            <Sparkles
-                              className="size-3.5 shrink-0 text-primary opacity-90"
-                              aria-hidden
-                            />
-                            <span className="min-w-0 text-balance">
-                              {t("connectToCallDataCollection")}
-                            </span>
-                            <Sparkles
-                              className="size-3.5 shrink-0 text-primary opacity-90"
-                              aria-hidden
-                            />
-                          </button>
-                        </td>
-                        <td className="p-2 align-top tabular-nums">
-                          {String(row.from ?? "").trim() || "—"}
-                        </td>
-                        <td className="p-2 align-top">{row.status}</td>
-                        <td className="p-2 text-foreground/70 align-top">
-                          {row.dateCreated
-                            ? new Date(row.dateCreated).toLocaleString(locale)
-                            : "—"}
-                        </td>
-                      </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
           <div>
             <h3 className="text-sm font-semibold text-foreground mb-1">
               {t("transcriptTitle")}
             </h3>
-            <pre className="text-xs font-mono whitespace-pre-wrap bg-foreground/[0.04] border border-foreground/10 rounded-lg p-2 max-h-64 overflow-auto min-h-[6rem]">
+            <pre className="text-xs font-mono whitespace-pre-wrap bg-foreground/[0.04] border border-foreground/10 rounded-lg p-3 min-h-[28rem] max-h-[min(82vh,52rem)] overflow-auto">
               {transcript || t("transcriptEmpty")}
             </pre>
           </div>
 
           <details
+            open
             className={`rounded-lg border text-xs ${
               hasMissingAttention
                 ? "border-red-600/50 bg-red-500/[0.06]"
@@ -1142,21 +1062,59 @@ export function LiveDemoClient({
             <summary className="cursor-pointer select-none list-none px-2 py-1.5 font-semibold text-foreground [&::-webkit-details-marker]:hidden">
               {t("agentAdviceTitle")}
             </summary>
-            <div className="px-2 pb-2 border-t border-foreground/10 pt-1.5 space-y-1.5">
+            <div className="px-2 pb-3 border-t border-foreground/10 pt-2 space-y-2 min-h-[22rem] max-h-[min(68vh,44rem)] overflow-y-auto">
               {guidanceText ? (
-                <p className="text-foreground/90 whitespace-pre-wrap">{guidanceText}</p>
+                <p className="text-foreground/90 whitespace-pre-wrap text-[11px]">{guidanceText}</p>
               ) : null}
               {hasMissingAttention ? (
                 <>
                   <p className="text-[10px] font-medium uppercase tracking-wide text-foreground/60">
                     {t("missingFieldsHeading")}
                   </p>
-                  <ul className="list-disc list-inside text-foreground/85 space-y-0.5">
-                    {missingKeysForDisplay.map((key) => (
-                      <li key={key}>
-                        {fieldLabelForLocale(key, locale, pkg)}
-                      </li>
-                    ))}
+                  <p className="text-[10px] text-foreground/55">{t("agentAdviceEditableHint")}</p>
+                  <ul className="space-y-2 list-none p-0 m-0">
+                    {missingKeysForDisplay.map((key) => {
+                      const raw = entities[key];
+                      const rowFilled = isFieldValueFilled(raw);
+                      const def = verticalCfg?.fields.find((f) => f.key === key);
+                      const missHelp =
+                        def?.description &&
+                        (locale === "es" ? def.description.es : def.description.en);
+                      const missLabel = fieldLabelForLocale(key, locale, pkg);
+                      return (
+                        <li key={key} className="min-w-0">
+                          <label
+                            htmlFor={`agent-missing-${key}`}
+                            className="flex flex-wrap items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-foreground/65 mb-0.5"
+                          >
+                            {missLabel}
+                            {missHelp ? (
+                              <FieldHelpIcon text={missHelp} label={missLabel} />
+                            ) : null}
+                          </label>
+                          <input
+                            id={`agent-missing-${key}`}
+                            type="text"
+                            value={
+                              raw === undefined || raw === null
+                                ? ""
+                                : typeof raw === "object"
+                                  ? JSON.stringify(raw)
+                                  : String(raw)
+                            }
+                            onChange={(e) =>
+                              setEntityFieldFromAgent(key, e.target.value)
+                            }
+                            className={`w-full rounded-md border bg-background px-2 py-1.5 text-sm text-foreground ${
+                              rowFilled
+                                ? "ring-2 ring-emerald-600/45 border-emerald-600/35 dark:ring-emerald-500/40 dark:border-emerald-500/28"
+                                : "border-foreground/15"
+                            }`}
+                            autoComplete="off"
+                          />
+                        </li>
+                      );
+                    })}
                   </ul>
                 </>
               ) : (
@@ -1193,10 +1151,7 @@ export function LiveDemoClient({
           </div>
         </section>
 
-        <section
-          className="min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5rem)] flex flex-col gap-3"
-          aria-label={t("applicationTitle")}
-        >
+        <section className="hidden" aria-label={t("applicationTitle")} aria-hidden>
           <div className="shrink-0">
             <h3 className="text-sm font-semibold text-foreground mb-1">
               {t("applicationTitle")}
@@ -1237,10 +1192,14 @@ export function LiveDemoClient({
                           : typeof raw === "object"
                             ? JSON.stringify(raw)
                             : String(raw);
+                      const filled = isFieldValueFilled(raw);
                       const flash = flashingKeys.has(key);
                       const spanFull =
                         fields.length % 2 === 1 &&
                         index === fields.length - 1;
+                      const helpText =
+                        field.description &&
+                        (locale === "es" ? field.description.es : field.description.en);
                       return (
                         <div
                           key={key}
@@ -1254,10 +1213,19 @@ export function LiveDemoClient({
                               : ""
                           }`}
                         >
-                          <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground/65">
+                          <span className="flex flex-wrap items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-foreground/65">
                             {labelText}
+                            {helpText ? (
+                              <FieldHelpIcon text={helpText} label={labelText} />
+                            ) : null}
                           </span>
-                          <div className="flex items-center gap-2 rounded-md border border-foreground/12 bg-background px-2 py-1.5 min-h-[2.25rem] min-w-0">
+                          <div
+                            className={`flex items-center gap-2 rounded-md border bg-background px-2 py-1.5 min-h-[2.25rem] min-w-0 ${
+                              filled
+                                ? "ring-2 ring-emerald-600/45 border-emerald-600/35 dark:ring-emerald-500/40 dark:border-emerald-500/28"
+                                : "border-foreground/12"
+                            }`}
+                          >
                             <span className="text-sm text-foreground break-words flex-1 min-w-0">
                               {display}
                             </span>
