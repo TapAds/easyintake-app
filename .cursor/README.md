@@ -5,10 +5,28 @@ This folder holds **project-scoped** Cursor settings for the monorepo.
 ## What lives here
 
 | Item | Path | Purpose |
-|------|------|---------|
+|------|------|--------|
 | **Rules** | `rules/*.mdc` | Always-on or glob-scoped constraints (replaces relying on a single root `.cursorrules` for this repo). |
 | **Skills** | `skills/<name>/SKILL.md` | Task-focused instructions the agent can apply when the `description` matches the user’s request. |
 | **Slash commands** | `commands/*.md` | User-invoked prompts via `/` — rituals, templates, read-only audits, approval gates. |
+
+## Slash commands (full set)
+
+| Command | When to use |
+|---------|-------------|
+| [`add-to-roadmap`](commands/add-to-roadmap.md) | Capture an idea for the roadmap with priority and impact. |
+| [`audit`](commands/audit.md) | Read-only codebase audit vs docs, i18n, auth, env documentation. |
+| [`architecture-check`](commands/architecture-check.md) | Read-only structural review: layering, boundaries, duplication, guideline fit. |
+| [`commit`](commands/commit.md) | Draft a conventional commit message for current changes. |
+| [`context-check`](commands/context-check.md) | Verify the model’s mental model against canonical context docs. |
+| [`debug`](commands/debug.md) | Structured diagnosis; follows [`skills/debugging-protocol`](skills/debugging-protocol/SKILL.md). |
+| [`decision-record`](commands/decision-record.md) | Draft an ADR; persist to `DECISIONS.md` only after doc approval phrases. |
+| [`implementation-plan`](commands/implementation-plan.md) | Turn a spec into ordered tasks and verification; pairs with [`feature-to-task-breakdown`](skills/feature-to-task-breakdown/SKILL.md). |
+| [`review`](commands/review.md) | Review current changes for bugs, security, performance, clarity. |
+| [`spec`](commands/spec.md) | Write a feature spec before implementation (with approval gate). |
+| [`test-plan`](commands/test-plan.md) | Testing strategy: scopes, edge cases, failure scenarios. |
+| [`trace-flow`](commands/trace-flow.md) | Trace a route, job, or event from entry through persistence and response. |
+| [`update-context`](commands/update-context.md) | Sync documentation after work (per command instructions). |
 
 ## Slash commands vs skills
 

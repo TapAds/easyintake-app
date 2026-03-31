@@ -1,7 +1,7 @@
 ---
 name: document-changes
 description: >-
-  Proposes a concise per-file documentation edit plan for the Easy Intake monorepo, then applies edits only after the user sends an explicit approval phrase. Updates existing markdown only (allowlisted paths). Use when the user asks to sync docs with recent work, wants documentation changes after approving a summary, or mentions ARCHITECTURE, CONTEXT, SETUP, roadmap, or apps/web deployment docs.
+  Proposes a concise per-file documentation edit plan for the Easy Intake monorepo, then applies edits only after the user sends an explicit approval phrase. Updates existing markdown only (allowlisted paths). Use when the user asks to sync docs with recent work, wants documentation changes after approving a summary, or mentions ARCHITECTURE, CONTEXT, DECISIONS, SETUP, roadmap, or apps/web deployment docs. Same approval phrases apply when persisting ADRs from `/decision-record`.
 ---
 
 # Document changes (summary first, apply after approval)
@@ -42,6 +42,7 @@ Paths are relative to the **`easy-intake-app/`** repo root:
 |------|-------------|
 | `ARCHITECTURE.md` | Auth split, data flow, deployment, DB, integration TODOs |
 | `CONTEXT.md` | Product scope, stack, auth layers, related docs |
+| `DECISIONS.md` | Decision log and direction tables; ADRs appended after `/decision-record` approval |
 | `SETUP.md` | Local setup, env overview, how to run web/api |
 | `PRODUCT_ROADMAP.md` | High-level sequencing; light touch for “foundation” notes |
 | `apps/web/README.md` | Next.js package scope, Clerk, middleware, deploy pointer |

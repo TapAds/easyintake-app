@@ -120,3 +120,7 @@ After applying the fix:
 **Type errors** → Check shared package was rebuilt after changes (`build:shared`), import paths, version mismatches
 
 **Silent failures (no error, wrong behavior)** → Add logging at each step to find where the data diverges from expectation
+
+---
+
+**Slash command:** Users can invoke [`/debug`](../../commands/debug.md) for this workflow as an explicit ritual; this skill remains the detailed reference.

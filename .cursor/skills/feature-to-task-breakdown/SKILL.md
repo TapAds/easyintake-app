@@ -152,3 +152,7 @@ Re-run the breakdown (can be abbreviated) if:
 - A task is much larger than expected
 - The user adds scope mid-build
 - Something breaks in a way that suggests incomplete scope
+
+---
+
+**Slash command:** Users can invoke [`/implementation-plan`](../../commands/implementation-plan.md) for a spec-to-plan checklist; this skill carries **Easy Intake** monorepo boundaries and approval gates.
