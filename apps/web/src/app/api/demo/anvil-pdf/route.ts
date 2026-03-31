@@ -83,7 +83,9 @@ export async function POST(req: Request) {
     templateRaw === "nlg_term_life" ? "nlg_term_life" : "uscis_n400";
 
   const templateIdImm = process.env.ANVIL_TEMPLATE_IMM_400_EID?.trim();
-  const templateIdNlg = process.env.ANVIL_TEMPLATE_NLG_TERM_LIFE_EID?.trim();
+  const templateIdNlg =
+    process.env.ANVIL_TEMPLATE_NLG_TERM_LIFE_EID?.trim() ||
+    process.env.ANVIL_TEMPLATE_NLG_TL_EID?.trim();
 
   let templateId: string | undefined;
   let data: Record<string, unknown>;
@@ -96,7 +98,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "NLG Term Life PDF is not configured. Set ANVIL_TEMPLATE_NLG_TERM_LIFE_EID on the server.",
+            "NLG Term Life PDF is not configured. Set ANVIL_TEMPLATE_NLG_TERM_LIFE_EID or ANVIL_TEMPLATE_NLG_TL_EID on the server.",
         },
         { status: 500 }
       );

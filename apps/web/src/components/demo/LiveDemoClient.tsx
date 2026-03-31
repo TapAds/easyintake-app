@@ -946,56 +946,57 @@ export function LiveDemoClient({
         ) : null}
       </div>
 
-      <div className="grid gap-4 grid-cols-1 lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         <section className="space-y-2 min-w-0">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              {t("productFormLabel")}
-            </label>
-            <select
-              value={presetId}
-              onChange={(e) => setPresetId(e.target.value)}
-              className="w-full rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm"
-            >
-              {LIVE_DEMO_PRESETS.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {locale === "es" ? p.labels.es : p.labels.en}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:items-end sm:gap-x-3">
+            <div className="min-w-0 sm:max-w-full">
+              <label className="block text-sm font-medium text-foreground mb-1">
+                {t("productFormLabel")}
+              </label>
+              <select
+                value={presetId}
+                onChange={(e) => setPresetId(e.target.value)}
+                className="w-full rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm"
+              >
+                {LIVE_DEMO_PRESETS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {locale === "es" ? p.labels.es : p.labels.en}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="min-w-0">
+              <label
+                htmlFor="callerLastFour"
+                className="block text-sm font-medium text-foreground mb-1"
+              >
+                {t("callerLastFourLabel")}
+              </label>
+              <input
+                id="callerLastFour"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={4}
+                value={callerLastFour}
+                onChange={(e) =>
+                  setCallerLastFour(e.target.value.replace(/\D/g, "").slice(0, 4))
+                }
+                placeholder="1234"
+                className="w-full max-w-[10rem] rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm font-mono tracking-widest"
+              />
+            </div>
           </div>
-
-          <div>
-            <label
-              htmlFor="callerLastFour"
-              className="block text-sm font-medium text-foreground mb-1"
-            >
-              {t("callerLastFourLabel")}
-            </label>
-            <input
-              id="callerLastFour"
-              type="text"
-              inputMode="numeric"
-              autoComplete="off"
-              maxLength={4}
-              value={callerLastFour}
-              onChange={(e) =>
-                setCallerLastFour(e.target.value.replace(/\D/g, "").slice(0, 4))
-              }
-              placeholder="1234"
-              className="w-full max-w-[10rem] rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm font-mono tracking-widest"
-            />
-            {twilioError ? (
-              <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
-                {twilioError}
-              </p>
-            ) : null}
-            {twilioLast4NotFound && !twilioError && callerLastFourDigits.length === 4 ? (
-              <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
-                {t("twilioLast4NotFound")}
-              </p>
-            ) : null}
-          </div>
+          {twilioError ? (
+            <p className="text-xs text-red-600 dark:text-red-400" role="alert">
+              {twilioError}
+            </p>
+          ) : null}
+          {twilioLast4NotFound && !twilioError && callerLastFourDigits.length === 4 ? (
+            <p className="text-xs text-red-600 dark:text-red-400" role="alert">
+              {t("twilioLast4NotFound")}
+            </p>
+          ) : null}
 
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
             <button
@@ -1046,7 +1047,7 @@ export function LiveDemoClient({
             <h3 className="text-sm font-semibold text-foreground mb-1">
               {t("transcriptTitle")}
             </h3>
-            <pre className="text-xs font-mono whitespace-pre-wrap bg-foreground/[0.04] border border-foreground/10 rounded-lg p-3 min-h-[28rem] max-h-[min(82vh,52rem)] overflow-auto">
+            <pre className="text-xs font-mono whitespace-pre-wrap bg-foreground/[0.04] border border-foreground/10 rounded-lg p-2 min-h-[6rem] max-h-[min(55vh,26rem)] overflow-auto">
               {transcript || t("transcriptEmpty")}
             </pre>
           </div>
@@ -1151,7 +1152,10 @@ export function LiveDemoClient({
           </div>
         </section>
 
-        <section className="hidden" aria-label={t("applicationTitle")} aria-hidden>
+        <section
+          className="min-w-0 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-5rem)] flex flex-col gap-3"
+          aria-label={t("applicationTitle")}
+        >
           <div className="shrink-0">
             <h3 className="text-sm font-semibold text-foreground mb-1">
               {t("applicationTitle")}
