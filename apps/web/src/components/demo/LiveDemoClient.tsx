@@ -66,6 +66,7 @@ type VoiceHealthPayload = {
 type CallDetailsSnapshot = {
   callStatus?: string;
   entities?: Record<string, unknown>;
+  fieldConfidences?: Record<string, number>;
   transcript?: string;
   score?: { overall: number; tier: string } | null;
 };
@@ -74,12 +75,76 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function FieldConfidenceInline({
+  fieldKey,
+  fieldLabel,
+  raw,
+  fcMap,
+  t,
+}: {
+  fieldKey: string;
+  fieldLabel: string;
+  raw: unknown;
+  fcMap: Record<string, number>;
+  t: (key: string, values?: Record<string, string | number | Date>) => string;
+}) {
+  const filled = isFieldValueFilled(raw);
+  const c = fcMap[fieldKey];
+  const hasNumber = typeof c === "number" && Number.isFinite(c);
+  const pct = filled && hasNumber ? Math.round(c * 100) : filled ? null : 0;
+  const ariaLabel =
+    filled && hasNumber
+      ? t("fieldConfidenceAria", { field: fieldLabel, percent: pct as number })
+      : filled
+        ? t("fieldConfidenceAriaUnknown", { field: fieldLabel })
+        : t("fieldConfidenceAria", { field: fieldLabel, percent: 0 });
+  const trackClass = "h-1.5 w-9 sm:w-10 rounded-full bg-foreground/10 overflow-hidden shrink-0";
+  let barClass = "h-full rounded-full transition-[width] duration-300";
+  let widthPct = 0;
+  if (!filled) {
+    barClass += " bg-foreground/20";
+  } else if (!hasNumber) {
+    barClass += " bg-foreground/20";
+    widthPct = 0;
+  } else if ((pct as number) >= 85) {
+    barClass += " bg-emerald-500";
+    widthPct = pct as number;
+  } else if ((pct as number) >= 60) {
+    barClass += " bg-amber-500";
+    widthPct = pct as number;
+  } else {
+    barClass += " bg-orange-500/90";
+    widthPct = pct as number;
+  }
+  const textClass =
+    filled && !hasNumber
+      ? "text-foreground/45"
+      : "text-foreground/70";
+  return (
+    <div
+      className="flex items-center gap-1.5 shrink-0"
+      aria-label={ariaLabel}
+      title={ariaLabel}
+    >
+      <div className={trackClass}>
+        <div className={barClass} style={{ width: `${widthPct}%` }} />
+      </div>
+      <span className={`text-[10px] tabular-nums w-8 text-right font-medium ${textClass}`}>
+        {filled && !hasNumber
+          ? t("fieldConfidenceDash")
+          : `${pct ?? 0}%`}
+      </span>
+    </div>
+  );
+}
+
 type AgentMsg =
   | { type: "transcript_chunk"; speaker: string; text: string }
   | {
       type: "entity_update";
       entities: Record<string, unknown>;
       score: { overall: number; tier: string };
+      fieldConfidences?: Record<string, number>;
     }
   | { type: "score_update"; overall: number; tier: string }
   | {
@@ -98,6 +163,7 @@ export function LiveDemoClient({
   uiMode?: "demo" | "liveCall";
 }) {
   const t = useTranslations(uiMode === "liveCall" ? "demo.liveCall" : "demo.live");
+  const tEnum = useTranslations("intake.enumOptions");
   const locale = useLocale();
   const [presetId, setPresetId] = useState(LIVE_DEMO_PRESETS[0]?.id ?? "");
   const [callSid, setCallSid] = useState("");
@@ -105,6 +171,9 @@ export function LiveDemoClient({
   const [busy, setBusy] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [entities, setEntities] = useState<Record<string, unknown>>({});
+  const [fieldConfidences, setFieldConfidences] = useState<
+    Record<string, number>
+  >({});
   const [score, setScore] = useState<{ overall: number; tier: string } | null>(
     null
   );
@@ -176,12 +245,19 @@ export function LiveDemoClient({
     const last = s(entities.lastName);
     const phone = crmPhoneDisplay(entities.phone);
     const email = s(entities.email);
+    const preferredContactMethod = s(entities.preferredContactMethod);
     const alien = s(entities.alienNumber);
     const city = s(entities.city);
     const state = s(entities.state);
     const location = [city, state].filter(Boolean).join(", ");
     const hasRecord = Boolean(
-      first || last || phone || email || alien || location
+      first ||
+        last ||
+        phone ||
+        email ||
+        preferredContactMethod ||
+        alien ||
+        location
     );
     const displayName = [first, last].filter(Boolean).join(" ");
     return {
@@ -189,6 +265,7 @@ export function LiveDemoClient({
       displayName,
       phone,
       email,
+      preferredContactMethod,
       alien,
       location,
     };
@@ -224,6 +301,7 @@ export function LiveDemoClient({
   useEffect(() => {
     prevEntitiesRef.current = { ...entities };
     setFlashingKeys(new Set());
+    setFieldConfidences({});
     setPdfError(null);
     setExtractError(null);
     setExtractNotice(null);
@@ -346,6 +424,7 @@ export function LiveDemoClient({
     setEntities(
       (data.entities ?? {}) as Record<string, unknown>
     );
+    setFieldConfidences(data.fieldConfidences ?? {});
     setTranscript(String(data.transcript ?? ""));
     if (data.score != null) {
       setScore(data.score);
@@ -457,6 +536,7 @@ export function LiveDemoClient({
       const data = (await res.json().catch(() => ({}))) as {
         error?: string;
         entities?: Record<string, unknown>;
+        fieldConfidences?: Record<string, number>;
         score?: { overall: number; tier: string };
         mergeMeta?: {
           appliedKeys?: string[];
@@ -469,6 +549,9 @@ export function LiveDemoClient({
       }
       if (data.entities) {
         setEntities(data.entities);
+      }
+      if (data.fieldConfidences) {
+        setFieldConfidences(data.fieldConfidences);
       }
       if (data.score) setScore(data.score);
       const skipped = data.mergeMeta?.skippedDueToCorrection?.length ?? 0;
@@ -561,6 +644,7 @@ export function LiveDemoClient({
       setTranscript("");
       prevEntitiesRef.current = {};
       setEntities({});
+      setFieldConfidences({});
       setScore(null);
       setGuidanceText(null);
       setGuidanceMissingKeys([]);
@@ -601,6 +685,9 @@ export function LiveDemoClient({
               break;
             case "entity_update":
               setEntities((msg.entities ?? {}) as Record<string, unknown>);
+              if (msg.fieldConfidences) {
+                setFieldConfidences(msg.fieldConfidences);
+              }
               setScore(msg.score);
               break;
             case "score_update":
@@ -648,8 +735,8 @@ export function LiveDemoClient({
   return (
     <div className="space-y-2">
       {(sectionRows.length > 0 || score != null) && verticalCfg ? (
-        <div className="rounded border border-foreground/10 bg-foreground/[0.02] p-2 text-xs">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 mb-1.5">
+        <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3 text-xs space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="font-semibold text-foreground">
               {t("sectionCompletionTitle")}
             </span>
@@ -657,18 +744,24 @@ export function LiveDemoClient({
               {t("overallComplete")}: {overallPct}%
             </span>
           </div>
+          <div className="h-2.5 w-full rounded-full bg-foreground/10 overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary/90 transition-[width] duration-300"
+              style={{ width: `${overallPct}%` }}
+            />
+          </div>
           {sectionRows.length > 0 ? (
-            <div className="flex flex-wrap gap-x-3 gap-y-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {sectionRows.map((row) => (
-                <div
-                  key={row.sectionId}
-                  className="min-w-[100px] max-w-[200px] flex-1"
-                >
-                  <div className="flex justify-between gap-1 text-[10px] text-foreground/70 mb-0.5">
+                <div key={row.sectionId} className="min-w-0">
+                  <div
+                    className="flex justify-between gap-2 text-[10px] text-foreground/70 mb-1"
+                    title={row.label}
+                  >
                     <span className="truncate">{row.label}</span>
                     <span className="shrink-0 tabular-nums">{row.percent}%</span>
                   </div>
-                  <div className="h-1.5 w-full rounded-full bg-foreground/10 overflow-hidden">
+                  <div className="h-2 w-full rounded-full bg-foreground/10 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-amber-500/90 transition-[width]"
                       style={{ width: `${row.percent}%` }}
@@ -787,6 +880,16 @@ export function LiveDemoClient({
                 <dt className="text-foreground/60 shrink-0">{t("crmLabelPhone")}</dt>
                 <dd className="text-foreground text-right break-words min-w-0">
                   {crmContactPreview.phone || t("crmValueEmpty")}
+                </dd>
+              </div>
+              <div className="flex justify-between gap-2">
+                <dt className="text-foreground/60 shrink-0">
+                  {t("crmLabelPreferredContact")}
+                </dt>
+                <dd className="text-foreground text-right break-words min-w-0">
+                  {crmContactPreview.preferredContactMethod
+                    ? tEnum(crmContactPreview.preferredContactMethod)
+                    : t("crmValueEmpty")}
                 </dd>
               </div>
               {crmContactPreview.location ? (
@@ -1060,6 +1163,7 @@ export function LiveDemoClient({
                     {fields.map((field, index) => {
                       const key = field.key;
                       const raw = entities[key];
+                      const labelText = fieldLabelForLocale(key, locale, pkg);
                       const display =
                         raw === undefined || raw === null
                           ? "—"
@@ -1073,7 +1177,7 @@ export function LiveDemoClient({
                       return (
                         <div
                           key={key}
-                          className={`px-3 py-2 flex flex-col gap-0.5 sm:flex-row sm:items-start sm:gap-2 transition-colors duration-500 border-b border-foreground/10 min-w-0 ${
+                          className={`px-3 py-2 flex flex-col gap-1 transition-colors duration-500 border-b border-foreground/10 min-w-0 ${
                             spanFull
                               ? "sm:col-span-2 sm:border-r-0"
                               : "sm:odd:border-r sm:odd:border-foreground/10"
@@ -1083,12 +1187,21 @@ export function LiveDemoClient({
                               : ""
                           }`}
                         >
-                          <span className="text-xs font-medium text-foreground/70 shrink-0 sm:max-w-[42%] sm:min-w-0">
-                            {fieldLabelForLocale(key, locale, pkg)}
+                          <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground/65">
+                            {labelText}
                           </span>
-                          <span className="text-sm text-foreground break-words flex-1 min-w-0">
-                            {display}
-                          </span>
+                          <div className="flex items-center gap-2 rounded-md border border-foreground/12 bg-background px-2 py-1.5 min-h-[2.25rem] min-w-0">
+                            <span className="text-sm text-foreground break-words flex-1 min-w-0">
+                              {display}
+                            </span>
+                            <FieldConfidenceInline
+                              fieldKey={key}
+                              fieldLabel={labelText}
+                              raw={raw}
+                              fcMap={fieldConfidences}
+                              t={t}
+                            />
+                          </div>
                         </div>
                       );
                     })}

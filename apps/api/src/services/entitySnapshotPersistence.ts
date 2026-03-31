@@ -1,7 +1,11 @@
 import { prisma } from "../db/prisma";
-import { buildEntityPayload, mergeDbEntityWithCache } from "./entityPayload";
+import {
+  buildEntityPayload,
+  fieldConfidencesFromEntityRow,
+  mergeDbEntityWithCache,
+} from "./entityPayload";
 import { computeCompletenessScore, computeN400CompletenessScore } from "./scoring";
-import { getEntityCache, type EntityState } from "./stageManager";
+import { getEntityCache, getFieldConfidenceCache, type EntityState } from "./stageManager";
 
 const DEBOUNCE_MS = 2500;
 const timers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -37,7 +41,14 @@ async function flushEntitySnapshot(callSid: string): Promise<void> {
     });
     const cached = getEntityCache(callSid);
     const merged = mergeDbEntityWithCache(existing, cached);
-    const payload = buildEntityPayload(merged);
+    const mergedFc = {
+      ...fieldConfidencesFromEntityRow(existing),
+      ...getFieldConfidenceCache(callSid),
+    };
+    const payload = buildEntityPayload(merged, {
+      fieldConfidences:
+        Object.keys(mergedFc).length > 0 ? mergedFc : undefined,
+    });
     await prisma.lifeInsuranceEntity.upsert({
       where: { callId: call.id },
       create: { callId: call.id, ...payload },

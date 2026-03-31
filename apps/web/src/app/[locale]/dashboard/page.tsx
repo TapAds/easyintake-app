@@ -5,7 +5,7 @@ import { DashboardDemoMetrics } from "@/components/dashboard/DashboardDemoMetric
 import { DashboardLiveMetrics } from "@/components/dashboard/DashboardLiveMetrics";
 import { userHasSuperAdminRole } from "@/lib/auth/roles";
 
-function normalizeMode(raw: string | string[] | undefined): string | undefined {
+function normalizeParam(raw: string | string[] | undefined): string | undefined {
   if (Array.isArray(raw)) return raw[0];
   return raw;
 }
@@ -15,11 +15,25 @@ export default async function DashboardPage({
   searchParams,
 }: {
   params: { locale: string };
-  searchParams?: { mode?: string | string[] };
+  searchParams?: {
+    mode?: string | string[];
+    carrier?: string | string[];
+    product?: string | string[];
+  };
 }) {
   const { locale } = params;
-  const mode = normalizeMode(searchParams?.mode);
+  const mode = normalizeParam(searchParams?.mode);
+  const carrier = normalizeParam(searchParams?.carrier);
+  const product = normalizeParam(searchParams?.product);
   const superAdmin = await userHasSuperAdminRole();
+
+  const filterQuery = (() => {
+    const q = new URLSearchParams();
+    if (carrier && carrier !== "all") q.set("carrier", carrier);
+    if (product && product !== "all") q.set("product", product);
+    const s = q.toString();
+    return s ? `&${s}` : "";
+  })();
   /** Super-admins default to illustrative metrics; append `?mode=live` for API-backed data. */
   const useDemo = superAdmin && mode !== "live";
 
@@ -43,14 +57,14 @@ export default async function DashboardPage({
               </span>
               {useDemo ? (
                 <Link
-                  href={`/${locale}/dashboard?mode=live`}
+                  href={`/${locale}/dashboard?mode=live${filterQuery}`}
                   className="text-primary font-medium underline underline-offset-2"
                 >
                   {t("superAdmin.showLiveLink")}
                 </Link>
               ) : (
                 <Link
-                  href={`/${locale}/dashboard`}
+                  href={`/${locale}/dashboard${filterQuery ? `?${filterQuery.slice(1)}` : ""}`}
                   className="text-primary font-medium underline underline-offset-2"
                 >
                   {t("superAdmin.showDemoLink")}
@@ -60,7 +74,11 @@ export default async function DashboardPage({
           ) : null}
         </div>
 
-        {useDemo ? <DashboardDemoMetrics /> : <DashboardLiveMetrics />}
+        {useDemo ? (
+          <DashboardDemoMetrics locale={locale} carrier={carrier} product={product} />
+        ) : (
+          <DashboardLiveMetrics locale={locale} carrier={carrier} product={product} />
+        )}
       </main>
     </AppChrome>
   );

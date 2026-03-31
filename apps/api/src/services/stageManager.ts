@@ -37,6 +37,9 @@ const callFieldSourceCache = new Map<
   Partial<Record<string, EntityFieldValueSource>>
 >();
 
+/** Per-field combined AI+STT confidence in [0, 1] for agent UIs. */
+const callFieldConfidenceCache = new Map<string, Record<string, number>>();
+
 export function initEntityCache(callSid: string): void {
   if (!callEntityCache.has(callSid)) {
     callEntityCache.set(callSid, {});
@@ -44,6 +47,20 @@ export function initEntityCache(callSid: string): void {
   if (!callFieldSourceCache.has(callSid)) {
     callFieldSourceCache.set(callSid, {});
   }
+  if (!callFieldConfidenceCache.has(callSid)) {
+    callFieldConfidenceCache.set(callSid, {});
+  }
+}
+
+export function getFieldConfidenceCache(callSid: string): Record<string, number> {
+  return { ...(callFieldConfidenceCache.get(callSid) ?? {}) };
+}
+
+function scaleStt(confidence: number | null | undefined): number {
+  if (confidence == null || Number.isNaN(confidence)) return 1;
+  if (confidence < 0) return 0;
+  if (confidence > 1) return 1;
+  return confidence;
 }
 
 /**
@@ -58,13 +75,22 @@ export function getEntityFieldSources(
 /**
  * Merges newly extracted fields into the in-memory entity cache for a call.
  * Does not overwrite agent_confirmed / agent_edited fields.
+ * Optionally updates per-field confidence (model × STT utterance confidence).
  */
 export function mergeIntoEntityCache(
   callSid: string,
-  extracted: EntityState
+  extracted: EntityState,
+  options?: {
+    fieldConfidences?: Partial<Record<string, number>>;
+    /** Deepgram / STT confidence for the triggering utterance, typically [0, 1]. */
+    sttConfidence?: number | null;
+  }
 ): EntityState {
   const current = callEntityCache.get(callSid) ?? {};
   const sources = callFieldSourceCache.get(callSid) ?? {};
+  const confCache = { ...(callFieldConfidenceCache.get(callSid) ?? {}) };
+  const stt = scaleStt(options?.sttConfidence);
+  const fcIn = options?.fieldConfidences ?? {};
 
   console.log(`[extraction] mergeIntoEntityCache ${callSid} — incoming:`, JSON.stringify(extracted, null, 2));
 
@@ -74,8 +100,13 @@ export function mergeIntoEntityCache(
     if (src === "agent_confirmed" || src === "agent_edited") continue;
     (current as Record<string, unknown>)[key] = value;
     sources[key] = "ai";
+    const aiC = fcIn[key];
+    if (typeof aiC === "number" && Number.isFinite(aiC)) {
+      confCache[key] = Math.min(1, Math.max(0, aiC * stt));
+    }
   }
 
+  callFieldConfidenceCache.set(callSid, confCache);
   callFieldSourceCache.set(callSid, sources);
   callEntityCache.set(callSid, current);
   console.log(`[extraction] mergeIntoEntityCache ${callSid} — after merge:`, JSON.stringify(current, null, 2));
@@ -93,6 +124,9 @@ export function applyAgentFieldConfirm(
   const sources = { ...(callFieldSourceCache.get(callSid) ?? {}) };
   sources[field] = "agent_confirmed";
   callFieldSourceCache.set(callSid, sources);
+  const confCache = { ...(callFieldConfidenceCache.get(callSid) ?? {}) };
+  confCache[field] = 1;
+  callFieldConfidenceCache.set(callSid, confCache);
   return current;
 }
 
@@ -108,6 +142,9 @@ export function applyAgentFieldEdit(
   sources[field] = "agent_edited";
   callEntityCache.set(callSid, current);
   callFieldSourceCache.set(callSid, sources);
+  const confCache = { ...(callFieldConfidenceCache.get(callSid) ?? {}) };
+  confCache[field] = 1;
+  callFieldConfidenceCache.set(callSid, confCache);
   return current;
 }
 
@@ -118,6 +155,7 @@ export function getEntityCache(callSid: string): EntityState {
 export function clearEntityCache(callSid: string): void {
   callEntityCache.delete(callSid);
   callFieldSourceCache.delete(callSid);
+  callFieldConfidenceCache.delete(callSid);
 }
 
 // ─── Missing fields ───────────────────────────────────────────────────────────

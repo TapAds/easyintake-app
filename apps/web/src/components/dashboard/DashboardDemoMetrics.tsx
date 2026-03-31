@@ -1,8 +1,11 @@
+import { Suspense } from "react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import {
   getDashboardSnapshot,
+  scaleDemoSalesKpis,
   type FunnelStageId,
 } from "@/lib/dashboard/snapshot";
+import { DashboardFilters, type DashboardFilterOption } from "./DashboardFilters";
 import { KpiCard } from "./KpiCard";
 
 const FUNNEL_COPY: Record<
@@ -18,15 +21,41 @@ const FUNNEL_COPY: Record<
   transfer: { title: "transferTitle", desc: "transferDesc" },
 };
 
-export async function DashboardDemoMetrics() {
+function toDemoOptions(ids: string[]): DashboardFilterOption[] {
+  return ids.map((value) => ({ value, label: value }));
+}
+
+export async function DashboardDemoMetrics({
+  locale,
+  carrier,
+  product,
+}: {
+  locale: string;
+  carrier?: string;
+  product?: string;
+}) {
   const t = await getTranslations("dashboard");
   const tFunnel = await getTranslations("dashboard.funnel");
   const tDemoFunnel = await getTranslations("dashboard.demo.funnel");
   const tDemoConversion = await getTranslations("dashboard.demo.conversion");
-  const tDemoKpis = await getTranslations("dashboard.demo.kpis");
   const tActivity = await getTranslations("dashboard.activity");
+  const tSales = await getTranslations("dashboard.kpis.sales");
   const format = await getFormatter();
   const snapshot = getDashboardSnapshot();
+
+  const carrierOptions = toDemoOptions(snapshot.demoFilterPrograms);
+  const productOptions = toDemoOptions(snapshot.demoFilterProducts);
+
+  const selectedCarrier =
+    carrier && carrierOptions.some((o) => o.value === carrier) ? carrier : "all";
+  const selectedProduct =
+    product && productOptions.some((o) => o.value === product) ? product : "all";
+
+  const salesKpis = scaleDemoSalesKpis(
+    snapshot.salesKpis,
+    selectedCarrier,
+    selectedProduct
+  );
 
   const completionRate = (entered: number, completed: number) =>
     entered > 0 ? Math.round((completed / entered) * 1000) / 10 : 0;
@@ -36,6 +65,67 @@ export async function DashboardDemoMetrics() {
       <p className="text-sm text-violet-800 dark:text-violet-300/90 bg-violet-50 dark:bg-violet-950/40 border border-violet-200/80 dark:border-violet-800/50 rounded-lg px-3 py-2 inline-block max-w-2xl">
         {t("demo.banner")}
       </p>
+
+      <section aria-labelledby="sales-kpis-heading">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <h2
+            id="sales-kpis-heading"
+            className="text-lg font-semibold text-foreground"
+          >
+            {tSales("sectionTitle")}
+          </h2>
+          <Suspense
+            fallback={
+              <div className="h-10 w-56 rounded-lg bg-foreground/5 animate-pulse" />
+            }
+          >
+            <DashboardFilters
+              locale={locale}
+              carrierOptions={carrierOptions}
+              productOptions={productOptions}
+              selectedCarrier={selectedCarrier}
+              selectedProduct={selectedProduct}
+              labels={{
+                carrier: tSales("filterCarrier"),
+                product: tSales("filterProduct"),
+                all: tSales("filterAll"),
+                carrierTitle: tSales("filterCarrierTitle"),
+                productTitle: tSales("filterProductTitle"),
+              }}
+            />
+          </Suspense>
+        </div>
+        <p className="mt-2 text-xs text-foreground/55 max-w-2xl">
+          {tSales("demoFilterHint")}
+        </p>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <KpiCard
+            label={tSales("leads")}
+            hint={tSales("leadsHint")}
+            value={format.number(salesKpis.leads)}
+          />
+          <KpiCard
+            label={tSales("appsStarted")}
+            hint={tSales("appsStartedHint")}
+            value={format.number(salesKpis.appsStarted)}
+          />
+          <KpiCard
+            label={tSales("appsCompleted")}
+            hint={tSales("appsCompletedHint")}
+            value={format.number(salesKpis.appsCompleted)}
+          />
+          <KpiCard
+            label={tSales("appsSubmitted")}
+            hint={tSales("appsSubmittedHint")}
+            value={format.number(salesKpis.appsSubmitted)}
+          />
+          <KpiCard
+            label={tSales("appsAccepted")}
+            hint={tSales("appsAcceptedHint")}
+            value={format.number(salesKpis.appsAccepted)}
+          />
+        </div>
+      </section>
 
       <section aria-labelledby="funnel-heading">
         <h2
@@ -125,63 +215,6 @@ export async function DashboardDemoMetrics() {
               {format.number(snapshot.stageConversion.closeToTransfer)}%
             </p>
           </div>
-        </div>
-      </section>
-
-      <section aria-labelledby="kpis-heading">
-        <h2
-          id="kpis-heading"
-          className="text-lg font-semibold text-foreground mb-4"
-        >
-          {tDemoKpis("sectionTitle")}
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <KpiCard
-            label={tDemoKpis("totalSessions")}
-            value={format.number(snapshot.kpis.totalSessions)}
-          />
-          <KpiCard
-            label={tDemoKpis("avgIntakeTime")}
-            value={tDemoKpis("minutesValue", {
-              count: snapshot.kpis.avgIntakeMinutes,
-            })}
-          />
-          <KpiCard
-            label={tDemoKpis("verificationRate")}
-            value={tDemoKpis("percentValue", {
-              value: snapshot.kpis.verificationRatePct,
-            })}
-          />
-          <KpiCard
-            label={tDemoKpis("closePaymentRate")}
-            value={tDemoKpis("percentValue", {
-              value: snapshot.kpis.closePaymentRatePct,
-            })}
-          />
-          <KpiCard
-            label={tDemoKpis("destinationSuccess")}
-            value={tDemoKpis("percentValue", {
-              value: snapshot.kpis.destinationSuccessRatePct,
-            })}
-          />
-          <KpiCard
-            label={tDemoKpis("medianFirstResponse")}
-            value={tDemoKpis("minutesValue", {
-              count: snapshot.kpis.medianFirstResponseMinutes,
-            })}
-          />
-          <KpiCard
-            label={tDemoKpis("openExceptions")}
-            value={format.number(snapshot.kpis.openExceptions)}
-          />
-          <KpiCard
-            label={tDemoKpis("channelMix")}
-            value={tDemoKpis("channelMixValue", {
-              voice: snapshot.kpis.channelVoicePct,
-              messaging: snapshot.kpis.channelMessagingPct,
-              partner: snapshot.kpis.channelPartnerPct,
-            })}
-          />
         </div>
       </section>
 

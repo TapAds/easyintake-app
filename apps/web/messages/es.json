@@ -9,7 +9,7 @@
   },
   "nav": {
     "home": "Inicio",
-    "overview": "Resumen",
+    "overview": "Panel",
     "intakeQueue": "Cola de captación",
     "liveDemo": "Demo en vivo",
     "liveCall": "Llamada en vivo",
@@ -23,7 +23,7 @@
     "signedInBlurb": "Usa el panel para el embudo, la confiabilidad de entrega y KPIs operativos en todos los canales."
   },
   "dashboard": {
-    "title": "Panel operativo",
+    "title": "Panel",
     "subtitle": "Vista agnóstica al sector: captación, verificación, cierre y transferencia a tus destinos, comparable entre organizaciones y canales.",
     "superAdmin": {
       "demoModeOn": "Estás viendo métricas de demostración (datos ilustrativos).",
@@ -82,6 +82,25 @@
       "closeToTransfer": "Transferidas (de las en cierre o más allá)"
     },
     "kpis": {
+      "sales": {
+        "sectionTitle": "KPIs del embudo",
+        "filterCarrier": "Portador / programa",
+        "filterProduct": "Producto",
+        "filterAll": "Todos",
+        "filterCarrierTitle": "Filtra por el programa o bloque de portador guardado como identificador vertical de captación (verticalId) en cada sesión.",
+        "filterProductTitle": "Filtra por producto o paquete de solicitud (configPackageId) en cada sesión.",
+        "demoFilterHint": "Valores de programa y paquete de ejemplo para el diseño; las cifras se ajustan solo en la demostración.",
+        "leads": "Prospectos",
+        "leadsHint": "Cantidad de sesiones de captación en la lista y filtros actuales. Excluye fallidas y canceladas. Cada fila es una oportunidad en este vistazo (no un almacén de marketing completo).",
+        "appsStarted": "Solicitudes iniciadas",
+        "appsStartedHint": "Sesiones donde ya comenzó el trabajo: el estado pasó de creada o la completitud es mayor que cero. Excluye fallidas y canceladas.",
+        "appsCompleted": "Solicitudes completadas",
+        "appsCompletedHint": "Sesiones listas para presentar o entregar: estado listo para enviar, enviada o sincronizada. Excluye fallidas y canceladas.",
+        "appsSubmitted": "Solicitudes enviadas",
+        "appsSubmittedHint": "Sesiones presentadas o enviadas en tu flujo: estado enviada o sincronizada.",
+        "appsAccepted": "Solicitudes aceptadas",
+        "appsAcceptedHint": "Sesiones confirmadas como recibidas aguas abajo: estado sincronizada (alineado al cierre de mano del motor)."
+      },
       "sectionTitle": "KPIs operativos",
       "totalSessionsLive": "Sesiones en la lista",
       "avgCompleteness": "Completitud promedio",
@@ -163,6 +182,9 @@
       "title": "Demo en vivo",
       "subtitle": "Comparte esta pantalla durante una captación por voz: conéctate a un Call SID y observa la transcripción y los campos actualizados por el motor.",
       "productFormLabel": "Producto / formulario (demo)",
+      "fieldConfidenceAria": "Confianza de extracción para {field}: {percent, number} por ciento.",
+      "fieldConfidenceAriaUnknown": "No hay confianza de extracción registrada para {field} en este valor.",
+      "fieldConfidenceDash": "—",
       "agentInstructionTitle": "Antes de conectar",
       "agentStepConfirmProduct": "Confirma Producto / formulario (demo) y llama al +1 430-300-3049.",
       "agentStepConnectStream": "Conecta la transmisión.",
@@ -231,6 +253,7 @@
       "crmLabelPhone": "Teléfono",
       "crmLabelLocation": "Ciudad / estado",
       "crmLabelAlienNumber": "Número A",
+      "crmLabelPreferredContact": "Contacto preferido",
       "crmLabelSession": "Sesión (Call SID)",
       "crmValueEmpty": "—"
     },
@@ -238,6 +261,9 @@
       "title": "Llamada en vivo",
       "subtitle": "Usa esta pantalla durante una captación por voz: conéctate a un Call SID y observa la transcripción y los campos de la solicitud actualizados por el motor.",
       "productFormLabel": "Producto / formulario",
+      "fieldConfidenceAria": "Confianza de extracción para {field}: {percent, number} por ciento.",
+      "fieldConfidenceAriaUnknown": "No hay confianza de extracción registrada para {field} en este valor.",
+      "fieldConfidenceDash": "—",
       "agentInstructionTitle": "Antes de conectar",
       "agentStepConfirmProduct": "Elige Producto / formulario y pide al prospecto que llame al número de voz de tu organización (la línea configurada en Twilio hacia Easy Intake).",
       "agentStepConnectStream": "Conecta la transmisión.",
@@ -306,6 +332,7 @@
       "crmLabelPhone": "Teléfono",
       "crmLabelLocation": "Ciudad / estado",
       "crmLabelAlienNumber": "Número A",
+      "crmLabelPreferredContact": "Contacto preferido",
       "crmLabelSession": "Sesión (Call SID)",
       "crmValueEmpty": "—"
     }
@@ -424,11 +451,50 @@
     }
   },
   "intake": {
+    "enumOptions": {
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "email": "Correo electrónico",
+      "phone": "Llamada telefónica",
+      "general": "Elegibilidad general",
+      "marriage": "Matrimonio con ciudadano de EE.UU.",
+      "military": "Servicio militar",
+      "other": "Otra",
+      "male": "Masculino",
+      "female": "Femenino",
+      "nonbinary": "No binario",
+      "unspecified": "Prefiero no decir",
+      "single": "Soltero/a",
+      "married": "Casado/a",
+      "divorced": "Divorciado/a",
+      "widowed": "Viudo/a",
+      "separated": "Separado/a",
+      "civil_union": "Unión civil",
+      "hispanic": "Hispano o latino",
+      "not_hispanic": "No hispano o latino",
+      "brown": "Marrón",
+      "blue": "Azul",
+      "green": "Verde",
+      "hazel": "Avellana",
+      "gray": "Gris",
+      "maroon": "Granate",
+      "pink": "Rosa",
+      "unknown": "Desconocido",
+      "bald": "Calvo (sin cabello)",
+      "black": "Negro",
+      "blond": "Rubio",
+      "red": "Rojo",
+      "sandy": "Arena",
+      "white": "Blanco"
+    },
     "n400Demo": {
       "title": "Formulario web N-400 (demo)",
       "subtitle": "Mismas claves FieldValueMap que la voz en vivo cuando la sesión usa el paquete uscis-n400. Los datos permanecen en esta pestaña.",
       "sessionJson": "FieldValues (JSON)",
-      "openLiveCall": "Abrir llamada en vivo"
+      "openLiveCall": "Abrir llamada en vivo",
+      "sectionCompletionTitle": "Avance por sección",
+      "overallComplete": "Total",
+      "enumPlaceholder": "Seleccionar…"
     }
   }
 }

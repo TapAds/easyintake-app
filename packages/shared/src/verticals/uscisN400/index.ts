@@ -3,8 +3,8 @@ import { buildN400Fields } from "./fields";
 import { N400_SECTIONS } from "./sections";
 
 /**
- * USCIS Form N-400 catalog (Parts 1–16): comprehensive field keys, bilingual labels,
- * conditional visibility, and PDF output hints where wired to Anvil.
+ * USCIS Form N-400 catalog: comprehensive field keys (form Parts 1–16), grouped into
+ * four UI sections; bilingual labels, conditional visibility, PDF output hints where wired to Anvil.
  */
 export const USCIS_N400_VERTICAL_CONFIG: VerticalConfig = {
   id: "uscis-n400-catalog-v2",
@@ -23,6 +23,7 @@ export const USCIS_N400_VERTICAL_CONFIG: VerticalConfig = {
     "state",
     "zip",
     "phone",
+    "preferredContactMethod",
   ],
 };
 

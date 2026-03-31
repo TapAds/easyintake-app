@@ -9,7 +9,7 @@
   },
   "nav": {
     "home": "Home",
-    "overview": "Overview",
+    "overview": "Dashboard",
     "intakeQueue": "Intake queue",
     "liveDemo": "Live demo",
     "liveCall": "Live call",
@@ -23,7 +23,7 @@
     "signedInBlurb": "Use the dashboard for funnel health, handoff reliability, and operational KPIs across channels."
   },
   "dashboard": {
-    "title": "Operations dashboard",
+    "title": "Dashboard",
     "subtitle": "Industry-agnostic view of intake, verification, completion, and transfer to your destinations — comparable across organizations and channels.",
     "superAdmin": {
       "demoModeOn": "You are viewing demo metrics (illustrative sample data).",
@@ -82,6 +82,25 @@
       "closeToTransfer": "Transferred (of those at close or beyond)"
     },
     "kpis": {
+      "sales": {
+        "sectionTitle": "Pipeline KPIs",
+        "filterCarrier": "Carrier",
+        "filterProduct": "Product",
+        "filterAll": "All",
+        "filterCarrierTitle": "Filter by the program or carrier bucket stored as the intake vertical identifier (verticalId) on each session.",
+        "filterProductTitle": "Filter by product or application package identifier (configPackageId) on each session.",
+        "demoFilterHint": "Sample program and package values for layout; numbers adjust for demo only.",
+        "leads": "Leads",
+        "leadsHint": "Count of intake sessions in the current list and filters. Excludes failed and cancelled. Each row is one opportunity in this snapshot (not a full marketing warehouse).",
+        "appsStarted": "Apps started",
+        "appsStartedHint": "Sessions where application work has begun: status is past created, or completeness is above zero. Excludes failed and cancelled.",
+        "appsCompleted": "Apps completed",
+        "appsCompletedHint": "Sessions whose intake is finished on your side and ready for filing or handoff: status is ready to submit, submitted, or synced. Excludes failed and cancelled.",
+        "appsSubmitted": "Apps submitted",
+        "appsSubmittedHint": "Sessions filed or sent forward in your workflow: status is submitted or synced.",
+        "appsAccepted": "Apps accepted",
+        "appsAcceptedHint": "Sessions confirmed as successfully received downstream: status is synced (aligned to your engine’s terminal handoff state)."
+      },
       "sectionTitle": "Operational KPIs",
       "totalSessionsLive": "Sessions in list",
       "avgCompleteness": "Avg. completeness",
@@ -163,6 +182,9 @@
       "title": "Live Demo",
       "subtitle": "Share this screen while on a voice intake: connect to a Call SID, watch transcript and fields update from the engine.",
       "productFormLabel": "Product / Form (demo)",
+      "fieldConfidenceAria": "Extraction confidence for {field}: {percent, number} percent.",
+      "fieldConfidenceAriaUnknown": "Extraction confidence for {field} is not recorded for this value.",
+      "fieldConfidenceDash": "—",
       "agentInstructionTitle": "Before you connect",
       "agentStepConfirmProduct": "Confirm Product / Form (demo), and call +1 430-300-3049.",
       "agentStepConnectStream": "Connect stream.",
@@ -231,6 +253,7 @@
       "crmLabelPhone": "Phone",
       "crmLabelLocation": "City / state",
       "crmLabelAlienNumber": "A-Number",
+      "crmLabelPreferredContact": "Preferred contact",
       "crmLabelSession": "Session (Call SID)",
       "crmValueEmpty": "—"
     },
@@ -238,6 +261,9 @@
       "title": "Live call",
       "subtitle": "Use this screen while on a voice intake: connect to a Call SID and watch the transcript and application fields update from the engine.",
       "productFormLabel": "Product / Form",
+      "fieldConfidenceAria": "Extraction confidence for {field}: {percent, number} percent.",
+      "fieldConfidenceAriaUnknown": "Extraction confidence for {field} is not recorded for this value.",
+      "fieldConfidenceDash": "—",
       "agentInstructionTitle": "Before you connect",
       "agentStepConfirmProduct": "Choose Product / Form, then have the prospect call your organization’s voice number (the line wired to Easy Intake in Twilio).",
       "agentStepConnectStream": "Connect stream.",
@@ -306,6 +332,7 @@
       "crmLabelPhone": "Phone",
       "crmLabelLocation": "City / state",
       "crmLabelAlienNumber": "A-Number",
+      "crmLabelPreferredContact": "Preferred contact",
       "crmLabelSession": "Session (Call SID)",
       "crmValueEmpty": "—"
     }
@@ -424,11 +451,50 @@
     }
   },
   "intake": {
+    "enumOptions": {
+      "sms": "SMS",
+      "whatsapp": "WhatsApp",
+      "email": "Email",
+      "phone": "Phone call",
+      "general": "General eligibility",
+      "marriage": "Marriage to U.S. citizen",
+      "military": "Military service",
+      "other": "Other",
+      "male": "Male",
+      "female": "Female",
+      "nonbinary": "Non-binary",
+      "unspecified": "Prefer not to say",
+      "single": "Single",
+      "married": "Married",
+      "divorced": "Divorced",
+      "widowed": "Widowed",
+      "separated": "Separated",
+      "civil_union": "Civil union",
+      "hispanic": "Hispanic or Latino",
+      "not_hispanic": "Not Hispanic or Latino",
+      "brown": "Brown",
+      "blue": "Blue",
+      "green": "Green",
+      "hazel": "Hazel",
+      "gray": "Gray",
+      "maroon": "Maroon",
+      "pink": "Pink",
+      "unknown": "Unknown",
+      "bald": "Bald (no hair)",
+      "black": "Black",
+      "blond": "Blond",
+      "red": "Red",
+      "sandy": "Sandy",
+      "white": "White"
+    },
     "n400Demo": {
       "title": "N-400 webform (demo)",
       "subtitle": "Same FieldValueMap keys as live voice when the session uses the uscis-n400 package. Data stays in this browser tab.",
       "sessionJson": "FieldValues (JSON)",
-      "openLiveCall": "Open live call"
+      "openLiveCall": "Open live call",
+      "sectionCompletionTitle": "Section completion",
+      "overallComplete": "Overall",
+      "enumPlaceholder": "Select…"
     }
   }
 }

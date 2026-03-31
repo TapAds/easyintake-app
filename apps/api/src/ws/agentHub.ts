@@ -13,6 +13,8 @@ import {
   applyAgentFieldEdit,
   stageToScope,
   getMissingFieldsByStage,
+  getFieldConfidenceCache,
+  type EntityState,
 } from "../services/stageManager";
 import {
   computeCompletenessScore,
@@ -38,7 +40,13 @@ import { scheduleDebouncedEntitySnapshot } from "../services/entitySnapshotPersi
 
 export type AgentMessage =
   | { type: "transcript_chunk"; callSid: string; speaker: string; text: string; offsetMs: number; languageCode: string; confidence?: number }
-  | { type: "entity_update"; callSid: string; entities: Record<string, unknown>; score: { overall: number; tier: string } }
+  | {
+      type: "entity_update";
+      callSid: string;
+      entities: Record<string, unknown>;
+      score: { overall: number; tier: string };
+      fieldConfidences?: Record<string, number>;
+    }
   | { type: "guidance"; callSid: string; guidanceText: string; missingFields: string[]; priorityField: string | null }
   | { type: "score_update"; callSid: string; overall: number; tier: string }
   | { type: "stage_transition"; callSid: string; from: string; to: string; flow?: string }
@@ -61,6 +69,20 @@ function unsubscribe(ws: WebSocket): void {
     set.delete(ws);
     if (set.size === 0) subscribers.delete(callSid);
   }
+}
+
+function broadcastEntityUpdate(
+  callSid: string,
+  entities: Record<string, unknown>,
+  score: { overall: number; tier: string }
+): void {
+  broadcast(callSid, {
+    type: "entity_update",
+    callSid,
+    entities,
+    score,
+    fieldConfidences: getFieldConfidenceCache(callSid),
+  });
 }
 
 function broadcast(callSid: string, message: AgentMessage): void {
@@ -165,7 +187,7 @@ callEvents.on(
         });
 
         console.log(`[agentHub] calling extraction for ${callSid}`);
-        const extracted =
+        const extraction =
           configPackageId === "uscis-n400"
             ? await extractN400Entities(utterances)
             : await extractEntities(utterances, scope, {
@@ -175,18 +197,23 @@ callEvents.on(
               });
         console.log(`[agentHub] extraction done for ${callSid}`);
 
-        const fullEntity = mergeIntoEntityCache(callSid, extracted);
+        const fullEntity = mergeIntoEntityCache(
+          callSid,
+          extraction.entities as EntityState,
+          {
+            fieldConfidences: extraction.fieldConfidences,
+            sttConfidence:   event.confidence,
+          }
+        );
 
         const scoreResult =
           configPackageId === "uscis-n400"
             ? computeN400CompletenessScore(fullEntity as Record<string, unknown>)
             : computeCompletenessScore(fullEntity);
 
-        broadcast(callSid, {
-          type: "entity_update",
-          callSid,
-          entities: fullEntity as Record<string, unknown>,
-          score: { overall: scoreResult.overall, tier: scoreResult.tier },
+        broadcastEntityUpdate(callSid, fullEntity as Record<string, unknown>, {
+          overall: scoreResult.overall,
+          tier:    scoreResult.tier,
         });
 
         broadcast(callSid, {
@@ -351,11 +378,9 @@ export function handleAgentConnection(
               pkg === "uscis-n400"
                 ? computeN400CompletenessScore(fullEntity as Record<string, unknown>)
                 : computeCompletenessScore(fullEntity);
-            broadcast(confirmSid, {
-              type: "entity_update",
-              callSid: confirmSid,
-              entities: fullEntity as Record<string, unknown>,
-              score: { overall: scoreResult.overall, tier: scoreResult.tier },
+            broadcastEntityUpdate(confirmSid, fullEntity as Record<string, unknown>, {
+              overall: scoreResult.overall,
+              tier:    scoreResult.tier,
             });
             scheduleDebouncedEntitySnapshot(confirmSid);
           } catch (e) {
@@ -407,11 +432,9 @@ export function handleAgentConnection(
               pkg === "uscis-n400"
                 ? computeN400CompletenessScore(fullEntity as Record<string, unknown>)
                 : computeCompletenessScore(fullEntity);
-            broadcast(editSid, {
-              type: "entity_update",
-              callSid: editSid,
-              entities: fullEntity as Record<string, unknown>,
-              score: { overall: scoreResult.overall, tier: scoreResult.tier },
+            broadcastEntityUpdate(editSid, fullEntity as Record<string, unknown>, {
+              overall: scoreResult.overall,
+              tier:    scoreResult.tier,
             });
             scheduleDebouncedEntitySnapshot(editSid);
           } catch (e) {

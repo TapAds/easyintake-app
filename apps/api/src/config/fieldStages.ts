@@ -25,6 +25,7 @@ export type EntityFieldName =
   | "productTypeInterest"
   | "termLengthDesired"
   | "budgetMonthly"
+  | "preferredContactMethod"
   | "firstName"
   | "lastName"
   | "phone"
@@ -57,6 +58,7 @@ export const FIELD_CONFIG: Record<EntityFieldName, FieldMeta> = {
   productTypeInterest:   { stage: "quote", weight: 2, label: "Product type (term, whole, etc.)" },
   termLengthDesired:     { stage: "quote", weight: 1, label: "Term length desired" },
   budgetMonthly:         { stage: "quote", weight: 2, label: "Monthly budget" },
+  preferredContactMethod:{ stage: "quote", weight: 2, label: "Preferred contact method" },
 
   // ── Application fields (FULL_APPLICATION stage) ─────────────────────────
   firstName:             { stage: "application", weight: 3, label: "First name" },

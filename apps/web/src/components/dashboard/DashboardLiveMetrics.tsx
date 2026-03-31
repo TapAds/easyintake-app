@@ -1,9 +1,13 @@
+import { Suspense } from "react";
 import { getFormatter, getTranslations } from "next-intl/server";
 import { fetchIntakeSessionsListFromBff } from "@/lib/bff/serverFetch";
 import {
+  computeSalesKpis,
   deriveDashboardFromSessions,
+  filterSessionsForDashboard,
   type DashboardFunnelStageId,
 } from "@/lib/dashboard/deriveFromSessions";
+import { DashboardFilters, type DashboardFilterOption } from "./DashboardFilters";
 import { KpiCard } from "./KpiCard";
 
 const FUNNEL_COPY: Record<
@@ -19,14 +23,47 @@ const FUNNEL_COPY: Record<
   transfer: { title: "transferTitle", desc: "transferDesc" },
 };
 
-export async function DashboardLiveMetrics() {
+function toOptions(ids: string[]): DashboardFilterOption[] {
+  return Array.from(new Set(ids))
+    .sort()
+    .map((value) => ({ value, label: value }));
+}
+
+export async function DashboardLiveMetrics({
+  locale,
+  carrier,
+  product,
+}: {
+  locale: string;
+  carrier?: string;
+  product?: string;
+}) {
   const t = await getTranslations("dashboard");
   const tFunnel = await getTranslations("dashboard.funnel");
   const tActivity = await getTranslations("dashboard.activity");
+  const tSales = await getTranslations("dashboard.kpis.sales");
   const format = await getFormatter();
 
-  const rows = await fetchIntakeSessionsListFromBff();
-  const live = rows !== null ? deriveDashboardFromSessions(rows) : null;
+  const allRows = await fetchIntakeSessionsListFromBff();
+  const carrierOptions =
+    allRows !== null ? toOptions(allRows.map((r) => r.verticalId)) : [];
+  const productOptions =
+    allRows !== null ? toOptions(allRows.map((r) => r.configPackageId)) : [];
+
+  const selectedCarrier =
+    carrier && carrierOptions.some((o) => o.value === carrier) ? carrier : "all";
+  const selectedProduct =
+    product && productOptions.some((o) => o.value === product) ? product : "all";
+
+  const filteredRows =
+    allRows !== null
+      ? filterSessionsForDashboard(allRows, selectedCarrier, selectedProduct)
+      : null;
+
+  const live =
+    filteredRows !== null ? deriveDashboardFromSessions(filteredRows) : null;
+  const salesKpis =
+    filteredRows !== null ? computeSalesKpis(filteredRows) : null;
 
   const funnelDisplay =
     live?.funnel ??
@@ -38,8 +75,8 @@ export async function DashboardLiveMetrics() {
 
   return (
     <>
-      {rows === null ? (
-        <p className="text-sm text-amber-700 dark:text-amber-400/90 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/50 rounded-lg px-3 py-2 inline-block">
+      {allRows === null ? (
+        <p className="text-sm text-amber-700 dark:text-amber-400/90 bg-amber-50 dark:text-amber-950/40 border border-amber-200/80 dark:border-amber-800/50 rounded-lg px-3 py-2 inline-block">
           {t("loadErrorNote")}
         </p>
       ) : (
@@ -47,6 +84,64 @@ export async function DashboardLiveMetrics() {
           {t("liveDataNote")}
         </p>
       )}
+
+      <section aria-labelledby="sales-kpis-heading">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <h2
+            id="sales-kpis-heading"
+            className="text-lg font-semibold text-foreground"
+          >
+            {tSales("sectionTitle")}
+          </h2>
+          <Suspense
+            fallback={
+              <div className="h-10 w-56 rounded-lg bg-foreground/5 animate-pulse" />
+            }
+          >
+            <DashboardFilters
+              locale={locale}
+              carrierOptions={carrierOptions}
+              productOptions={productOptions}
+              selectedCarrier={selectedCarrier}
+              selectedProduct={selectedProduct}
+              labels={{
+                carrier: tSales("filterCarrier"),
+                product: tSales("filterProduct"),
+                all: tSales("filterAll"),
+                carrierTitle: tSales("filterCarrierTitle"),
+                productTitle: tSales("filterProductTitle"),
+              }}
+            />
+          </Suspense>
+        </div>
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          <KpiCard
+            label={tSales("leads")}
+            hint={tSales("leadsHint")}
+            value={salesKpis ? format.number(salesKpis.leads) : "—"}
+          />
+          <KpiCard
+            label={tSales("appsStarted")}
+            hint={tSales("appsStartedHint")}
+            value={salesKpis ? format.number(salesKpis.appsStarted) : "—"}
+          />
+          <KpiCard
+            label={tSales("appsCompleted")}
+            hint={tSales("appsCompletedHint")}
+            value={salesKpis ? format.number(salesKpis.appsCompleted) : "—"}
+          />
+          <KpiCard
+            label={tSales("appsSubmitted")}
+            hint={tSales("appsSubmittedHint")}
+            value={salesKpis ? format.number(salesKpis.appsSubmitted) : "—"}
+          />
+          <KpiCard
+            label={tSales("appsAccepted")}
+            hint={tSales("appsAcceptedHint")}
+            value={salesKpis ? format.number(salesKpis.appsAccepted) : "—"}
+          />
+        </div>
+      </section>
 
       <section aria-labelledby="funnel-heading">
         <h2
@@ -126,49 +221,6 @@ export async function DashboardLiveMetrics() {
               {live ? format.number(live.conversion.closeToTransfer) : "—"}%
             </p>
           </div>
-        </div>
-      </section>
-
-      <section aria-labelledby="kpis-heading">
-        <h2
-          id="kpis-heading"
-          className="text-lg font-semibold text-foreground mb-4"
-        >
-          {t("kpis.sectionTitle")}
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <KpiCard
-            label={t("kpis.totalSessionsLive")}
-            value={live ? format.number(live.total) : "—"}
-          />
-          <KpiCard
-            label={t("kpis.avgCompleteness")}
-            value={
-              live
-                ? t("kpis.percentValue", { value: live.kpis.avgCompletenessPct })
-                : "—"
-            }
-          />
-          <KpiCard
-            label={t("kpis.pendingAgentReview")}
-            value={live ? format.number(live.kpis.pendingHitl) : "—"}
-          />
-          <KpiCard
-            label={t("kpis.failedOrCancelled")}
-            value={live ? format.number(live.kpis.failedOrCancelled) : "—"}
-          />
-          <KpiCard
-            label={t("kpis.channelMix")}
-            value={
-              live
-                ? t("kpis.channelMixValue", {
-                    voice: live.kpis.channelVoicePct,
-                    messaging: live.kpis.channelMessagingPct,
-                    partner: live.kpis.channelPartnerPct,
-                  })
-                : "—"
-            }
-          />
         </div>
       </section>
 

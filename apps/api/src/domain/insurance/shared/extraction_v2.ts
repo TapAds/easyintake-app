@@ -37,7 +37,7 @@ ${EXTRACTION_FIELDS_FOR_PROMPT}
 CRITICAL FIELDS – EXTRACT THESE WHEN CLEARLY STATED OR CLEARLY CONFIRMED
 -------------------------
 
-PERSONAL: first_name, middle_name, last_name, dob, gender, home_address, city, state, zip, mobile_phone, email, citizenship, occupation, employer, annual_income, height, weight
+PERSONAL: first_name, middle_name, last_name, dob, gender, home_address, city, state, zip, mobile_phone, email, preferred_contact_method, citizenship, occupation, employer, annual_income, height, weight
 OWNER: owner_type, owner_name, owner_dob, owner_relationship, owner_address, owner_email, owner_phone
 BENEFICIARY: primary_beneficiary_name, primary_beneficiary_relationship, primary_beneficiary_dob, contingent_beneficiary_name, contingent_beneficiary_relationship
 POLICY: product_name, company, face_amount, term_length, inforce_face_amount, death_benefit_option, coverage_type, premium_frequency, planned_premium, has_inforce_insurance, ever_declined, moving_violations, felony, bankruptcy, extreme_sports, aviation, foreign_travel
@@ -76,6 +76,7 @@ DATE OF BIRTH (EN): "DOB", "date of birth", "born", MM/DD/YYYY → dob ISO
 DATE OF BIRTH (ES): "nací el", "mi cumpleaños es", "el [day] de [month] de [year]"
 ADDRESS: street + city + state + zip from either language
 PHONE: E.164-style or dashed US numbers → mobile_phone
+PREFERRED_CONTACT_METHOD: applicant preference for follow-up — one of sms, whatsapp, email, phone (Spanish: SMS, WhatsApp, correo, llamada / teléfono). Normalize to those exact lowercase tokens in the value field.
 GENDER: male/female, M/F, hombre/mujer → M or F
 AMOUNTS: "five hundred thousand", "half a million", "quinientos mil" → numeric face_amount
 

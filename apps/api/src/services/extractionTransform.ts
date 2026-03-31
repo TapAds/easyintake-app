@@ -31,6 +31,7 @@ export const V2_TO_EASY_INTAKE_FIELD: Record<string, EntityFieldName> = {
   home_phone: "phone",
   work_phone: "phone",
   email: "email",
+  preferred_contact_method: "preferredContactMethod",
   face_amount: "coverageAmountDesired",
   term_length: "termLengthDesired",
   inforce_face_amount: "existingCoverageAmount",
@@ -157,6 +158,34 @@ function normalizeValue(
     return code ?? (str.length === 2 ? str.toUpperCase() : String(value));
   }
 
+  if (v2Field === "preferred_contact_method") {
+    const allowed = new Set(["sms", "whatsapp", "email", "phone"]);
+    if (allowed.has(str)) return str;
+    if (
+      str === "text" ||
+      str.includes("text message") ||
+      (str.includes("message") && str.includes("text"))
+    )
+      return "sms";
+    if (str.includes("whatsapp") || str.includes("what's app")) return "whatsapp";
+    if (
+      str.includes("email") ||
+      str.includes("e-mail") ||
+      str.includes("correo") ||
+      str.includes("mail")
+    )
+      return "email";
+    if (
+      str.includes("phone") ||
+      str.includes("call") ||
+      str.includes("teléfono") ||
+      str.includes("telefono") ||
+      str.includes("llamada")
+    )
+      return "phone";
+    return undefined;
+  }
+
   // Height: "5'10" or "5 feet 10 inches" -> heightFeet + heightInches
   if (v2Field === "height") {
     const val = String(value);
@@ -178,14 +207,22 @@ function normalizeValue(
   return value;
 }
 
+export type V2ExtractionEntitiesAndConfidence = {
+  entities: Partial<Record<EntityFieldName, unknown>>;
+  /** Per Easy Intake field key, model-reported confidence in [0, 1]. */
+  fieldConfidences: Partial<Record<EntityFieldName, number>>;
+};
+
 /**
- * Converts extraction_v2 updates array into Easy Intake ExtractedEntities.
- * Filters by confidence >= 0.75, maps field names, normalizes values.
+ * Converts extraction_v2 updates array into Easy Intake ExtractedEntities
+ * and parallel confidence scores (max confidence when multiple V2 keys map
+ * to one entity field).
  */
-export function transformV2ToExtractedEntities(
+export function transformV2ToExtractedEntitiesWithConfidence(
   result: V2ExtractionResult
-): Partial<Record<EntityFieldName, unknown>> {
-  const out: Partial<Record<EntityFieldName, unknown>> = {};
+): V2ExtractionEntitiesAndConfidence {
+  const entities: Partial<Record<EntityFieldName, unknown>> = {};
+  const fieldConfidences: Partial<Record<EntityFieldName, number>> = {};
   const updates = result.updates ?? [];
 
   for (const { field, value, confidence = 0 } of updates) {
@@ -198,12 +235,27 @@ export function transformV2ToExtractedEntities(
 
     if (field === "height" && typeof normalized === "object" && normalized !== null && "heightFeet" in normalized) {
       const h = normalized as { heightFeet: number; heightInches: number };
-      out.heightFeet = h.heightFeet;
-      out.heightInches = h.heightInches;
+      entities.heightFeet = h.heightFeet;
+      entities.heightInches = h.heightInches;
+      const c = Math.max(fieldConfidences.heightFeet ?? 0, confidence);
+      fieldConfidences.heightFeet = c;
+      fieldConfidences.heightInches = c;
     } else if (normalized !== undefined && normalized !== null) {
-      (out as Record<string, unknown>)[easyIntakeField] = normalized;
+      (entities as Record<string, unknown>)[easyIntakeField] = normalized;
+      const prev = fieldConfidences[easyIntakeField] ?? 0;
+      fieldConfidences[easyIntakeField] = Math.max(prev, confidence);
     }
   }
 
-  return out;
+  return { entities, fieldConfidences };
+}
+
+/**
+ * Converts extraction_v2 updates array into Easy Intake ExtractedEntities.
+ * Filters by confidence >= 0.75, maps field names, normalizes values.
+ */
+export function transformV2ToExtractedEntities(
+  result: V2ExtractionResult
+): Partial<Record<EntityFieldName, unknown>> {
+  return transformV2ToExtractedEntitiesWithConfidence(result).entities;
 }

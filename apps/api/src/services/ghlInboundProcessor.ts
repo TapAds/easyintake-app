@@ -318,7 +318,7 @@ export async function processGhlInboundMessage(
         sources,
       });
       const lang = inferInboundLanguage(inbound.bodyText);
-      extractedText = await extractEntities(
+      const extraction = await extractEntities(
         [
           {
             speaker: "caller",
@@ -329,6 +329,7 @@ export async function processGhlInboundMessage(
         "all",
         { currentState, scope: "all" }
       );
+      extractedText = extraction.entities;
       const beforeSnap = { ...fieldValuesToEntityState(mergedFv) };
       mergedFv = mergeExtractedIntoFieldValues(
         mergedFv,

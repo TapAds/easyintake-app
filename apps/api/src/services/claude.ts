@@ -27,6 +27,7 @@ import { EntityFieldName } from "../config/fieldStages";
 import { runCompliance, ComplianceContext, ComplianceViolation } from "./compliance";
 import {
   transformV2ToExtractedEntities,
+  transformV2ToExtractedEntitiesWithConfidence,
   V2ExtractionResult,
 } from "./extractionTransform";
 import { extractionScopeHint } from "./extractionScope";
@@ -103,6 +104,12 @@ export function deriveAgentContextFromUtterances(
 // Partial entity fields returned from extraction (all nullable)
 export type ExtractedEntities = Partial<Record<EntityFieldName, unknown>>;
 
+/** V2 voice/text extraction: flat fields plus per-field model confidence. */
+export type ExtractEntitiesResult = {
+  entities: ExtractedEntities;
+  fieldConfidences: Partial<Record<EntityFieldName, number>>;
+};
+
 export type AgentGuidanceResult = {
   guidanceText: string;            // compliance-sanitized, safe to deliver to agent
   missingFields: string[];
@@ -121,8 +128,8 @@ export async function extractEntities(
   utterances: ExtractEntitiesUtterance[],
   stage: "quote" | "application" | "all" = "quote",
   options: ExtractEntitiesOptions = {}
-): Promise<ExtractedEntities> {
-  if (utterances.length === 0) return {};
+): Promise<ExtractEntitiesResult> {
+  if (utterances.length === 0) return { entities: {}, fieldConfidences: {} };
 
   const formattedTranscript = formatUtterancesForExtractionPrompt(utterances);
   const scopeForHint = options.scope ?? stage;
@@ -153,7 +160,7 @@ export async function extractEntities(
   const textBlock = response.content.find((b) => b.type === "text");
   if (!textBlock || textBlock.type !== "text") {
     console.warn("[claude] extractEntities: no text block in response");
-    return {};
+    return { entities: {}, fieldConfidences: {} };
   }
 
   let rawJson = textBlock.text.trim();
@@ -166,21 +173,26 @@ export async function extractEntities(
     v2Result = JSON.parse(rawJson) as V2ExtractionResult;
   } catch (err) {
     console.warn("[extraction] failed to parse JSON:", err);
-    return {};
+    return { entities: {}, fieldConfidences: {} };
   }
 
-  const parsed = transformV2ToExtractedEntities(v2Result);
-  console.log("[extraction] parsed result:", JSON.stringify(parsed, null, 2));
-  return parsed;
+  const parsed = transformV2ToExtractedEntitiesWithConfidence(v2Result);
+  console.log("[extraction] parsed result:", JSON.stringify(parsed.entities, null, 2));
+  return { entities: parsed.entities, fieldConfidences: parsed.fieldConfidences };
 }
 
 /**
  * Extracts USCIS N-400 catalog fields from transcript utterances (structured tool call).
  */
+const N400_DEFAULT_FIELD_CONFIDENCE = 0.88;
+
 export async function extractN400Entities(
   utterances: ExtractEntitiesUtterance[]
-): Promise<Record<string, unknown>> {
-  if (utterances.length === 0) return {};
+): Promise<{
+  entities: Record<string, unknown>;
+  fieldConfidences: Record<string, number>;
+}> {
+  if (utterances.length === 0) return { entities: {}, fieldConfidences: {} };
   const formatted = formatUtterancesForExtractionPrompt(utterances);
   const response = await client.messages.create({
     model: "claude-sonnet-4-6",
@@ -198,15 +210,19 @@ export async function extractN400Entities(
   const toolUse = response.content.find((b) => b.type === "tool_use");
   if (!toolUse || toolUse.type !== "tool_use") {
     console.warn("[claude] extractN400Entities: no tool_use in response");
-    return {};
+    return { entities: {}, fieldConfidences: {} };
   }
   const input = toolUse.input as Record<string, unknown>;
   const out: Record<string, unknown> = {};
+  const fieldConfidences: Record<string, number> = {};
   for (const [k, v] of Object.entries(input)) {
-    if (v !== null && v !== undefined) out[k] = v;
+    if (v !== null && v !== undefined) {
+      out[k] = v;
+      fieldConfidences[k] = N400_DEFAULT_FIELD_CONFIDENCE;
+    }
   }
   console.log("[extraction] n400 result keys:", Object.keys(out).length);
-  return out;
+  return { entities: out, fieldConfidences };
 }
 
 const DOCUMENT_EXTRACTION_USER_INSTRUCTION = `The attached file was sent by an insurance applicant via SMS, WhatsApp, or email (e.g. government ID, intake form, application PDF, declaration page, or screenshot).

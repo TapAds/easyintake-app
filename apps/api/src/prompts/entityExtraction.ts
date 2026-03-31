@@ -23,6 +23,7 @@ Rules:
 - Gender must be one of: MALE, FEMALE, NON_BINARY, UNKNOWN.
 - tobaccoLastUsed must be one of: "never", "<1yr", "1-3yr", "3+yr".
 - productTypeInterest must be one of: "term", "whole", "universal", "final_expense".
+- preferredContactMethod must be one of: "sms", "whatsapp", "email", "phone".
 - The transcript may contain English and Spanish. Extract from both languages.
 - You are an internal system. Never produce output addressed to the applicant.`;
 
@@ -41,6 +42,11 @@ const ALL_FIELD_PROPERTIES: Record<EntityFieldName, object> = {
   productTypeInterest:    { type: ["string", "null"], enum: ["term", "whole", "universal", "final_expense", null] },
   termLengthDesired:      { type: ["integer", "null"], description: "Desired term length in years" },
   budgetMonthly:          { type: ["integer", "null"], description: "Max monthly premium in dollars" },
+  preferredContactMethod: {
+    type: ["string", "null"],
+    enum: ["sms", "whatsapp", "email", "phone", null],
+    description: "How the applicant prefers to be contacted",
+  },
   // Application fields
   firstName:              { type: ["string", "null"], description: "Applicant first name" },
   lastName:               { type: ["string", "null"], description: "Applicant last name" },

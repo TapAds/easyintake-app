@@ -13,6 +13,17 @@ export interface FunnelStageSnapshot {
 
 export interface DashboardSnapshot {
   funnel: FunnelStageSnapshot[];
+  /** Illustrative pipeline counts for demo KPI cards (not tied to list filters). */
+  salesKpis: {
+    leads: number;
+    appsStarted: number;
+    appsCompleted: number;
+    appsSubmitted: number;
+    appsAccepted: number;
+  };
+  /** Optional filter chips for demo layout only. */
+  demoFilterPrograms: string[];
+  demoFilterProducts: string[];
   kpis: {
     totalSessions: number;
     avgIntakeMinutes: number;
@@ -42,6 +53,25 @@ export interface DashboardSnapshot {
   }>;
 }
 
+/** Demo-only: narrows illustrative KPIs when filters are applied (no session list in demo). */
+export function scaleDemoSalesKpis(
+  base: DashboardSnapshot["salesKpis"],
+  carrier: string | undefined,
+  product: string | undefined
+): DashboardSnapshot["salesKpis"] {
+  let factor = 1;
+  if (carrier && carrier !== "all") factor *= 0.52;
+  if (product && product !== "all") factor *= 0.52;
+  const s = (n: number) => Math.max(0, Math.round(n * factor));
+  return {
+    leads: s(base.leads),
+    appsStarted: s(base.appsStarted),
+    appsCompleted: s(base.appsCompleted),
+    appsSubmitted: s(base.appsSubmitted),
+    appsAccepted: s(base.appsAccepted),
+  };
+}
+
 export function getDashboardSnapshot(): DashboardSnapshot {
   return {
     funnel: [
@@ -50,6 +80,15 @@ export function getDashboardSnapshot(): DashboardSnapshot {
       { id: "close", entered: 1288, completed: 1104 },
       { id: "transfer", entered: 1104, completed: 1061 },
     ],
+    salesKpis: {
+      leads: 1840,
+      appsStarted: 1688,
+      appsCompleted: 1150,
+      appsSubmitted: 1104,
+      appsAccepted: 1061,
+    },
+    demoFilterPrograms: ["demo-program-east", "demo-program-west"],
+    demoFilterProducts: ["standard-intake-a", "standard-intake-b"],
     kpis: {
       totalSessions: 1840,
       avgIntakeMinutes: 7,

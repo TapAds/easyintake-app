@@ -204,7 +204,7 @@ const PART9_ITEMS: { key: string; en: string; es: string }[] = [
 
 function part9Fields(): VerticalFieldDefinition[] {
   return PART9_ITEMS.map((item, i) =>
-    bool(item.key, S.p9, i, item.en, item.es, {
+    bool(item.key, S.additional, i, item.en, item.es, {
       sourceRef: `N-400 Part 9 (${i + 1})`,
       weight: 1,
     })
@@ -212,11 +212,16 @@ function part9Fields(): VerticalFieldDefinition[] {
 }
 
 export function buildN400Fields(): VerticalFieldDefinition[] {
+  const A = S.applicant;
+  const ET = S.employmentTravel;
+  const AD = S.additional;
+  const CT = S.contact;
+
   const physicalAddress: VerticalFieldDefinition = {
     key: "address",
     type: "address",
-    sectionId: S.p4,
-    order: 0,
+    sectionId: A,
+    order: 300,
     labels: {
       en: "Physical street number and name",
       es: "Calle y número (domicilio físico)",
@@ -228,7 +233,7 @@ export function buildN400Fields(): VerticalFieldDefinition[] {
   return [
     enm(
       "n400.p1.eligibilityBasis",
-      S.p1,
+      A,
       0,
       "Basis for applying (general, marriage, military, other)",
       "Base (general, matrimonio, militar, otra)",
@@ -240,7 +245,7 @@ export function buildN400Fields(): VerticalFieldDefinition[] {
     ),
     tx(
       "n400.p1.eligibilityExplanation",
-      S.p1,
+      A,
       1,
       "Explain if basis is “other”",
       "Explique si la base es “otra”",
@@ -253,7 +258,7 @@ export function buildN400Fields(): VerticalFieldDefinition[] {
     ),
     dt(
       "dateBecameLpr",
-      S.p1,
+      A,
       2,
       "Date became lawful permanent resident",
       "Fecha en que se obtuvo la residencia permanente",
@@ -267,85 +272,85 @@ export function buildN400Fields(): VerticalFieldDefinition[] {
     ),
     num(
       "yearsAsLpr",
-      S.p1,
+      A,
       3,
       "Years as permanent resident (if known)",
       "Años como residente permanente",
       { sourceRef: "N-400 Part 1", weight: 5 }
     ),
 
-    tx("alienNumber", S.p2, 0, "A-Number (if any)", "Número A (si aplica)", {
+    tx("alienNumber", A, 100, "A-Number (if any)", "Número A (si aplica)", {
       sourceRef: "N-400 Part 2",
       outputMappings: [
         { destinationKind: "pdf", destinationKey: "aNumber" },
         { destinationKind: "pdf", destinationKey: "part3ANumber" },
       ],
     }),
-    tx("firstName", S.p2, 1, "Given name", "Nombre", {
+    tx("firstName", A, 101, "Given name", "Nombre", {
       validation: [{ kind: "required" }],
       weight: 15,
     }),
-    tx("middleName", S.p2, 2, "Middle name (if any)", "Segundo nombre", { weight: 5 }),
-    tx("lastName", S.p2, 3, "Family name", "Apellido", {
+    tx("middleName", A, 102, "Middle name (if any)", "Segundo nombre", { weight: 5 }),
+    tx("lastName", A, 103, "Family name", "Apellido", {
       validation: [{ kind: "required" }],
       weight: 15,
     }),
     bool(
       "n400.p2.nameLegallyChanged",
-      S.p2,
-      4,
+      A,
+      104,
       "Has your name legally changed?",
       "¿Su nombre ha cambiado legalmente?",
       { sourceRef: "N-400 Part 2" }
     ),
-    tx("n400.p2.priorLegalNames", S.p2, 5, "All other legal names used", "Otros nombres legales", {
+    tx("n400.p2.priorLegalNames", A, 105, "All other legal names used", "Otros nombres legales", {
       visibility: { allOf: [{ fieldKey: "n400.p2.nameLegallyChanged", equals: true }] },
     }),
     bool(
       "n400.p2.ssnProvided",
-      S.p2,
-      6,
+      A,
+      106,
       "Do you have (or had) a U.S. Social Security number?",
       "¿Tiene o tuvo número de Seguro Social de EE.UU.?",
       {}
     ),
-    tx("n400.p2.ssn", S.p2, 7, "Social Security number", "Número de Seguro Social", {
+    tx("n400.p2.ssn", A, 107, "Social Security number", "Número de Seguro Social", {
       visibility: { allOf: [{ fieldKey: "n400.p2.ssnProvided", equals: true }] },
     }),
-    dt("dateOfBirth", S.p2, 8, "Date of birth", "Fecha de nacimiento", {
+    dt("dateOfBirth", A, 108, "Date of birth", "Fecha de nacimiento", {
       validation: [{ kind: "required" }],
       weight: 20,
       outputMappings: [{ destinationKind: "pdf", destinationKey: "dateOfBirth" }],
     }),
-    tx("n400.p2.birthCity", S.p2, 9, "City/town/village of birth", "Ciudad/pueblo de nacimiento", {
+    tx("n400.p2.birthCity", A, 109, "City/town/village of birth", "Ciudad/pueblo de nacimiento", {
       weight: 10,
     }),
-    tx("countryOfBirth", S.p2, 10, "Country of birth", "País de nacimiento", {
+    tx("countryOfBirth", A, 110, "Country of birth", "País de nacimiento", {
       weight: 10,
       outputMappings: [
         { destinationKind: "pdf", destinationKey: "countryOfBirth" },
         { destinationKind: "pdf", destinationKey: "countryOfCitizenshipOrNationality" },
       ],
     }),
-    enm("gender", S.p2, 11, "Gender", "Sexo", {
+    enm("gender", A, 111, "Gender", "Sexo", {
       validation: [{ kind: "enum", value: ["male", "female", "nonbinary", "unspecified"] }],
     }),
     bool(
       "n400.p2.disabilityAccommodations",
-      S.p2,
-      12,
+      A,
+      112,
       "Request disability accommodations for interview?",
       "¿Solicita adaptaciones por discapacidad para la entrevista?",
       {}
     ),
-    tx("n400.p2.accommodationDetails", S.p2, 13, "Describe accommodations", "Describa las adaptaciones", {
+    tx("n400.p2.accommodationDetails", A, 113, "Describe accommodations", "Describa las adaptaciones", {
       visibility: {
         allOf: [{ fieldKey: "n400.p2.disabilityAccommodations", equals: true }],
       },
     }),
 
-    tx("n400.p3.usOnlineAccountNumber", S.p3, 0, "USCIS online account number (if any)", "Cuenta en línea USCIS", {}),
-    enm("maritalStatus", S.p3, 1, "Marital status", "Estado civil", {
+    tx("n400.p3.usOnlineAccountNumber", A, 200, "USCIS online account number (if any)", "Cuenta en línea USCIS", {}),
+    enm("maritalStatus", A, 201, "Marital status", "Estado civil", {
       validation: [
         {
           kind: "enum",
@@ -354,14 +359,14 @@ export function buildN400Fields(): VerticalFieldDefinition[] {
       ],
       outputMappings: [{ destinationKind: "pdf", destinationKey: "currentMaritalStatus" }],
     }),
-    enm("n400.p3.ethnicity", S.p3, 2, "Ethnicity — Hispanic or Latino?", "¿Es hispano o latino?", {
+    enm("n400.p3.ethnicity", A, 202, "Ethnicity — Hispanic or Latino?", "¿Es hispano o latino?", {
       validation: [{ kind: "enum", value: ["hispanic", "not_hispanic"] }],
     }),
-    tx("n400.p3.race", S.p3, 3, "Race (per form instructions)", "Raza", {}),
-    num("n400.p3.heightFeet", S.p3, 4, "Height — feet", "Estatura — pies", {}),
-    num("n400.p3.heightInches", S.p3, 5, "Height — inches", "Estatura — pulgadas", {}),
-    num("n400.p3.weightPounds", S.p3, 6, "Weight — pounds", "Peso — libras", {}),
-    enm("n400.p3.eyeColor", S.p3, 7, "Eye color", "Color de ojos", {
+    tx("n400.p3.race", A, 203, "Race (per form instructions)", "Raza", {}),
+    num("n400.p3.heightFeet", A, 204, "Height — feet", "Estatura — pies", {}),
+    num("n400.p3.heightInches", A, 205, "Height — inches", "Estatura — pulgadas", {}),
+    num("n400.p3.weightPounds", A, 206, "Weight — pounds", "Peso — libras", {}),
+    enm("n400.p3.eyeColor", A, 207, "Eye color", "Color de ojos", {
       validation: [
         {
           kind: "enum",
@@ -369,7 +374,7 @@ export function buildN400Fields(): VerticalFieldDefinition[] {
         },
       ],
     }),
-    enm("n400.p3.hairColor", S.p3, 8, "Hair color", "Color de cabello", {
+    enm("n400.p3.hairColor", A, 208, "Hair color", "Color de cabello", {
       validation: [
         {
           kind: "enum",
@@ -379,122 +384,122 @@ export function buildN400Fields(): VerticalFieldDefinition[] {
     }),
 
     physicalAddress,
-    tx("city", S.p4, 1, "City or town", "Ciudad", { weight:8 }),
-    tx("state", S.p4, 2, "State", "Estado", { weight:8 }),
-    tx("zip", S.p4, 3, "ZIP Code", "Código postal", { weight:8 }),
-    dt("n400.p4.physicalSinceDate", S.p4, 4, "Lived at this address since", "Vive aquí desde", {}),
+    tx("city", A, 301, "City or town", "Ciudad", { weight: 8 }),
+    tx("state", A, 302, "State", "Estado", { weight: 8 }),
+    tx("zip", A, 303, "ZIP Code", "Código postal", { weight: 8 }),
+    dt("n400.p4.physicalSinceDate", A, 304, "Lived at this address since", "Vive aquí desde", {}),
     bool(
       "n400.p4.mailingSameAsPhysical",
-      S.p4,
-      5,
+      A,
+      305,
       "Mailing address same as physical?",
       "¿Correo igual que domicilio físico?",
       {}
     ),
-    tx("n400.p4.mailingStreet", S.p4, 6, "Mailing — street", "Correo — calle", {
+    tx("n400.p4.mailingStreet", A, 306, "Mailing — street", "Correo — calle", {
       visibility: { allOf: [{ fieldKey: "n400.p4.mailingSameAsPhysical", equals: false }] },
     }),
-    tx("n400.p4.mailingCity", S.p4, 7, "Mailing — city", "Correo — ciudad", {
+    tx("n400.p4.mailingCity", A, 307, "Mailing — city", "Correo — ciudad", {
       visibility: { allOf: [{ fieldKey: "n400.p4.mailingSameAsPhysical", equals: false }] },
     }),
-    tx("n400.p4.mailingState", S.p4, 8, "Mailing — state", "Correo — estado", {
+    tx("n400.p4.mailingState", A, 308, "Mailing — state", "Correo — estado", {
       visibility: { allOf: [{ fieldKey: "n400.p4.mailingSameAsPhysical", equals: false }] },
     }),
-    tx("n400.p4.mailingZip", S.p4, 9, "Mailing — ZIP", "Correo — ZIP", {
+    tx("n400.p4.mailingZip", A, 309, "Mailing — ZIP", "Correo — ZIP", {
       visibility: { allOf: [{ fieldKey: "n400.p4.mailingSameAsPhysical", equals: false }] },
     }),
     bool(
       "n400.p4.otherPriorAddresses",
-      S.p4,
-      10,
+      A,
+      310,
       "Other residences in past 5 years?",
       "¿Otras residencias en los últimos 5 años?",
       {}
     ),
-    tx("n400.p4.priorAddress1Street", S.p4, 11, "Prior residence — street", "Residencia anterior — calle", {
+    tx("n400.p4.priorAddress1Street", A, 311, "Prior residence — street", "Residencia anterior — calle", {
       visibility: { allOf: [{ fieldKey: "n400.p4.otherPriorAddresses", equals: true }] },
     }),
-    tx("n400.p4.priorAddress1City", S.p4, 12, "Prior residence — city", "Residencia anterior — ciudad", {
+    tx("n400.p4.priorAddress1City", A, 312, "Prior residence — city", "Residencia anterior — ciudad", {
       visibility: { allOf: [{ fieldKey: "n400.p4.otherPriorAddresses", equals: true }] },
     }),
-    tx("n400.p4.priorAddress1State", S.p4, 13, "Prior residence — state", "Residencia anterior — estado", {
+    tx("n400.p4.priorAddress1State", A, 313, "Prior residence — state", "Residencia anterior — estado", {
       visibility: { allOf: [{ fieldKey: "n400.p4.otherPriorAddresses", equals: true }] },
     }),
-    tx("n400.p4.priorAddress1Zip", S.p4, 14, "Prior residence — ZIP", "Residencia anterior — ZIP", {
+    tx("n400.p4.priorAddress1Zip", A, 314, "Prior residence — ZIP", "Residencia anterior — ZIP", {
       visibility: { allOf: [{ fieldKey: "n400.p4.otherPriorAddresses", equals: true }] },
     }),
-    dt("n400.p4.priorAddress1From", S.p4, 15, "Prior residence — from", "Desde", {
+    dt("n400.p4.priorAddress1From", A, 315, "Prior residence — from", "Desde", {
       visibility: { allOf: [{ fieldKey: "n400.p4.otherPriorAddresses", equals: true }] },
     }),
-    dt("n400.p4.priorAddress1To", S.p4, 16, "Prior residence — to", "Hasta", {
+    dt("n400.p4.priorAddress1To", A, 316, "Prior residence — to", "Hasta", {
       visibility: { allOf: [{ fieldKey: "n400.p4.otherPriorAddresses", equals: true }] },
     }),
 
-    tx("n400.p5.motherGiven", S.p5, 0, "Mother’s given name", "Nombre de la madre", {}),
-    tx("n400.p5.motherFamily", S.p5, 1, "Mother’s family name", "Apellido de la madre", {}),
-    dt("n400.p5.motherDob", S.p5, 2, "Mother’s date of birth", "Fecha de nacimiento de la madre", {}),
-    tx("n400.p5.motherBirthCountry", S.p5, 3, "Mother’s country of birth", "País de nacimiento de la madre", {}),
-    bool("n400.p5.motherDeceased", S.p5, 4, "Mother deceased?", "¿Madre fallecida?", {}),
-    tx("n400.p5.fatherGiven", S.p5, 5, "Father’s given name", "Nombre del padre", {}),
-    tx("n400.p5.fatherFamily", S.p5, 6, "Father’s family name", "Apellido del padre", {}),
-    dt("n400.p5.fatherDob", S.p5, 7, "Father’s date of birth", "Fecha de nacimiento del padre", {}),
-    tx("n400.p5.fatherBirthCountry", S.p5, 8, "Father’s country of birth", "País de nacimiento del padre", {}),
-    bool("n400.p5.fatherDeceased", S.p5, 9, "Father deceased?", "¿Padre fallecido?", {}),
+    tx("n400.p5.motherGiven", A, 400, "Mother’s given name", "Nombre de la madre", {}),
+    tx("n400.p5.motherFamily", A, 401, "Mother’s family name", "Apellido de la madre", {}),
+    dt("n400.p5.motherDob", A, 402, "Mother’s date of birth", "Fecha de nacimiento de la madre", {}),
+    tx("n400.p5.motherBirthCountry", A, 403, "Mother’s country of birth", "País de nacimiento de la madre", {}),
+    bool("n400.p5.motherDeceased", A, 404, "Mother deceased?", "¿Madre fallecida?", {}),
+    tx("n400.p5.fatherGiven", A, 405, "Father’s given name", "Nombre del padre", {}),
+    tx("n400.p5.fatherFamily", A, 406, "Father’s family name", "Apellido del padre", {}),
+    dt("n400.p5.fatherDob", A, 407, "Father’s date of birth", "Fecha de nacimiento del padre", {}),
+    tx("n400.p5.fatherBirthCountry", A, 408, "Father’s country of birth", "País de nacimiento del padre", {}),
+    bool("n400.p5.fatherDeceased", A, 409, "Father deceased?", "¿Padre fallecido?", {}),
 
-    bool("n400.p6.currentlyMarried", S.p6, 0, "Currently married?", "¿Actualmente casado/a?", {}),
-    tx("n400.p6.spouseGiven", S.p6, 1, "Current spouse given name", "Nombre del cónyuge", {
+    bool("n400.p6.currentlyMarried", A, 500, "Currently married?", "¿Actualmente casado/a?", {}),
+    tx("n400.p6.spouseGiven", A, 501, "Current spouse given name", "Nombre del cónyuge", {
       visibility: { allOf: [{ fieldKey: "n400.p6.currentlyMarried", equals: true }] },
     }),
-    tx("n400.p6.spouseFamily", S.p6, 2, "Current spouse family name", "Apellido del cónyuge", {
+    tx("n400.p6.spouseFamily", A, 502, "Current spouse family name", "Apellido del cónyuge", {
       visibility: { allOf: [{ fieldKey: "n400.p6.currentlyMarried", equals: true }] },
     }),
-    dt("n400.p6.spouseDob", S.p6, 3, "Spouse date of birth", "Fecha de nacimiento del cónyuge", {
+    dt("n400.p6.spouseDob", A, 503, "Spouse date of birth", "Fecha de nacimiento del cónyuge", {
       visibility: { allOf: [{ fieldKey: "n400.p6.currentlyMarried", equals: true }] },
     }),
-    dt("n400.p6.dateOfMarriage", S.p6, 4, "Date of marriage to current spouse", "Fecha del matrimonio actual", {
+    dt("n400.p6.dateOfMarriage", A, 504, "Date of marriage to current spouse", "Fecha del matrimonio actual", {
       visibility: { allOf: [{ fieldKey: "n400.p6.currentlyMarried", equals: true }] },
     }),
-    bool("n400.p6.spouseUsCitizen", S.p6, 5, "Current spouse is a U.S. citizen?", "¿Cónyuge actual es ciudadano de EE.UU.?", {
+    bool("n400.p6.spouseUsCitizen", A, 505, "Current spouse is a U.S. citizen?", "¿Cónyuge actual es ciudadano de EE.UU.?", {
       visibility: { allOf: [{ fieldKey: "n400.p6.currentlyMarried", equals: true }] },
     }),
-    num("n400.p6.priorMarriagesCount", S.p6, 6, "Number of prior marriages", "Número de matrimonios anteriores", {}),
+    num("n400.p6.priorMarriagesCount", A, 506, "Number of prior marriages", "Número de matrimonios anteriores", {}),
     bool(
       "n400.p6.priorSpouseImmigrationBenefit",
-      S.p6,
-      7,
+      A,
+      507,
       "Did any former spouse obtain a green card through you?",
       "¿Algún ex cónyuge obtuvo residencia por usted?",
       {}
     ),
-    tx("n400.p6.priorSpouseImmigrationExplain", S.p6, 8, "Explain (former spouse benefit)", "Explique (beneficio del ex cónyuge)", {
+    tx("n400.p6.priorSpouseImmigrationExplain", A, 508, "Explain (former spouse benefit)", "Explique (beneficio del ex cónyuge)", {
       visibility: {
         allOf: [{ fieldKey: "n400.p6.priorSpouseImmigrationBenefit", equals: true }],
       },
     }),
 
-    tx("n400.p7.employerOrSchool1", S.p7, 0, "Current employer or school (name)", "Empleo o estudios actual — nombre", { weight: 10 }),
-    tx("n400.p7.occupation1", S.p7, 1, "Occupation", "Ocupación", {}),
-    dt("n400.p7.fromDate1", S.p7, 2, "Employer/school — from", "Desde", {}),
-    tx("n400.p7.employerOrSchool2", S.p7, 3, "Prior employer or school (name)", "Empleo o estudios anterior — nombre", {}),
-    tx("n400.p7.occupation2", S.p7, 4, "Prior occupation", "Ocupación anterior", {}),
-    dt("n400.p7.fromDate2", S.p7, 5, "Prior — from", "Anterior desde", {}),
-    dt("n400.p7.toDate2", S.p7, 6, "Prior — to", "Anterior hasta", {}),
+    tx("n400.p7.employerOrSchool1", ET, 0, "Current employer or school (name)", "Empleo o estudios actual — nombre", { weight: 10 }),
+    tx("n400.p7.occupation1", ET, 1, "Occupation", "Ocupación", {}),
+    dt("n400.p7.fromDate1", ET, 2, "Employer/school — from", "Desde", {}),
+    tx("n400.p7.employerOrSchool2", ET, 3, "Prior employer or school (name)", "Empleo o estudios anterior — nombre", {}),
+    tx("n400.p7.occupation2", ET, 4, "Prior occupation", "Ocupación anterior", {}),
+    dt("n400.p7.fromDate2", ET, 5, "Prior — from", "Anterior desde", {}),
+    dt("n400.p7.toDate2", ET, 6, "Prior — to", "Anterior hasta", {}),
 
     bool(
       "n400.p8.hasTripsOutsideUS",
-      S.p8,
-      0,
+      ET,
+      100,
       "Trips outside the U.S. (over 24h) in statutory period?",
       "¿Viajes fuera de EE.UU. (más de 24 h) en el período?",
       {}
     ),
-    tx("n400.p8.trip1Country", S.p8, 1, "Trip — country or region", "Viaje — país", {
+    tx("n400.p8.trip1Country", ET, 101, "Trip — country or region", "Viaje — país", {
       visibility: { allOf: [{ fieldKey: "n400.p8.hasTripsOutsideUS", equals: true }] },
     }),
-    dt("n400.p8.trip1Depart", S.p8, 2, "Trip — departed", "Salida", {
+    dt("n400.p8.trip1Depart", ET, 102, "Trip — departed", "Salida", {
       visibility: { allOf: [{ fieldKey: "n400.p8.hasTripsOutsideUS", equals: true }] },
     }),
-    dt("n400.p8.trip1Return", S.p8, 3, "Trip — returned", "Regreso", {
+    dt("n400.p8.trip1Return", ET, 103, "Trip — returned", "Regreso", {
       visibility: { allOf: [{ fieldKey: "n400.p8.hasTripsOutsideUS", equals: true }] },
     }),
 
@@ -502,44 +507,54 @@ export function buildN400Fields(): VerticalFieldDefinition[] {
 
     bool(
       "n400.p10.denialRiskFactors",
-      S.p10,
-      0,
+      AD,
+      100,
       "Any conduct in Part 10 instructions to disclose?",
       "¿Algún motivo de la Parte 10 a declarar?",
       {}
     ),
-    tx("n400.p10.denialExplain", S.p10, 1, "Part 10 explanation", "Explicación Parte 10", {
+    tx("n400.p10.denialExplain", AD, 101, "Part 10 explanation", "Explicación Parte 10", {
       visibility: { allOf: [{ fieldKey: "n400.p10.denialRiskFactors", equals: true }] },
     }),
 
-    bool("n400.p11.militaryService", S.p11, 0, "Current or past U.S. armed forces?", "¿Fuerzas armadas de EE.UU. actual o pasado?", {}),
-    tx("n400.p11.militaryBranch", S.p11, 1, "Branch (if yes)", "Rama militar", {
+    bool("n400.p11.militaryService", AD, 200, "Current or past U.S. armed forces?", "¿Fuerzas armadas de EE.UU. actual o pasado?", {}),
+    tx("n400.p11.militaryBranch", AD, 201, "Branch (if yes)", "Rama militar", {
       visibility: { allOf: [{ fieldKey: "n400.p11.militaryService", equals: true }] },
     }),
-    dt("n400.p11.serviceFrom", S.p11, 2, "Service from", "Servicio desde", {
+    dt("n400.p11.serviceFrom", AD, 202, "Service from", "Servicio desde", {
       visibility: { allOf: [{ fieldKey: "n400.p11.militaryService", equals: true }] },
     }),
-    dt("n400.p11.serviceTo", S.p11, 3, "Service to", "Servicio hasta", {
+    dt("n400.p11.serviceTo", AD, 203, "Service to", "Servicio hasta", {
       visibility: { allOf: [{ fieldKey: "n400.p11.militaryService", equals: true }] },
     }),
 
-    bool("n400.p12.childSupportObligation", S.p12, 0, "Child support / court orders (see instructions)?", "¿Manutención u órdenes judiciales?", {}),
-    tx("n400.p12.childSupportExplain", S.p12, 1, "Explain child support / orders", "Explique manutención", {
+    bool("n400.p12.childSupportObligation", AD, 300, "Child support / court orders (see instructions)?", "¿Manutención u órdenes judiciales?", {}),
+    tx("n400.p12.childSupportExplain", AD, 301, "Explain child support / orders", "Explique manutención", {
       visibility: { allOf: [{ fieldKey: "n400.p12.childSupportObligation", equals: true }] },
     }),
 
-    bool("n400.p13.nameChangeRequested", S.p13, 0, "Requesting a name change with naturalization?", "¿Solicita cambio de nombre?", {}),
-    tx("n400.p13.newFullName", S.p13, 1, "New name (if requesting change)", "Nombre nuevo", {
+    bool("n400.p13.nameChangeRequested", AD, 400, "Requesting a name change with naturalization?", "¿Solicita cambio de nombre?", {}),
+    tx("n400.p13.newFullName", AD, 401, "New name (if requesting change)", "Nombre nuevo", {
       visibility: { allOf: [{ fieldKey: "n400.p13.nameChangeRequested", equals: true }] },
     }),
 
-    bool("n400.p14.certifyUnderstandEnglish", S.p14, 0, "Understand English and attachment requirements?", "¿Comprende requisitos de inglés y anexos?", {}),
+    bool("n400.p14.certifyUnderstandEnglish", AD, 500, "Understand English and attachment requirements?", "¿Comprende requisitos de inglés y anexos?", {}),
+
+    bool("n400.p15.usedInterpreter", AD, 600, "Interpreter used for this application?", "¿Se usó intérprete?", {}),
+    tx("n400.p15.interpreterName", AD, 601, "Interpreter full name", "Nombre del intérprete", {
+      visibility: { allOf: [{ fieldKey: "n400.p15.usedInterpreter", equals: true }] },
+    }),
+
+    bool("n400.p16.usedPreparer", AD, 700, "Attorney/preparer assisted?", "¿Asistencia de abogado o preparador?", {}),
+    tx("n400.p16.preparerName", AD, 701, "Preparer full name", "Nombre del preparador", {
+      visibility: { allOf: [{ fieldKey: "n400.p16.usedPreparer", equals: true }] },
+    }),
 
     {
       key: "phone",
       type: "phone",
-      sectionId: S.p14,
-      order: 1,
+      sectionId: CT,
+      order: 0,
       labels: { en: "Daytime phone", es: "Teléfono diurno" },
       stage: "application",
       weight: 12,
@@ -547,20 +562,23 @@ export function buildN400Fields(): VerticalFieldDefinition[] {
     {
       key: "email",
       type: "email",
-      sectionId: S.p14,
-      order: 2,
+      sectionId: CT,
+      order: 1,
       labels: { en: "Email", es: "Correo electrónico" },
       stage: "application",
     },
-
-    bool("n400.p15.usedInterpreter", S.p15, 0, "Interpreter used for this application?", "¿Se usó intérprete?", {}),
-    tx("n400.p15.interpreterName", S.p15, 1, "Interpreter full name", "Nombre del intérprete", {
-      visibility: { allOf: [{ fieldKey: "n400.p15.usedInterpreter", equals: true }] },
-    }),
-
-    bool("n400.p16.usedPreparer", S.p16, 0, "Attorney/preparer assisted?", "¿Asistencia de abogado o preparador?", {}),
-    tx("n400.p16.preparerName", S.p16, 1, "Preparer full name", "Nombre del preparador", {
-      visibility: { allOf: [{ fieldKey: "n400.p16.usedPreparer", equals: true }] },
-    }),
+    enm(
+      "preferredContactMethod",
+      CT,
+      2,
+      "Preferred contact method",
+      "Método de contacto preferido",
+      {
+        validation: [
+          { kind: "enum", value: ["sms", "whatsapp", "email", "phone"] },
+        ],
+        weight: 8,
+      }
+    ),
   ];
 }

@@ -13,6 +13,15 @@ export interface DerivedFunnelStage {
   sharePct: number;
 }
 
+/** Pipeline KPIs derived from session statuses (current list slice, not a warehouse). */
+export interface SalesKpis {
+  leads: number;
+  appsStarted: number;
+  appsCompleted: number;
+  appsSubmitted: number;
+  appsAccepted: number;
+}
+
 export interface DerivedDashboard {
   total: number;
   funnel: DerivedFunnelStage[];
@@ -34,6 +43,49 @@ export interface DerivedDashboard {
     atIso: string;
     status: string;
   }[];
+}
+
+/**
+ * Counts sessions that are still workable outcomes (excludes failed/cancelled).
+ * Definitions are aligned to the shared IntakeSessionStatus model.
+ */
+export function computeSalesKpis(rows: IntakeSessionListRow[]): SalesKpis {
+  const pool = rows.filter(
+    (r) => r.status !== "failed" && r.status !== "cancelled"
+  );
+  const leads = pool.length;
+  const appsStarted = pool.filter(
+    (r) => r.status !== "created" || r.completenessScore > 0
+  ).length;
+  const appsCompleted = pool.filter((r) =>
+    ["ready_to_submit", "submitted", "synced"].includes(r.status)
+  ).length;
+  const appsSubmitted = pool.filter((r) =>
+    ["submitted", "synced"].includes(r.status)
+  ).length;
+  const appsAccepted = pool.filter((r) => r.status === "synced").length;
+
+  return {
+    leads,
+    appsStarted,
+    appsCompleted,
+    appsSubmitted,
+    appsAccepted,
+  };
+}
+
+export function filterSessionsForDashboard(
+  rows: IntakeSessionListRow[],
+  carrier: string | undefined,
+  product: string | undefined
+): IntakeSessionListRow[] {
+  const c = carrier?.trim();
+  const p = product?.trim();
+  return rows.filter((r) => {
+    if (c && c !== "all" && r.verticalId !== c) return false;
+    if (p && p !== "all" && r.configPackageId !== p) return false;
+    return true;
+  });
 }
 
 function bucketStatus(status: string): DashboardFunnelStageId | "other" {

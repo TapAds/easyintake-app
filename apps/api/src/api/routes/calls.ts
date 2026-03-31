@@ -62,6 +62,7 @@ callsRouter.post(
       utteranceCount: result.utteranceCount,
       chunkCount: result.chunkCount,
       entities: result.entities,
+      fieldConfidences: result.fieldConfidences,
       score: {
         overall: result.completenessScore,
         tier: result.tier,

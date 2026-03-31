@@ -36,7 +36,17 @@ export function toDateOfBirth(value: unknown): Date | undefined {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function buildEntityPayload(entity: EntityData): Record<string, any> {
+export function buildEntityPayload(
+  entity: EntityData,
+  opts?: { fieldConfidences?: Record<string, number> }
+): Record<string, any> {
+  const extractedByAI: Record<string, unknown> = {
+    ...(entity as Record<string, unknown>),
+  };
+  const fc = opts?.fieldConfidences;
+  if (fc && Object.keys(fc).length > 0) {
+    extractedByAI.fieldConfidences = fc;
+  }
   return {
     firstName: entity.firstName as string | undefined,
     lastName: entity.lastName as string | undefined,
@@ -61,7 +71,7 @@ export function buildEntityPayload(entity: EntityData): Record<string, any> {
     existingCoverageAmount: entity.existingCoverageAmount as number | undefined,
     beneficiaryName: entity.beneficiaryName as string | undefined,
     beneficiaryRelation: entity.beneficiaryRelation as string | undefined,
-    extractedByAI: entity as object,
+    extractedByAI,
   };
 }
 
@@ -81,11 +91,32 @@ const ENTITY_ROW_SKIP = new Set([
  * Reconstructs a merge-friendly entity map from a DB row (typed columns + extractedByAI).
  * Cache / live extractions overlay on top of this in handleCallEnd.
  */
+/** Reads per-field confidence map stored under extractedByAI.fieldConfidences. */
+export function fieldConfidencesFromEntityRow(
+  row: LifeInsuranceEntity | null | undefined
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  const ai = row?.extractedByAI;
+  if (ai && typeof ai === "object" && !Array.isArray(ai)) {
+    const fc = (ai as Record<string, unknown>).fieldConfidences;
+    if (fc && typeof fc === "object" && !Array.isArray(fc)) {
+      for (const [k, v] of Object.entries(fc)) {
+        if (typeof v === "number" && Number.isFinite(v)) {
+          out[k] = Math.min(1, Math.max(0, v));
+        }
+      }
+    }
+  }
+  return out;
+}
+
 export function entityRowToFlatState(row: LifeInsuranceEntity): EntityState {
   const out: EntityState = {};
   const ai = row.extractedByAI;
   if (ai && typeof ai === "object" && !Array.isArray(ai)) {
-    Object.assign(out, ai as Record<string, unknown>);
+    const blob = ai as Record<string, unknown>;
+    const { fieldConfidences: _fc, ...restBlob } = blob;
+    Object.assign(out, restBlob);
   }
   for (const [k, v] of Object.entries(row)) {
     if (ENTITY_ROW_SKIP.has(k) || v === null || v === undefined) continue;

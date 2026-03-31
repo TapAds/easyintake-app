@@ -3,10 +3,15 @@ import { callEvents } from "../lib/callEvents";
 import {
   getEntityCache,
   clearEntityCache,
+  getFieldConfidenceCache,
   type EntityState,
 } from "./stageManager";
 import { computeCompletenessScore, computeN400CompletenessScore } from "./scoring";
-import { buildEntityPayload, mergeDbEntityWithCache } from "./entityPayload";
+import {
+  buildEntityPayload,
+  fieldConfidencesFromEntityRow,
+  mergeDbEntityWithCache,
+} from "./entityPayload";
 import { syncIntakeSessionAfterCallEnd } from "./intakeSessionSync";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -111,7 +116,13 @@ export async function handleCallEnd(payload: CallEndPayload): Promise<void> {
   });
   const cached = getEntityCache(callSid);
   const mergedEntityState = mergeDbEntityWithCache(existingEntity, cached);
-  const entityPayload = buildEntityPayload(mergedEntityState);
+  const fromDbFc = fieldConfidencesFromEntityRow(existingEntity);
+  const fromCacheFc = getFieldConfidenceCache(callSid);
+  const mergedFieldConfidences = { ...fromDbFc, ...fromCacheFc };
+  const entityPayload = buildEntityPayload(mergedEntityState, {
+    fieldConfidences:
+      Object.keys(mergedFieldConfidences).length > 0 ? mergedFieldConfidences : undefined,
+  });
 
   try {
     await prisma.lifeInsuranceEntity.upsert({

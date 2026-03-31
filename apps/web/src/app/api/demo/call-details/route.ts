@@ -79,7 +79,9 @@ export async function GET(request: NextRequest) {
     transcriptText = transcriptSegmentsToText(tr.segments ?? []);
   }
 
-  const entities = mergeCallEntityForClient(call.entity ?? null);
+  const { entities, fieldConfidences } = mergeCallEntityForClient(
+    (call.entity ?? null) as Record<string, unknown> | null
+  );
   const overall = call.completenessScore ?? 0;
 
   return NextResponse.json({
@@ -88,6 +90,7 @@ export async function GET(request: NextRequest) {
     completenessScore: overall,
     score: { overall, tier: tierFromOverall(overall) },
     entities,
+    fieldConfidences,
     transcript: transcriptText,
   });
 }

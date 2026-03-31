@@ -3,6 +3,7 @@ import { prisma } from "../db/prisma";
 import {
   buildEntityPayload,
   entityRowToFlatState,
+  fieldConfidencesFromEntityRow,
 } from "./entityPayload";
 import { extractEntities, extractN400Entities } from "./claude";
 import { computeCompletenessScore, computeN400CompletenessScore } from "./scoring";
@@ -92,6 +93,18 @@ function mergeChunkExtractions(
   return { ...a, ...b };
 }
 
+function mergeChunkConfidences(
+  a: Record<string, number>,
+  b: Partial<Record<string, number>>
+): Record<string, number> {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    if (typeof v !== "number" || !Number.isFinite(v)) continue;
+    out[k] = Math.max(out[k] ?? 0, Math.min(1, Math.max(0, v)));
+  }
+  return out;
+}
+
 async function loadAllTranscriptUtterances(callId: string): Promise<
   { speaker: string; text: string; languageCode: string }[]
 > {
@@ -140,6 +153,7 @@ export type TranscriptExtractResult = {
   utteranceCount: number;
   chunkCount: number;
   entities: EntityState;
+  fieldConfidences: Record<string, number>;
   completenessScore: number;
   tier: string;
   appliedKeys: string[];
@@ -177,16 +191,17 @@ export async function runTranscriptExtractAndPersist(
   const chunks = chunkUtterancesForExtraction(utterances);
   let extracted: Record<string, unknown> = {};
   const configPackageId = call.intakeSession?.configPackageId ?? null;
+  const existingRow: LifeInsuranceEntity | null = call.entity;
+  let fieldConfidences = fieldConfidencesFromEntityRow(existingRow);
 
   for (const chunk of chunks) {
     const part =
       configPackageId === "uscis-n400"
         ? await extractN400Entities(chunk)
         : await extractEntities(chunk, "all", { scope: "all" });
-    extracted = mergeChunkExtractions(extracted, part);
+    extracted = mergeChunkExtractions(extracted, part.entities);
+    fieldConfidences = mergeChunkConfidences(fieldConfidences, part.fieldConfidences);
   }
-
-  const existingRow: LifeInsuranceEntity | null = call.entity;
   const agentCorrected = existingRow?.agentCorrected ?? false;
   const base: EntityState = existingRow
     ? entityRowToFlatState(existingRow)
@@ -204,7 +219,7 @@ export async function runTranscriptExtractAndPersist(
     }
   }
 
-  const payload = buildEntityPayload(merged);
+  const payload = buildEntityPayload(merged, { fieldConfidences });
   await prisma.lifeInsuranceEntity.upsert({
     where: { callId: call.id },
     create: { callId: call.id, ...payload },
@@ -231,6 +246,7 @@ export async function runTranscriptExtractAndPersist(
     utteranceCount: utterances.length,
     chunkCount: chunks.length,
     entities,
+    fieldConfidences,
     completenessScore: overall,
     tier,
     appliedKeys,
