@@ -12,6 +12,7 @@ import { appendIntakeSessionFieldChangeLog, systemActor } from "./fieldChangeLog
 import type { InboundCanonicalChannel } from "../types/ghlInbound";
 import { isGhlSignatureSignedEvent, processGhlSignatureWebhook } from "./ghlSignature";
 import { scheduleGapChaserIfNeeded } from "./smartChaser";
+import { processIngestedData } from "./workflow/processIngestedData";
 
 export type { InboundCanonicalChannel } from "../types/ghlInbound";
 
@@ -423,6 +424,18 @@ export async function processGhlInboundMessage(
       hitl: hitl as object,
     },
   });
+
+  const sessionPkg = await prisma.intakeSession.findUnique({
+    where: { id: session.id },
+    select: { configPackageId: true },
+  });
+  if (sessionPkg?.configPackageId === "uscis-n400") {
+    void processIngestedData({
+      intakeSessionId: session.id,
+      configPackageId: "uscis-n400",
+      sourceChannel: inbound.channel,
+    }).catch((err) => console.error("[workflow] processIngestedData:", err));
+  }
 
   const callLink = await prisma.call.findFirst({
     where: { ghlContactId: inbound.contactId, intakeSessionId: null },

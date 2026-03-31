@@ -21,7 +21,7 @@
 | **Clerk for `apps/web`** | Browser authentication and session for the Next.js app. |
 | **HS256 JWT for `apps/api`** | Separate secret (`API_JWT_SECRET`); used for API auth and WebSocket tokens — **not** Clerk-issued tokens. |
 | **Two-auth flow (MVP)** | **Known architectural constraint:** Clerk for `apps/web` (dashboard); **application JWT** for `apps/api` (HTTP + **WebSocket** / agent stream). **Unification is a future track, not MVP.** |
-| **Applicants on microsite** | **Session tokens** for authentication — **not** Clerk. Vertical configs may require **stronger auth** for specific verticals; that is a **config option**, not a platform default. |
+| **Applicants on microsite** | **Opaque portal tokens** (stored **hashed** in **`ApplicantPortalAccess`**) — **not** Clerk. Public routes **`/[locale]/apply/[token]`** on **`apps/web`**; **`GET`/`PATCH /api/public/intake/session`** on **`apps/api`**. Mint/remind URLs use **`APPLICANT_PORTAL_BASE_URL`** on the **API** host. Verticals may add **stronger auth** later as a **config option**, not the default. |
 | **Supabase Auth** | **Not used** — policy in project rules. **([UNVERIFIED] historical "why" vs Clerk)** — record separately if you publish an ADR. |
 | **Auto-create org on new agent signup** | **[PLANNED]** — pattern exists in a connected product; build here when full agent onboarding flow is added to `apps/web`. |
 

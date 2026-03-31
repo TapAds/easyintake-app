@@ -35,6 +35,7 @@ cp .env.example .env
 | `GHL_CLIENT_SECRET` | GHL OAuth app credentials |
 | `GHL_PIPELINE_ID` | (Optional) GHL pipeline for qualified leads |
 | `GHL_PIPELINE_STAGE_ID` | (Optional) GHL pipeline stage |
+| `APPLICANT_PORTAL_BASE_URL` | **`apps/api` only** — public origin of **`apps/web`** where applicants open `/en/apply/...` (e.g. `http://localhost:3000` locally, `https://app.easyintakeapp.com` in production). Used when minting applicant links and sending **reminder** SMS with a full URL. Omit or leave empty only if you accept relative paths / manual copy; **Railway** (API) should match your Vercel production host. **Not** set on Vercel. |
 
 ---
 
@@ -147,6 +148,8 @@ npm run dev:web
 
 Open e.g. `http://localhost:3000/en`. For Clerk, configure **`apps/web/.env.local`** (see [`apps/web/.env.local.example`](apps/web/.env.local.example)). **Production** deploy notes: [`apps/web/DEPLOY-PRODUCTION.md`](apps/web/DEPLOY-PRODUCTION.md).
 
+**Applicant microsite (local):** Set **`APPLICANT_PORTAL_BASE_URL=http://localhost:3000`** in **`apps/api/.env`** so **Create applicant link** and reminders produce `http://localhost:3000/en/apply/...`. Run **`apps/web`** and **`apps/api`** together; run Prisma migrations so **`ApplicantPortalAccess`** exists.
+
 ---
 
 ## Checklist
@@ -159,3 +162,4 @@ Open e.g. `http://localhost:3000/en`. For Clerk, configure **`apps/web/.env.loca
 - [ ] ngrok running
 - [ ] `npm run dev` running
 - [ ] Test call completed
+- [ ] (If using applicant portal) `APPLICANT_PORTAL_BASE_URL` on **`apps/api`** points at the web origin; DB migration includes **`ApplicantPortalAccess`**

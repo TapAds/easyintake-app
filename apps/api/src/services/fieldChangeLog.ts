@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
+import type { FieldChangeEventV1, FieldChangeActor, FieldChangeReason } from "@easy-intake/shared";
 import { prisma } from "../db/prisma";
-import type { FieldChangeEventV1, FieldChangeActor, FieldChangeReason } from "../types/fieldChangeLog";
 
 function normalizeLog(raw: unknown): FieldChangeEventV1[] {
   if (!Array.isArray(raw)) return [];

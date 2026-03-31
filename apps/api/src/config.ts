@@ -27,6 +27,9 @@ export const config = {
     jwtSecret: requireEnv("API_JWT_SECRET"),
   },
 
+  /** Public origin of the Next.js app — applicant links and SMS (e.g. https://app.example.com). */
+  applicantPortalBaseUrl: optional("APPLICANT_PORTAL_BASE_URL", "").replace(/\/$/, ""),
+
   twilio: {
     accountSid: requireEnv("TWILIO_ACCOUNT_SID"),
     authToken: requireEnv("TWILIO_AUTH_TOKEN"),

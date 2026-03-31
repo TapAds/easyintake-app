@@ -1,3 +1,4 @@
+import type { FieldChangeEventV1 } from "./fieldChangeLog";
 import type { FieldKey, FieldValueMap } from "./fieldState";
 
 /**
@@ -61,12 +62,16 @@ export interface HitlState {
   pendingDocumentApproval?: boolean;
   pendingFinalSignOff?: boolean;
   pendingApplicantSignature?: boolean;
+  /** Field keys the agent asked the applicant to complete (microsite highlights). */
+  agentRequestedFieldKeys?: FieldKey[];
 }
 
 /** Completeness scoring from the engine. */
 export interface CompletenessSnapshot {
   /** Ratio in [0, 1] unless product standardizes otherwise. */
   score: number;
+  /** N-400 / workflow: required evidence items satisfied (see `WorkflowInstance.requirementsJson`). */
+  evidenceScore?: number;
   missingRequiredKeys?: FieldKey[];
 }
 
@@ -96,6 +101,12 @@ export interface IntakeSession {
   completeness: CompletenessSnapshot;
   hitl: HitlState;
   externalIds?: IntakeSessionExternalIds;
+  fieldChangeLog?: FieldChangeEventV1[];
+  /** Whether an unexpired, non-revoked applicant portal token exists (no secret leaked). */
+  applicantPortal?: {
+    hasActiveToken: boolean;
+    expiresAt?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

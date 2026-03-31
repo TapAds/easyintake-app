@@ -20,10 +20,14 @@ Forwarding the caller to your cell is a **Twilio configuration** concern (TwiML 
 
 ## Slices 2–4 — Product UI
 
-- **Connect stream** — Paste a **`callSid`** from the live leg (or pick from **Recent Twilio calls** after refresh). Requires **`NEXT_PUBLIC_API_URL`** in the browser and **`API_JWT_SECRET`** on Vercel matching the API.
+- **Last 4 digits (calling from)** — Enter **four digits**; the UI **refetches** **Recent Twilio calls** via the BFF, then **matches** rows where Twilio’s `from` equals those digits (the API returns **last 4 only** for privacy). If no row matches after a successful fetch, an **error** is shown. If **exactly one** row matches, **Call SID** may auto-fill; if **multiple** rows share the same last 4, pick the correct row’s CTA.
+- **Connect to Call for Data Collection** — Per-row primary action (with sparkles in the UI): enabled only when the row matches the last-4 lookup; sets **Call SID** and **opens the agent WebSocket** (same connection behavior as below). **Disconnect** ends the stream.
+- **Connect stream** — Optional path: paste a **`callSid`** manually, then **Connect stream**. Requires **`NEXT_PUBLIC_API_URL`** (or equivalent) in the browser and **`API_JWT_SECRET`** on Vercel matching the API.
 - **After hang-up** — The demo reloads transcript and fields from the API via **`/api/demo/call-details`** (BFF → `GET /api/calls/:callSid` + transcript). If the status callback is configured, data reappears within a few seconds (retries handle orchestrator lag).
 - **Product / Form (demo)** — Selects which vertical catalog (and PDF/extract behavior where applicable). The UI lists **all** catalog fields by section; the realtime engine may still populate a subset per call until extraction fills more keys.
-- **Twilio list** — Server calls Twilio REST via **`GET /api/operator/twilio/recent-calls`** (JWT); the web app uses a BFF at **`/api/demo/twilio-calls`**.
+- **Twilio list** — Server calls Twilio REST via **`GET /api/operator/twilio/recent-calls`** (Bearer JWT); the web app uses a BFF at **`/api/demo/twilio-calls`**. **Refresh** still reruns the list without retyping last 4.
+
+**Live call** (`/[locale]/dashboard/live-call`) uses the same component and flow with non-demo labeling.
 
 ---
 
@@ -32,8 +36,8 @@ Forwarding the caller to your cell is a **Twilio configuration** concern (TwiML 
 1. Sign in to the app; open **Live demo** in the nav.
 2. Confirm **Voice pipeline** shows the expected WebSocket host and engine flags.
 3. From a second phone, **call `+1 430-300-3049`** (universal product demo); keep the call active.
-4. Click **Refresh** on recent Twilio calls; **select the row** to fill `callSid`.
-5. Click **Connect stream**; speak as the caller; show **transcript** and **application fields** updating.
+4. Enter the **last 4 digits** of the calling number; wait for the list to refresh. If the row appears, click **Connect to Call for Data Collection** on that row (or use **Connect stream** after pasting **Call SID** manually).
+5. Speak as the caller; show **transcript** and **application fields** updating. Use **Disconnect** when finished.
 6. Switch **Product / Form (demo)** to show how the **sectioned catalog** and labels change for another product line or vertical (config-driven demo).
 
 ### Failure modes (what to say)
@@ -41,6 +45,7 @@ Forwarding the caller to your cell is a **Twilio configuration** concern (TwiML 
 | Symptom | Check |
 |--------|--------|
 | No Twilio rows | API credentials, BFF env, or no recent calls |
+| “No recent call matches those 4 digits” | Wrong digits, call not in last 10, or refresh needed; confirm `from` last 4 in Twilio vs what you typed |
 | WebSocket error | Wrong `callSid`, ended call, or API URL mismatch |
 | No transcript | Media stream not attached to this call; verify TwiML / stream URL |
 | Data vanishes after hang-up | Confirm **Status Callback** to `/webhooks/twilio/call-status`; check API logs for `[callStatus]` / `[orchestrator]` |

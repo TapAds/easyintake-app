@@ -202,6 +202,9 @@ const PART9_ITEMS: { key: string; en: string; es: string }[] = [
   },
 ];
 
+/** Moral character field keys — derived from `PART9_ITEMS` (single source of truth). */
+export const N400_MORAL_CHARACTER_FIELD_KEYS: readonly string[] = PART9_ITEMS.map((item) => item.key);
+
 function part9Fields(): VerticalFieldDefinition[] {
   return PART9_ITEMS.map((item, i) =>
     bool(item.key, S.additional, i, item.en, item.es, {

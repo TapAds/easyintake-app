@@ -78,7 +78,9 @@ model IntakeSession {
   status             String   @default("collecting") // IntakeSessionStatus string
   substatus          String?
   primaryChannel     String?  @default("voice")
-  completenessScore  Float    @default(0)
+  completenessScore         Float    @default(0)
+  /// N-400 workflow: share of required evidence items satisfied [0–1] (see `requirementsJson` + attachments).
+  evidenceCompletenessScore   Float    @default(0)
   fieldValues        Json     @default("{}")
   channels           Json     @default("[]")
   hitl               Json     @default("{}")
@@ -92,12 +94,30 @@ model IntakeSession {
   attachments  IntakeAttachment[]
   signatureRequests SignatureRequest[]
   followUpJobs FollowUpJob[]
+  workflowInstance  WorkflowInstance?
+
+  applicantPortalAccesses ApplicantPortalAccess[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([organizationId, updatedAt])
   @@index([configPackageId])
+}
+
+/// Time-limited opaque token for applicant self-service (microsite); store hash only.
+model ApplicantPortalAccess {
+  id               String        @id @default(cuid())
+  intakeSessionId  String
+  intakeSession    IntakeSession @relation(fields: [intakeSessionId], references: [id], onDelete: Cascade)
+  tokenHash        String        @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastUsedAt       DateTime?
+  createdAt        DateTime      @default(now())
+
+  @@index([intakeSessionId])
+  @@index([expiresAt])
 }
 
 /// Phase 4 — GHL Documents & Contracts: template send, signature completion webhooks, reminder nudges.
@@ -312,4 +332,56 @@ model IntakeLead {
   lastEvent      String   // lead.captured | quote.completed | quote.requested_callback
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+// ─── Workflow agent (N-400 / long-running intake) ─────────────────────────────
+
+/// 1:1 with IntakeSession — durable case state for multi-channel workflow (Release A+).
+model WorkflowInstance {
+  id                 String         @id @default(cuid())
+  intakeSessionId    String         @unique
+  intakeSession      IntakeSession  @relation(fields: [intakeSessionId], references: [id], onDelete: Cascade)
+
+  /// INITIAL_INTAKE | PRE_ELIGIBLE_COLLECTION | PENDING_DOCS | VERIFYING | AUDIT_READY | ESCALATED | ESCALATED_CONFLICT | ESCALATED_LEGAL_REVIEW | CLOSED
+  phase              String         @default("INITIAL_INTAKE")
+  /// First day applicant may file with USCIS (90-day early filing rule); denormalized from rules.
+  targetSubmissionDate             DateTime?      @db.Date
+  /// End of continuous residence period (LPR + 3/5 years); denormalized for dashboard.
+  continuousResidenceCompleteDate DateTime?     @db.Date
+  /// Dynamic evidence checklist + statuses (see packages/shared uscisN400/rules.ts).
+  requirementsJson   Json           @default("[]")
+  preferredChannel   String?        // sms | whatsapp | voice | web
+
+  nudgeCount         Int            @default(0)
+  maxNudges          Int            @default(3)
+  lastNudgeAt        DateTime?
+  silenceWindowHours Int            @default(22)
+  nextAllowedNudgeAt DateTime?
+
+  escalationReason   String?        @db.Text
+  escalatedAt        DateTime?
+  assignedToUserId   String?
+
+  lastIngestionAt    DateTime?
+  lastChannel        String?
+
+  events             WorkflowEvent[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([phase])
+}
+
+/// Append-only audit trail for workflow / orchestrator (Release A+).
+model WorkflowEvent {
+  id                 String           @id @default(cuid())
+  workflowInstanceId String
+  workflowInstance   WorkflowInstance @relation(fields: [workflowInstanceId], references: [id], onDelete: Cascade)
+  type               String
+  payload            Json             @default("{}")
+
+  createdAt DateTime @default(now())
+
+  @@index([workflowInstanceId, createdAt])
 }

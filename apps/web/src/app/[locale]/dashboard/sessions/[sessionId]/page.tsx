@@ -1,7 +1,9 @@
 import { getLocale, getTranslations } from "next-intl/server";
+import type { FieldChangeEventV1 } from "@easy-intake/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppChrome } from "@/components/AppChrome";
+import { SessionApplicantTools } from "@/components/sessions/SessionApplicantTools";
 import { fetchIntakeSessionFromBff } from "@/lib/bff/serverFetch";
 import { buildAgentHtmlUrl } from "@/lib/agent/buildAgentHtmlUrl";
 import { fieldLabelForLocale } from "@/lib/intake/fieldLabels";
@@ -30,6 +32,22 @@ export default async function SessionDetailPage({
     : null;
 
   const fieldEntries = Object.entries(session.fieldValues);
+
+  const fieldChangeLog: FieldChangeEventV1[] = Array.isArray(
+    (session as { fieldChangeLog?: unknown }).fieldChangeLog
+  )
+    ? (session as { fieldChangeLog: FieldChangeEventV1[] }).fieldChangeLog
+    : [];
+
+  const applicantPortal =
+    (
+      session as {
+        applicantPortal?: { hasActiveToken: boolean; expiresAt?: string };
+      }
+    ).applicantPortal ?? { hasActiveToken: false };
+
+  const agentRequestedFieldKeys =
+    session.hitl.agentRequestedFieldKeys ?? [];
 
   return (
     <AppChrome>
@@ -155,6 +173,14 @@ export default async function SessionDetailPage({
             </p>
           ) : null}
         </section>
+
+        <SessionApplicantTools
+          sessionId={session.sessionId}
+          configPackageId={session.configPackageId}
+          agentRequestedFieldKeys={agentRequestedFieldKeys}
+          fieldChangeLog={fieldChangeLog}
+          applicantPortal={applicantPortal}
+        />
 
         <section aria-labelledby="hitl-heading">
           <h2

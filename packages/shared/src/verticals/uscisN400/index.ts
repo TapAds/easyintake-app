@@ -28,4 +28,6 @@ export const USCIS_N400_VERTICAL_CONFIG: VerticalConfig = {
 };
 
 export { N400_SECTION_IDS, N400_SECTIONS } from "./sections";
-export { buildN400Fields } from "./fields";
+export { buildN400Fields, N400_MORAL_CHARACTER_FIELD_KEYS } from "./fields";
+export * from "./rules";
+export * from "./templates";

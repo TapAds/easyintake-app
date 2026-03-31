@@ -20,17 +20,17 @@ Easy Intake is a **horizontal intake engine** in **product intent**: it is not a
 | Package | Tech |
 |---------|------|
 | **apps/api** | Express, TypeScript, Prisma, WebSockets. Twilio (voice), Deepgram (transcription), Claude (extraction). Serves **static agent UI** at `public/agent.html`. |
-| **apps/web** | Next.js 14 App Router, **Clerk** (embedded sign-in/up on `/[locale]/sign-in` & `/[locale]/sign-up`, protected routes), next-intl (`/en`, `/es`), Tailwind. Dashboard includes **Live demo**, **Live call**, **Settings** (org / CRM), localized **intake** routes under `/[locale]/intake/*` as implemented. **Deployed** to **Vercel** (project `easyintake-app-web`, monorepo root install + build order per `apps/web/vercel.json`). **Not** the in-call realtime UI — that is still **`apps/api/public/agent.html`**. |
+| **apps/web** | Next.js 14 App Router, **Clerk** (embedded sign-in/up on `/[locale]/sign-in` & `/[locale]/sign-up`, protected routes), next-intl (`/en`, `/es`), Tailwind. Dashboard includes **Live demo**, **Live call**, **Settings** (org / CRM), queue/session detail (applicant **portal link**, **field highlights**, **changelog**, **send reminder**), localized **intake** routes under `/[locale]/intake/*`, and a **public** applicant microsite at **`/[locale]/apply/[token]`** (no Clerk). **Deployed** to **Vercel** (project `easyintake-app-web`, monorepo root install + build order per `apps/web/vercel.json`). **Not** the in-call realtime UI — that is still **`apps/api/public/agent.html`**. |
 | **packages/shared** | Shared TypeScript types, **vertical configs** (with optional **Zod** parsing in `verticalConfigZod.ts`), **field visibility** helpers, and **legal** JSON (terms/privacy **en**/**es**) exported for the web app. Immigration **`uscis-n400`** (and related) live under modular `verticals/uscisN400/*`. |
 
-**Universal product demo (voice):** **`+1 430-300-3049`** with the dashboard **[Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo)** (`/[locale]/dashboard/live-demo`): confirm **Product / Form (demo)** in the UI, then call the number; the page shows the **full application catalog by section** for that package as data arrives. Details: [docs/demo/LIVE_CALL_DEMO.md](docs/demo/LIVE_CALL_DEMO.md).
+**Universal product demo (voice):** **`+1 430-300-3049`** with the dashboard **[Live demo](https://app.easyintakeapp.com/en/dashboard/live-demo)** (`/[locale]/dashboard/live-demo`): confirm **Product / Form (demo)** in the UI, then call the number; the page shows the **full application catalog by section** for that package as data arrives. **Matching a leg:** enter the **last 4 digits** of the caller’s number; the app refreshes **Recent Twilio calls** from the API, matches the **last-4-only** caller id returned by **`/api/operator/twilio/recent-calls`**, and enables **Connect to Call for Data Collection** on matching rows (or shows an error if none match). **[Live call](https://app.easyintakeapp.com/en/dashboard/live-call)** uses the same `LiveDemoClient` flow with production-oriented copy. Details: [docs/demo/LIVE_CALL_DEMO.md](docs/demo/LIVE_CALL_DEMO.md).
 
 ---
 
 ## Authentication (two layers) — be precise
 
-- **`apps/web`** uses **Clerk** for browser session (middleware + `ClerkProvider`).
-- **`apps/api`** uses a **separate HS256 JWT** signed with `API_JWT_SECRET` for Bearer-protected routes and short-lived **WebSocket** tokens (e.g. agent stream). **Do not** describe "the product" as Clerk-only — see [ARCHITECTURE.md](ARCHITECTURE.md).
+- **`apps/web`** uses **Clerk** for browser session (middleware + `ClerkProvider`). **Applicants** completing a session via the microsite use a **portal token** in the URL and **do not** sign in with Clerk.
+- **`apps/api`** uses a **separate HS256 JWT** signed with `API_JWT_SECRET` for Bearer-protected routes and short-lived **WebSocket** tokens (e.g. agent stream). **Applicant saves** use a dedicated **portal Bearer token** minted per `IntakeSession`. **Do not** describe "the product" as Clerk-only — see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ---
 

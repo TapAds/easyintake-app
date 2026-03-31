@@ -1,5 +1,6 @@
 import type { CallStatus } from "@prisma/client";
 import { prisma } from "../db/prisma";
+import { processIngestedData } from "./workflow/processIngestedData";
 
 const DEFAULT_ORG = process.env.DEFAULT_ORGANIZATION_ID ?? "org_local_dev";
 const DEFAULT_VERTICAL = process.env.DEFAULT_VERTICAL_ID ?? "insurance";
@@ -234,4 +235,16 @@ export async function syncIntakeSessionAfterCallEnd(args: {
       externalIds: { ...prevExt, callSid } as object,
     },
   });
+
+  const pkgRow = await prisma.intakeSession.findUnique({
+    where: { id: sessionId },
+    select: { configPackageId: true },
+  });
+  if (pkgRow?.configPackageId === "uscis-n400") {
+    void processIngestedData({
+      intakeSessionId: sessionId,
+      configPackageId: "uscis-n400",
+      sourceChannel: "voice",
+    }).catch((err) => console.error("[workflow] processIngestedData:", err));
+  }
 }

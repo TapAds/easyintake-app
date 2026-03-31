@@ -35,6 +35,8 @@ In **Vercel → Project → Settings → Environment Variables**, add the same k
 | `BLOB_READ_WRITE_TOKEN` | From **[Vercel Blob](https://vercel.com/docs/storage/vercel-blob)** linked to this project — **required** for **Settings → Organization** logo uploads and for rehosting logos fetched from a website | Server-only; without it, uploads return 503 |
 | `NEXT_PUBLIC_APP_URL` | Optional but recommended — production origin (e.g. `https://app.easyintakeapp.com`) for stable absolute URLs in invites and similar | Public |
 
+**Applicant microsite / SMS links:** Full URLs in **minted applicant links** and **“Send reminder to complete”** SMS are built on **`apps/api`** using **`APPLICANT_PORTAL_BASE_URL`**. Set that variable on **Railway** (or wherever the API runs) to this same production web origin (e.g. `https://app.easyintakeapp.com`). **Do not** add `APPLICANT_PORTAL_BASE_URL` to Vercel — the Next app does not read it.
+
 - **Never** commit real keys. Set them only in Vercel (and local `.env` / `.env.local` for dev).
 - After changing env vars, **redeploy** (or trigger a new deployment) so the build picks them up.
 

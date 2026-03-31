@@ -31,6 +31,12 @@ const isPublicLegalRoute = createRouteMatcher([
   "/es/privacy(.*)",
 ]);
 
+/** Applicant microsite (portal token in URL; no Clerk session required). */
+const isPublicApplicantRoute = createRouteMatcher([
+  "/en/apply(.*)",
+  "/es/apply(.*)",
+]);
+
 /**
  * Clerk recommends returning next-intl from inside clerkMiddleware so locale handling
  * runs on the same response chain as auth (see Clerk "Combine Middleware" docs).
@@ -46,6 +52,7 @@ const middleware = clerkMiddleware(async (auth, req) => {
   if (
     !isPublicAuthRoute(req) &&
     !isPublicLegalRoute(req) &&
+    !isPublicApplicantRoute(req) &&
     isProtectedRoute(req)
   ) {
     await auth.protect();

@@ -1,9 +1,23 @@
 import { Router, Request, Response } from "express";
+import type { FieldChangeEventV1 } from "@easy-intake/shared";
+import { computeCompletenessSnapshot, getVerticalConfigForPackageId } from "@easy-intake/shared";
 import { prisma } from "../../db/prisma";
 import { requireAuth } from "../middleware/auth";
+import { config } from "../../config";
+import {
+  createApplicantPortalAccess,
+  getActivePortalAccessSummary,
+} from "../../services/applicantPortalAccess";
+import { deliverApplicantPortalReminder } from "../../services/followUpSend";
+import { getGhlContactPrimaryPhone } from "../../services/ghl";
 
 export const intakeSessionsRouter = Router();
 intakeSessionsRouter.use(requireAuth);
+
+function normalizeLog(raw: unknown): FieldChangeEventV1[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((e) => e && typeof e === "object") as FieldChangeEventV1[];
+}
 
 function channelSummary(channels: unknown): string {
   if (!Array.isArray(channels)) return "—";
@@ -17,6 +31,35 @@ function channelSummary(channels: unknown): string {
         : "?"
     )
     .join(" · ");
+}
+
+function sessionPlainField(fv: Record<string, unknown>, key: string): string | null {
+  const cell = fv[key];
+  if (!cell || typeof cell !== "object" || !("value" in cell)) return null;
+  const v = (cell as { value: unknown }).value;
+  if (v === undefined || v === null) return null;
+  const s = String(v).trim();
+  return s || null;
+}
+
+function parseHitl(hitl: unknown): {
+  pendingAgentReview: boolean;
+  pendingDocumentApproval: boolean;
+  pendingFinalSignOff: boolean;
+  pendingApplicantSignature: boolean;
+  agentRequestedFieldKeys: string[];
+} {
+  const h = (hitl as Record<string, unknown>) ?? {};
+  const agentRequested = h.agentRequestedFieldKeys;
+  return {
+    pendingAgentReview: Boolean(h.pendingAgentReview),
+    pendingDocumentApproval: Boolean(h.pendingDocumentApproval),
+    pendingFinalSignOff: Boolean(h.pendingFinalSignOff),
+    pendingApplicantSignature: Boolean(h.pendingApplicantSignature),
+    agentRequestedFieldKeys: Array.isArray(agentRequested)
+      ? agentRequested.filter((k): k is string => typeof k === "string")
+      : [],
+  };
 }
 
 /**
@@ -45,6 +88,161 @@ intakeSessionsRouter.get("/", async (_req: Request, res: Response): Promise<void
     })
   );
 });
+
+/**
+ * POST /api/intake/sessions/:sessionId/applicant-portal-token
+ */
+intakeSessionsRouter.post(
+  "/:sessionId/applicant-portal-token",
+  async (req: Request, res: Response): Promise<void> => {
+    const sessionId = String(req.params.sessionId);
+    const row = await prisma.intakeSession.findUnique({ where: { id: sessionId } });
+    if (!row) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
+    const body = req.body as { ttlDays?: unknown; locale?: unknown };
+    const ttlRaw = body.ttlDays;
+    const ttlDays =
+      typeof ttlRaw === "number" && Number.isFinite(ttlRaw)
+        ? Math.max(1, Math.min(365, Math.floor(ttlRaw)))
+        : 30;
+    const locale = body.locale === "es" ? "es" : "en";
+
+    const { rawToken, expiresAt } = await createApplicantPortalAccess(sessionId, ttlDays);
+    const base = config.applicantPortalBaseUrl;
+    const path = `/${locale}/apply/${encodeURIComponent(rawToken)}`;
+    const applyUrl = base ? `${base}${path}` : null;
+
+    res.json({
+      token: rawToken,
+      expiresAt: expiresAt.toISOString(),
+      applyPath: path,
+      applyUrl,
+    });
+  }
+);
+
+/**
+ * PATCH /api/intake/sessions/:sessionId
+ * Body: { hitl?: { agentRequestedFieldKeys: string[] } }
+ */
+intakeSessionsRouter.patch("/:sessionId", async (req: Request, res: Response): Promise<void> => {
+  const sessionId = String(req.params.sessionId);
+  const body = req.body as { hitl?: { agentRequestedFieldKeys?: unknown } };
+  const keys = body.hitl?.agentRequestedFieldKeys;
+  if (!Array.isArray(keys) || !keys.every((k) => typeof k === "string")) {
+    res.status(400).json({ error: "hitl.agentRequestedFieldKeys must be string[]" });
+    return;
+  }
+
+  const row = await prisma.intakeSession.findUnique({ where: { id: sessionId } });
+  if (!row) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+
+  const hitl = {
+    ...((row.hitl as Record<string, unknown>) ?? {}),
+    agentRequestedFieldKeys: keys,
+  };
+
+  await prisma.intakeSession.update({
+    where: { id: sessionId },
+    data: { hitl: hitl as object },
+  });
+
+  res.json({
+    ok: true,
+    hitl: parseHitl(hitl),
+  });
+});
+
+/**
+ * POST /api/intake/sessions/:sessionId/remind-applicant
+ * Sends SMS (or GHL conversation) with a fresh applicant portal link.
+ */
+intakeSessionsRouter.post(
+  "/:sessionId/remind-applicant",
+  async (req: Request, res: Response): Promise<void> => {
+    const sessionId = String(req.params.sessionId);
+    const body = req.body as { locale?: unknown };
+    const locale = body.locale === "es" ? "es" : "en";
+
+    const row = await prisma.intakeSession.findUnique({ where: { id: sessionId } });
+    if (!row) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
+    const base = config.applicantPortalBaseUrl;
+    if (!base) {
+      res.status(503).json({
+        error: "APPLICANT_PORTAL_BASE_URL is not configured on the API server",
+      });
+      return;
+    }
+
+    const fv = (row.fieldValues as Record<string, unknown>) ?? {};
+    const ext = (row.externalIds as Record<string, unknown>) ?? {};
+    const ghlLocationId = typeof ext.ghlLocationId === "string" ? ext.ghlLocationId : "";
+    const ghlContactId = typeof ext.ghlContactId === "string" ? ext.ghlContactId : null;
+
+    let phone = sessionPlainField(fv, "phone");
+    if (!phone && ghlLocationId && ghlContactId) {
+      try {
+        phone = await getGhlContactPrimaryPhone(ghlLocationId, ghlContactId);
+      } catch (err) {
+        console.warn("[remind-applicant] GHL phone lookup failed:", err);
+      }
+    }
+
+    if (!phone) {
+      res.status(400).json({
+        error: "No phone number on session and GHL lookup unavailable — add phone to field values or link GHL contact",
+      });
+      return;
+    }
+
+    const firstName = sessionPlainField(fv, "firstName") ?? "";
+    const stickyRaw = ext.lastInboundChannel;
+    const stickyChannel =
+      stickyRaw === "sms" ||
+      stickyRaw === "email" ||
+      stickyRaw === "whatsapp" ||
+      stickyRaw === "live_chat" ||
+      stickyRaw === "other"
+        ? stickyRaw
+        : null;
+    const applicantEmail = sessionPlainField(fv, "email");
+
+    const { rawToken } = await createApplicantPortalAccess(sessionId, 30);
+    const portalUrl = `${base}/${locale}/apply/${encodeURIComponent(rawToken)}`;
+
+    try {
+      const delivered = await deliverApplicantPortalReminder({
+        ghlLocationId: ghlLocationId || "",
+        phone,
+        ghlContactId,
+        firstName,
+        portalUrl,
+        stickyChannel,
+        applicantEmail,
+      });
+      res.json({
+        ok: true,
+        provider: delivered.provider,
+        externalMessageId: delivered.externalMessageId,
+        portalUrl,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Send failed";
+      console.error("[remind-applicant]", e);
+      res.status(502).json({ error: msg });
+    }
+  }
+);
 
 /**
  * GET /api/intake/sessions/:sessionId
@@ -92,12 +290,16 @@ intakeSessionsRouter.get(
       return;
     }
 
-    const hitl = (row.hitl as Record<string, boolean>) ?? {};
+    const hitlParsed = parseHitl(row.hitl);
     const fieldValues = (row.fieldValues as Record<string, unknown>) ?? {};
     const channels = Array.isArray(row.channels) ? row.channels : [];
     const externalIds = (row.externalIds as Record<string, unknown>) ?? {};
+    const cfg = getVerticalConfigForPackageId(row.configPackageId);
+    const snapshot = computeCompletenessSnapshot(cfg, fieldValues);
 
     const { attachments: attachmentRows, signatureRequests: sigRows, ...sessionRest } = row;
+
+    const portalSummary = await getActivePortalAccessSummary(sessionId);
 
     res.json({
       sessionId: sessionRest.id,
@@ -111,13 +313,11 @@ intakeSessionsRouter.get(
       fieldValues,
       completeness: {
         score: sessionRest.completenessScore,
+        missingRequiredKeys: snapshot.missingRequiredKeys ?? [],
       },
-      hitl: {
-        pendingAgentReview: hitl.pendingAgentReview ?? false,
-        pendingDocumentApproval: hitl.pendingDocumentApproval ?? false,
-        pendingFinalSignOff: hitl.pendingFinalSignOff ?? false,
-        pendingApplicantSignature: hitl.pendingApplicantSignature ?? false,
-      },
+      hitl: hitlParsed,
+      fieldChangeLog: normalizeLog(row.fieldChangeLog),
+      applicantPortal: portalSummary,
       attachments: attachmentRows.map((a) => ({
         id: a.id,
         mimeType: a.mimeType,

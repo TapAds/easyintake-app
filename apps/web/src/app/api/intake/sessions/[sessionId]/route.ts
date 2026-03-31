@@ -49,3 +49,60 @@ export async function GET(
 
   return NextResponse.json(payload, { status: res.status });
 }
+
+/**
+ * BFF: Clerk → JWT → PATCH apps/api/api/intake/sessions/:sessionId
+ */
+export async function PATCH(
+  request: Request,
+  context: { params: Promise<{ sessionId: string }> | { sessionId: string } }
+) {
+  const params = await Promise.resolve(context.params);
+  const sessionId = params.sessionId ?? "";
+
+  const authResult = await intakeApiBearerToken();
+  if (authResult instanceof NextResponse) return authResult;
+  const { token, base } = authResult;
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(
+      `${base}/api/intake/sessions/${encodeURIComponent(sessionId)}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(25_000),
+      }
+    );
+  } catch (err) {
+    console.error("[intake session BFF] PATCH failed:", err);
+    return NextResponse.json(
+      { error: "Failed to reach intake API." },
+      { status: 502 }
+    );
+  }
+
+  const text = await res.text();
+  let payload: unknown = {};
+  try {
+    if (text) payload = JSON.parse(text) as unknown;
+  } catch {
+    return NextResponse.json(
+      { error: `Intake API returned non-JSON (HTTP ${res.status}).` },
+      { status: 502 }
+    );
+  }
+
+  return NextResponse.json(payload, { status: res.status });
+}

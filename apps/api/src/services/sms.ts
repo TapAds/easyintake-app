@@ -121,3 +121,32 @@ export async function sendFollowUpSms(
 
   return { sid: message.sid, status: message.status };
 }
+
+/** SMS copy for applicant microsite link (no AI — fixed template + URL from server). */
+export function getApplicantPortalReminderBody(
+  firstName: string,
+  portalUrl: string
+): string {
+  const name = firstName.trim() || "there";
+  const url = portalUrl.trim();
+  return (
+    `Hi ${name}, please complete your application here: ${url}\n` +
+    `Reply STOP to opt out.`
+  );
+}
+
+export async function sendApplicantPortalReminderSms(
+  phone: string,
+  firstName: string,
+  portalUrl: string
+): Promise<SendSmsResult> {
+  const body = getApplicantPortalReminderBody(firstName, portalUrl);
+
+  const message = await twilioClient.messages.create({
+    body,
+    from: config.twilio.phoneNumber,
+    to: phone,
+  });
+
+  return { sid: message.sid, status: message.status };
+}

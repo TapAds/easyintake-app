@@ -5,6 +5,7 @@ import {
   LIVE_DEMO_PRESETS,
   listApplicableFieldKeys,
 } from "@easy-intake/shared";
+import { Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { buildAgentWsUrl } from "@/lib/agent/buildAgentWsUrl";
@@ -73,6 +74,20 @@ type CallDetailsSnapshot = {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** Normalize to up to 4 trailing digits for Twilio `from` (API returns last 4 or "—"). */
+function digitsTail4(raw: string): string {
+  const d = raw.replace(/\D/g, "");
+  if (d.length === 0) return "";
+  return d.slice(-4);
+}
+
+function rowMatchesCallerLast4(row: TwilioRow, callerLast4: string): boolean {
+  if (callerLast4.length !== 4) return false;
+  const from = String(row.from ?? "").trim();
+  if (!from || from === "—") return false;
+  return digitsTail4(from) === callerLast4;
 }
 
 function FieldConfidenceInline({
@@ -163,7 +178,6 @@ export function LiveDemoClient({
   uiMode?: "demo" | "liveCall";
 }) {
   const t = useTranslations(uiMode === "liveCall" ? "demo.liveCall" : "demo.live");
-  const tEnum = useTranslations("intake.enumOptions");
   const locale = useLocale();
   const [presetId, setPresetId] = useState(LIVE_DEMO_PRESETS[0]?.id ?? "");
   const [callSid, setCallSid] = useState("");
@@ -186,12 +200,11 @@ export function LiveDemoClient({
   const [twilioRows, setTwilioRows] = useState<TwilioRow[]>([]);
   const [twilioError, setTwilioError] = useState<string | null>(null);
   const [twilioLoading, setTwilioLoading] = useState(false);
+  const [callerLastFour, setCallerLastFour] = useState("");
+  const [twilioLast4NotFound, setTwilioLast4NotFound] = useState(false);
+  const [lastFourMatchSids, setLastFourMatchSids] = useState<string[]>([]);
   const [flashingKeys, setFlashingKeys] = useState<Set<string>>(() => new Set());
   const [linkCopied, setLinkCopied] = useState(false);
-  const [copiedTwilioSid, setCopiedTwilioSid] = useState<string | null>(null);
-  const copiedTwilioSidTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [extractBusy, setExtractBusy] = useState(false);
@@ -265,11 +278,14 @@ export function LiveDemoClient({
       displayName,
       phone,
       email,
-      preferredContactMethod,
-      alien,
-      location,
     };
   }, [entities]);
+
+  const crmProductLabel = preset
+    ? locale === "es"
+      ? preset.labels.es
+      : preset.labels.en
+    : "";
 
   const clientVisibleMissingKeys = useMemo(
     () =>
@@ -287,7 +303,11 @@ export function LiveDemoClient({
 
   const hasMissingAttention = missingKeysForDisplay.length > 0;
 
-  /** Demo placeholder; set NEXT_PUBLIC_DEMO_APPLICANT_LINK_BASE to your future microsite origin. */
+  /**
+   * Demo placeholder URL. Production applicant links are minted from
+   * Dashboard → Session → “Create applicant link” (portal token + /[locale]/apply/...).
+   * Optional: set NEXT_PUBLIC_DEMO_APPLICANT_LINK_BASE for a fixed demo origin.
+   */
   const applicantLinkUrl = useMemo(() => {
     const base = process.env.NEXT_PUBLIC_DEMO_APPLICANT_LINK_BASE?.replace(
       /\/$/,
@@ -318,14 +338,6 @@ export function LiveDemoClient({
   }, []);
 
   useEffect(() => {
-    return () => {
-      if (copiedTwilioSidTimeoutRef.current) {
-        clearTimeout(copiedTwilioSidTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
     const prev = prevEntitiesRef.current;
     for (const key of applicationFieldKeys) {
       if (
@@ -349,50 +361,72 @@ export function LiveDemoClient({
     prevEntitiesRef.current = { ...entities };
   }, [entities, applicationFieldKeys]);
 
-  const copyTwilioCallSid = useCallback(
-    async (sid: string) => {
-      const trimmed = sid.trim();
-      if (!trimmed) return;
-      try {
-        await navigator.clipboard.writeText(trimmed);
-        if (copiedTwilioSidTimeoutRef.current) {
-          clearTimeout(copiedTwilioSidTimeoutRef.current);
-        }
-        setCopiedTwilioSid(trimmed);
-        copiedTwilioSidTimeoutRef.current = setTimeout(() => {
-          setCopiedTwilioSid(null);
-          copiedTwilioSidTimeoutRef.current = null;
-        }, 2000);
-        setError(null);
-      } catch {
-        setError(t("copyCallSidError"));
-      }
-    },
-    [t]
-  );
-
-  const loadTwilioCalls = useCallback(() => {
+  const loadTwilioCalls = useCallback(async (): Promise<{
+    ok: boolean;
+    calls: TwilioRow[];
+  }> => {
     setTwilioError(null);
     setTwilioLoading(true);
-    fetch("/api/demo/twilio-calls")
-      .then(async (r) => {
-        const data = await r.json().catch(() => ({}));
-        if (!r.ok) {
-          setTwilioError(
-            (data as { error?: string }).error ?? t("twilioLoadError")
-          );
-          setTwilioRows([]);
+    try {
+      const r = await fetch("/api/demo/twilio-calls");
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setTwilioError(
+          (data as { error?: string }).error ?? t("twilioLoadError")
+        );
+        setTwilioRows([]);
+        return { ok: false, calls: [] };
+      }
+      const calls = (data as { calls?: TwilioRow[] }).calls ?? [];
+      setTwilioRows(calls);
+      return { ok: true, calls };
+    } catch {
+      setTwilioError(t("twilioLoadError"));
+      setTwilioRows([]);
+      return { ok: false, calls: [] };
+    } finally {
+      setTwilioLoading(false);
+    }
+  }, [t]);
+
+  const callerLastFourDigits = useMemo(
+    () => callerLastFour.replace(/\D/g, "").slice(0, 4),
+    [callerLastFour]
+  );
+
+  useEffect(() => {
+    if (callerLastFourDigits.length !== 4) {
+      setTwilioLast4NotFound(false);
+      setLastFourMatchSids([]);
+      return;
+    }
+    let alive = true;
+    const tid = setTimeout(() => {
+      void (async () => {
+        const result = await loadTwilioCalls();
+        if (!alive) return;
+        if (!result.ok) {
+          setTwilioLast4NotFound(false);
+          setLastFourMatchSids([]);
           return;
         }
-        const calls = (data as { calls?: TwilioRow[] }).calls ?? [];
-        setTwilioRows(calls);
-      })
-      .catch(() => {
-        setTwilioError(t("twilioLoadError"));
-        setTwilioRows([]);
-      })
-      .finally(() => setTwilioLoading(false));
-  }, [t]);
+        const matches = result.calls.filter((row) =>
+          rowMatchesCallerLast4(row, callerLastFourDigits)
+        );
+        setLastFourMatchSids(matches.map((r) => r.sid));
+        setTwilioLast4NotFound(matches.length === 0);
+        if (matches.length === 1) {
+          setCallSid(matches[0].sid);
+        } else {
+          setCallSid("");
+        }
+      })();
+    }, 300);
+    return () => {
+      alive = false;
+      clearTimeout(tid);
+    };
+  }, [callerLastFourDigits, loadTwilioCalls]);
 
   useEffect(() => {
     let alive = true;
@@ -410,7 +444,7 @@ export function LiveDemoClient({
   }, []);
 
   useEffect(() => {
-    loadTwilioCalls();
+    void loadTwilioCalls();
   }, [loadTwilioCalls]);
 
   const disconnect = useCallback(() => {
@@ -575,9 +609,9 @@ export function LiveDemoClient({
     }
   }, [applicantLinkUrl]);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(async (explicitSid?: string) => {
     setError(null);
-    const sid = callSid.trim();
+    const sid = (explicitSid ?? callSid).trim();
     if (!sid) {
       setError(t("errorCallSid"));
       return;
@@ -734,86 +768,165 @@ export function LiveDemoClient({
 
   return (
     <div className="space-y-2">
-      {(sectionRows.length > 0 || score != null) && verticalCfg ? (
-        <div className="rounded-lg border border-foreground/10 bg-foreground/[0.02] p-3 text-xs space-y-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <span className="font-semibold text-foreground">
-              {t("sectionCompletionTitle")}
-            </span>
-            <span className="tabular-nums text-foreground/80">
-              {t("overallComplete")}: {overallPct}%
-            </span>
-          </div>
-          <div className="h-2.5 w-full rounded-full bg-foreground/10 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-primary/90 transition-[width] duration-300"
-              style={{ width: `${overallPct}%` }}
-            />
-          </div>
-          {sectionRows.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {sectionRows.map((row) => (
-                <div key={row.sectionId} className="min-w-0">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start">
+          {(sectionRows.length > 0 || score != null) && verticalCfg ? (
+            <div className="w-full min-w-0 flex-1 rounded-lg border border-foreground/10 bg-foreground/[0.02] px-2.5 py-2 text-xs">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="font-semibold text-foreground shrink-0 leading-none">
+                  {t("sectionCompletionTitle")}
+                </span>
+                <div className="h-1 min-w-[4rem] flex-1 rounded-full bg-foreground/10 overflow-hidden basis-[8rem]">
                   <div
-                    className="flex justify-between gap-2 text-[10px] text-foreground/70 mb-1"
-                    title={row.label}
-                  >
-                    <span className="truncate">{row.label}</span>
-                    <span className="shrink-0 tabular-nums">{row.percent}%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-foreground/10 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-amber-500/90 transition-[width]"
-                      style={{ width: `${row.percent}%` }}
-                    />
-                  </div>
+                    className="h-full rounded-full bg-primary/90 transition-[width] duration-300"
+                    style={{ width: `${overallPct}%` }}
+                  />
                 </div>
-              ))}
+                <span className="tabular-nums text-foreground/80 shrink-0 text-[11px] leading-none">
+                  {t("overallComplete")}: {overallPct}%
+                </span>
+              </div>
+              {sectionRows.length > 0 ? (
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 border-t border-foreground/10 pt-1.5">
+                  {sectionRows.map((row) => (
+                    <div
+                      key={row.sectionId}
+                      className="flex min-w-0 max-w-full items-center gap-1.5"
+                      title={row.label}
+                    >
+                      <span className="truncate text-[10px] text-foreground/65 max-w-[7.5rem] sm:max-w-[9rem]">
+                        {row.label}
+                      </span>
+                      <div className="h-1 w-10 shrink-0 rounded-full bg-foreground/10 overflow-hidden sm:w-12">
+                        <div
+                          className="h-full rounded-full bg-amber-500/90 transition-[width]"
+                          style={{ width: `${row.percent}%` }}
+                        />
+                      </div>
+                      <span className="shrink-0 tabular-nums text-[10px] text-foreground/75">
+                        {row.percent}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
+
+          <aside
+            className="flex min-h-0 w-full min-w-0 flex-1 flex-col rounded-lg border border-foreground/15 bg-foreground/[0.03] px-3 py-2 text-xs text-foreground shadow-sm"
+            aria-label={t("crmPanelTitle")}
+          >
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-foreground leading-tight">
+                {t("crmPanelTitle")}
+              </p>
+              <span
+                className={`shrink-0 text-[9px] px-1 py-px rounded border font-medium leading-tight ${
+                  crmContactPreview.hasRecord
+                    ? "border-emerald-600/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200"
+                    : "border-foreground/20 bg-foreground/[0.06] text-foreground/65"
+                }`}
+              >
+                {crmContactPreview.hasRecord ? t("crmBadgeLinked") : t("crmBadgeNone")}
+              </span>
+            </div>
+
+            {crmContactPreview.hasRecord ? (
+              <dl className="mt-1.5 space-y-1">
+                <div className="flex justify-between gap-2 leading-snug">
+                  <dt className="text-foreground/60 shrink-0">{t("crmLabelName")}</dt>
+                  <dd className="text-foreground text-right break-words min-w-0">
+                    {crmContactPreview.displayName || t("crmValueEmpty")}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2 leading-snug">
+                  <dt className="text-foreground/60 shrink-0">{t("crmLabelPhone")}</dt>
+                  <dd className="text-foreground text-right break-words min-w-0">
+                    {crmContactPreview.phone || t("crmValueEmpty")}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2 leading-snug">
+                  <dt className="text-foreground/60 shrink-0">{t("crmLabelEmail")}</dt>
+                  <dd className="text-foreground text-right break-words min-w-0">
+                    {crmContactPreview.email || t("crmValueEmpty")}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2 leading-snug">
+                  <dt className="text-foreground/60 shrink-0">{t("productFormLabel")}</dt>
+                  <dd className="text-foreground text-right break-words min-w-0">
+                    {crmProductLabel.trim() || t("crmValueEmpty")}
+                  </dd>
+                </div>
+              </dl>
+            ) : (
+              <div className="mt-1.5 flex flex-col gap-1.5 py-1">
+                <p className="text-[11px] text-foreground/70 text-center leading-snug md:text-left">
+                  {t("crmNoRecordBody")}
+                </p>
+                {callSid.trim() ? (
+                  <p className="text-[10px] text-foreground/60 text-center md:text-left">
+                    <span className="text-foreground/50">{t("crmLabelSession")}: </span>
+                    <span className="font-mono break-all">{callSid.trim()}</span>
+                  </p>
+                ) : null}
+              </div>
+            )}
+          </aside>
         </div>
-      ) : null}
+
+        <aside
+          className="flex min-h-0 flex-col rounded-lg border border-primary/30 bg-primary/[0.06] px-4 py-3 text-sm text-foreground shadow-sm"
+          aria-label={t("agentInstructionAriaLabel")}
+        >
+          <ol className="list-decimal list-inside space-y-1.5 text-foreground/95">
+            <li>{t("agentInstructionStep1")}</li>
+            <li>{t("agentInstructionStep2")}</li>
+            <li>{t("agentInstructionStep3")}</li>
+          </ol>
+        </aside>
+      </div>
 
       <div className="flex flex-col items-end gap-1">
         <div className="flex flex-wrap gap-1.5 justify-end">
-        <button
-          type="button"
-          className={stubButtonClass}
-          disabled={!pdfTemplateId || pdfBusy}
-          title={
-            !pdfTemplateId
-              ? t("pdfWrongPreset")
-              : pdfBusy
-                ? t("pdfDownloading")
-                : undefined
-          }
-          onClick={() => void downloadDemoPdf()}
-        >
-          {pdfBusy ? t("pdfDownloading") : t("actionDownloadPdf")}
-        </button>
-        <button
-          type="button"
-          className={primaryStubClass}
-          disabled={!callSid.trim() || extractBusy}
-          title={
-            !callSid.trim()
-              ? t("extractNeedCallSid")
-              : extractBusy
-                ? t("extractRunning")
-                : undefined
-          }
-          onClick={() => void runBatchExtract()}
-        >
-          {extractBusy ? t("extractRunning") : t("actionExtractAi")}
-        </button>
-        <button
-          type="button"
-          className={stubButtonClass}
-          disabled
-          title={t("actionComingSoon")}
-        >
-          {t("actionCrmSync")}
-        </button>
+          <button
+            type="button"
+            className={stubButtonClass}
+            disabled={!pdfTemplateId || pdfBusy}
+            title={
+              !pdfTemplateId
+                ? t("pdfWrongPreset")
+                : pdfBusy
+                  ? t("pdfDownloading")
+                  : undefined
+            }
+            onClick={() => void downloadDemoPdf()}
+          >
+            {pdfBusy ? t("pdfDownloading") : t("actionDownloadPdf")}
+          </button>
+          <button
+            type="button"
+            className={primaryStubClass}
+            disabled={!callSid.trim() || extractBusy}
+            title={
+              !callSid.trim()
+                ? t("extractNeedCallSid")
+                : extractBusy
+                  ? t("extractRunning")
+                  : undefined
+            }
+            onClick={() => void runBatchExtract()}
+          >
+            {extractBusy ? t("extractRunning") : t("actionExtractAi")}
+          </button>
+          <button
+            type="button"
+            className={stubButtonClass}
+            disabled
+            title={t("actionComingSoon")}
+          >
+            {t("actionCrmSync")}
+          </button>
         </div>
         {pdfError ? (
           <p className="text-xs text-red-600 dark:text-red-400 max-w-md text-right" role="alert">
@@ -830,109 +943,6 @@ export function LiveDemoClient({
             {extractNotice}
           </p>
         ) : null}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-stretch">
-        <aside
-          className="flex flex-col h-full min-h-0 rounded-lg border border-primary/30 bg-primary/[0.06] px-4 py-3 text-sm text-foreground shadow-sm"
-          aria-label={t("agentInstructionTitle")}
-        >
-          <p className="font-semibold text-foreground">{t("agentInstructionTitle")}</p>
-          <ol className="mt-2 list-decimal list-inside space-y-1.5 text-foreground/95">
-            <li>{t("agentStepConfirmProduct")}</li>
-            <li>{t("agentStepConnectStream")}</li>
-          </ol>
-          <p className="mt-2 text-xs text-foreground/75">{t("agentInstructionHint")}</p>
-        </aside>
-
-        <aside
-          className="flex flex-col rounded-lg border border-foreground/15 bg-foreground/[0.03] px-4 py-3 text-sm text-foreground shadow-sm min-h-0 h-full"
-          aria-label={t("crmPanelTitle")}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-semibold text-foreground">{t("crmPanelTitle")}</p>
-            <span
-              className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border font-medium tabular-nums ${
-                crmContactPreview.hasRecord
-                  ? "border-emerald-600/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200"
-                  : "border-foreground/20 bg-foreground/[0.06] text-foreground/65"
-              }`}
-            >
-              {crmContactPreview.hasRecord ? t("crmBadgeLinked") : t("crmBadgeNone")}
-            </span>
-          </div>
-
-          {crmContactPreview.hasRecord ? (
-            <dl className="mt-2 space-y-1.5 text-xs flex-1 flex flex-col">
-              <div className="flex justify-between gap-2">
-                <dt className="text-foreground/60 shrink-0">{t("crmLabelName")}</dt>
-                <dd className="text-foreground text-right break-words min-w-0">
-                  {crmContactPreview.displayName || t("crmValueEmpty")}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-foreground/60 shrink-0">{t("crmLabelEmail")}</dt>
-                <dd className="text-foreground text-right break-words min-w-0">
-                  {crmContactPreview.email || t("crmValueEmpty")}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-foreground/60 shrink-0">{t("crmLabelPhone")}</dt>
-                <dd className="text-foreground text-right break-words min-w-0">
-                  {crmContactPreview.phone || t("crmValueEmpty")}
-                </dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-foreground/60 shrink-0">
-                  {t("crmLabelPreferredContact")}
-                </dt>
-                <dd className="text-foreground text-right break-words min-w-0">
-                  {crmContactPreview.preferredContactMethod
-                    ? tEnum(crmContactPreview.preferredContactMethod)
-                    : t("crmValueEmpty")}
-                </dd>
-              </div>
-              {crmContactPreview.location ? (
-                <div className="flex justify-between gap-2">
-                  <dt className="text-foreground/60 shrink-0">
-                    {t("crmLabelLocation")}
-                  </dt>
-                  <dd className="text-foreground text-right break-words min-w-0">
-                    {crmContactPreview.location}
-                  </dd>
-                </div>
-              ) : null}
-              {crmContactPreview.alien ? (
-                <div className="flex justify-between gap-2">
-                  <dt className="text-foreground/60 shrink-0">
-                    {t("crmLabelAlienNumber")}
-                  </dt>
-                  <dd className="text-foreground text-right break-words min-w-0">
-                    {crmContactPreview.alien}
-                  </dd>
-                </div>
-              ) : null}
-              <div className="flex justify-between gap-2 pt-1 border-t border-foreground/10 mt-auto">
-                <dt className="text-foreground/60 shrink-0">{t("crmLabelSession")}</dt>
-                <dd className="text-foreground text-right break-words min-w-0 font-mono text-[11px]">
-                  {callSid.trim() || t("crmValueEmpty")}
-                </dd>
-              </div>
-            </dl>
-          ) : (
-            <div className="mt-2 flex-1 flex flex-col items-stretch justify-center min-h-0 py-2 gap-2">
-              <p className="text-xs text-foreground/70 text-center leading-relaxed">
-                {t("crmNoRecordBody")}
-              </p>
-              {callSid.trim() ? (
-                <p className="text-[11px] text-foreground/60 text-center">
-                  <span className="text-foreground/50">{t("crmLabelSession")}: </span>
-                  <span className="font-mono break-all">{callSid.trim()}</span>
-                </p>
-              ) : null}
-            </div>
-          )}
-        </aside>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
@@ -956,6 +966,37 @@ export function LiveDemoClient({
 
           <div>
             <label
+              htmlFor="callerLastFour"
+              className="block text-sm font-medium text-foreground mb-1"
+            >
+              {t("callerLastFourLabel")}
+            </label>
+            <input
+              id="callerLastFour"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              maxLength={4}
+              value={callerLastFour}
+              onChange={(e) =>
+                setCallerLastFour(e.target.value.replace(/\D/g, "").slice(0, 4))
+              }
+              placeholder="1234"
+              className="w-full max-w-[8rem] rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm font-mono tracking-widest"
+              aria-describedby="callerLastFour-hint"
+            />
+            <p id="callerLastFour-hint" className="mt-1 text-xs text-foreground/60">
+              {t("callerLastFourHint")}
+            </p>
+            {twilioLast4NotFound && !twilioError && callerLastFourDigits.length === 4 ? (
+              <p className="mt-2 text-xs text-red-600 dark:text-red-400" role="alert">
+                {t("twilioLast4NotFound")}
+              </p>
+            ) : null}
+          </div>
+
+          <div>
+            <label
               htmlFor="callSid"
               className="block text-sm font-medium text-foreground mb-1"
             >
@@ -974,7 +1015,7 @@ export function LiveDemoClient({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={connect}
+              onClick={() => void connect()}
               disabled={busy || connected}
               className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 disabled:opacity-50"
             >
@@ -1002,7 +1043,7 @@ export function LiveDemoClient({
               </span>
               <button
                 type="button"
-                onClick={loadTwilioCalls}
+                onClick={() => void loadTwilioCalls()}
                 disabled={twilioLoading}
                 className="text-xs text-primary hover:underline disabled:opacity-50"
               >
@@ -1025,18 +1066,43 @@ export function LiveDemoClient({
                     </tr>
                   </thead>
                   <tbody>
-                    {twilioRows.map((row) => (
+                    {twilioRows.map((row) => {
+                      const ctaEnabled =
+                        callerLastFourDigits.length === 4 &&
+                        !twilioLoading &&
+                        !busy &&
+                        lastFourMatchSids.includes(row.sid);
+                      return (
                       <tr key={row.sid} className="border-t border-foreground/10">
-                        <td className="p-2 whitespace-nowrap align-top">
+                        <td className="p-2 align-top min-w-0 max-w-[12rem] sm:max-w-none">
                           <button
                             type="button"
-                            onClick={() => void copyTwilioCallSid(row.sid)}
-                            className="rounded border border-foreground/20 bg-background px-2 py-1 text-primary hover:bg-foreground/5 text-left"
-                            aria-label={t("copyCallSid")}
+                            disabled={!ctaEnabled}
+                            title={
+                              ctaEnabled
+                                ? undefined
+                                : t("connectToCallDataCollectionDisabledHint")
+                            }
+                            onClick={() => {
+                              setCallSid(row.sid);
+                              void connect(row.sid);
+                            }}
+                            aria-label={t("connectToCallDataCollectionAria", {
+                              sid: row.sid,
+                            })}
+                            className="group flex w-full min-w-0 items-center justify-center gap-1.5 rounded-lg border border-primary/40 bg-gradient-to-b from-primary/10 to-primary/[0.06] px-2 py-2 text-center text-[10px] font-semibold leading-tight text-primary shadow-sm transition-colors hover:border-primary/60 hover:from-primary/[0.14] hover:to-primary/10 disabled:pointer-events-none disabled:opacity-45 dark:border-primary/35 dark:from-primary/15 dark:to-primary/[0.08]"
                           >
-                            {copiedTwilioSid === row.sid
-                              ? t("copiedCallSid")
-                              : t("copyCallSid")}
+                            <Sparkles
+                              className="size-3.5 shrink-0 text-primary opacity-90"
+                              aria-hidden
+                            />
+                            <span className="min-w-0 text-balance">
+                              {t("connectToCallDataCollection")}
+                            </span>
+                            <Sparkles
+                              className="size-3.5 shrink-0 text-primary opacity-90"
+                              aria-hidden
+                            />
                           </button>
                         </td>
                         <td className="p-2 align-top tabular-nums">
@@ -1049,7 +1115,8 @@ export function LiveDemoClient({
                             : "—"}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
