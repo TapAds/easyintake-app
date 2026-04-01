@@ -20,6 +20,7 @@ import {
   overallCompletionPercent,
 } from "@/lib/intake/sectionCompletion";
 import { FieldHelpIcon } from "@/components/ui/FieldHelpIcon";
+import { useClientSuperAdmin } from "@/lib/auth/useClientSuperAdmin";
 
 function entityValueFingerprint(value: unknown): string {
   if (value === undefined || value === null) return "";
@@ -191,6 +192,7 @@ export function LiveDemoClient({
 }) {
   const t = useTranslations(uiMode === "liveCall" ? "demo.liveCall" : "demo.live");
   const locale = useLocale();
+  const isSuperAdmin = useClientSuperAdmin();
   const [presetId, setPresetId] = useState(LIVE_DEMO_PRESETS[0]?.id ?? "");
   const [callSid, setCallSid] = useState("");
   const [connected, setConnected] = useState(false);
@@ -221,6 +223,14 @@ export function LiveDemoClient({
   const [extractBusy, setExtractBusy] = useState(false);
   const [extractError, setExtractError] = useState<string | null>(null);
   const [extractNotice, setExtractNotice] = useState<string | null>(null);
+  /** Keys the agent typed into in the advice panel — kept so the row does not vanish after one character (any trim length > 0 counts as "filled" for completeness). */
+  const [agentAdviceStickyKeys, setAgentAdviceStickyKeys] = useState<
+    Set<string>
+  >(() => new Set());
+  /** Live Call: preset locked per CallSid after first successful connect (or snapshot connect). */
+  const [lockedPresetByCallSid, setLockedPresetByCallSid] = useState<
+    Record<string, string>
+  >({});
   const wsRef = useRef<WebSocket | null>(null);
   const subscribedCallSidRef = useRef<string>("");
   const prevEntitiesRef = useRef<Record<string, unknown>>({});
@@ -229,6 +239,31 @@ export function LiveDemoClient({
   );
 
   const preset = LIVE_DEMO_PRESETS.find((p) => p.id === presetId);
+
+  const commitLiveCallProductLock = useCallback(
+    (sid: string, presetKey: string) => {
+      if (uiMode !== "liveCall") return;
+      const trimmed = sid.trim();
+      if (!trimmed || !presetKey) return;
+      setLockedPresetByCallSid((prev) =>
+        prev[trimmed] ? prev : { ...prev, [trimmed]: presetKey }
+      );
+    },
+    [uiMode]
+  );
+
+  const liveCallProductSelectDisabled =
+    uiMode === "liveCall" &&
+    (connected ||
+      (!!callSid.trim() && Boolean(lockedPresetByCallSid[callSid.trim()])));
+
+  useEffect(() => {
+    if (uiMode !== "liveCall") return;
+    const sid = callSid.trim();
+    if (!sid) return;
+    const locked = lockedPresetByCallSid[sid];
+    if (locked) setPresetId(locked);
+  }, [callSid, lockedPresetByCallSid, uiMode]);
 
   const pdfTemplateId = useMemo(() => {
     if (presetId === "imm_n400") return "uscis_n400" as const;
@@ -308,9 +343,19 @@ export function LiveDemoClient({
     const s = new Set<string>([
       ...guidanceMissingKeys,
       ...clientVisibleMissingKeys,
+      ...Array.from(agentAdviceStickyKeys),
     ]);
-    return Array.from(s);
-  }, [guidanceMissingKeys, clientVisibleMissingKeys]);
+    const order = applicationFieldKeys;
+    const ordered = order.filter((k) => s.has(k));
+    const extras = Array.from(s).filter((k) => !order.includes(k));
+    extras.sort();
+    return [...ordered, ...extras];
+  }, [
+    guidanceMissingKeys,
+    clientVisibleMissingKeys,
+    agentAdviceStickyKeys,
+    applicationFieldKeys,
+  ]);
 
   const hasMissingAttention = missingKeysForDisplay.length > 0;
 
@@ -322,6 +367,18 @@ export function LiveDemoClient({
       } else {
         next[key] = value;
       }
+      return next;
+    });
+    setAgentAdviceStickyKeys((prev) => {
+      if (value.trim() === "") {
+        if (!prev.has(key)) return prev;
+        const next = new Set(prev);
+        next.delete(key);
+        return next;
+      }
+      if (prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.add(key);
       return next;
     });
   }, []);
@@ -348,6 +405,7 @@ export function LiveDemoClient({
     setPdfError(null);
     setExtractError(null);
     setExtractNotice(null);
+    setAgentAdviceStickyKeys(new Set());
     flashTimeoutsRef.current.forEach(clearTimeout);
     flashTimeoutsRef.current.clear();
   }, [presetId]); // eslint-disable-line react-hooks/exhaustive-deps -- sync baseline to current cache when preset changes
@@ -445,6 +503,10 @@ export function LiveDemoClient({
   }, [callerLastFourDigits, loadTwilioCalls]);
 
   useEffect(() => {
+    if (!isSuperAdmin) {
+      setVoiceHealth(null);
+      return;
+    }
     let alive = true;
     fetch("/api/demo/voice-health")
       .then((r) => r.json())
@@ -457,7 +519,7 @@ export function LiveDemoClient({
     return () => {
       alive = false;
     };
-  }, []);
+  }, [isSuperAdmin]);
 
   const disconnect = useCallback(() => {
     wsRef.current?.close();
@@ -467,6 +529,7 @@ export function LiveDemoClient({
   }, []);
 
   const applyCallSnapshot = useCallback((data: CallDetailsSnapshot) => {
+    setAgentAdviceStickyKeys(new Set());
     setEntities(
       (data.entities ?? {}) as Record<string, unknown>
     );
@@ -594,6 +657,7 @@ export function LiveDemoClient({
         return;
       }
       if (data.entities) {
+        setAgentAdviceStickyKeys(new Set());
         setEntities(data.entities);
       }
       if (data.fieldConfidences) {
@@ -657,6 +721,7 @@ export function LiveDemoClient({
         const hasNow = Object.keys(entities).length > 0 || transcriptStr.length > 0;
         if (hasNow) {
           applyCallSnapshot(preSnap);
+          commitLiveCallProductLock(sid, presetId);
           setGuidanceText(t("callEndedHint"));
           setGuidanceMissingKeys([]);
           setBusy(false);
@@ -664,6 +729,7 @@ export function LiveDemoClient({
         }
         const loaded = await hydrateFromSnapshot(sid);
         if (loaded) {
+          commitLiveCallProductLock(sid, presetId);
           setGuidanceText(t("callEndedHint"));
           setGuidanceMissingKeys([]);
           setBusy(false);
@@ -689,6 +755,7 @@ export function LiveDemoClient({
       wsRef.current = ws;
       setTranscript("");
       prevEntitiesRef.current = {};
+      setAgentAdviceStickyKeys(new Set());
       setEntities({});
       setFieldConfidences({});
       setScore(null);
@@ -697,6 +764,7 @@ export function LiveDemoClient({
 
       ws.onopen = () => {
         subscribedCallSidRef.current = sid;
+        commitLiveCallProductLock(sid, presetId);
         setConnected(true);
         setBusy(false);
       };
@@ -768,9 +836,12 @@ export function LiveDemoClient({
     apiBaseUrl,
     applyCallSnapshot,
     callSid,
+    commitLiveCallProductLock,
     disconnect,
     hydrateFromSnapshot,
+    presetId,
     t,
+    uiMode,
   ]);
 
   const stubButtonClass =
@@ -956,7 +1027,8 @@ export function LiveDemoClient({
               <select
                 value={presetId}
                 onChange={(e) => setPresetId(e.target.value)}
-                className="w-full rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm"
+                disabled={liveCallProductSelectDisabled}
+                className="w-full rounded-lg border border-foreground/15 bg-background px-3 py-2 text-sm disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {LIVE_DEMO_PRESETS.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -964,6 +1036,9 @@ export function LiveDemoClient({
                   </option>
                 ))}
               </select>
+              {liveCallProductSelectDisabled && uiMode === "liveCall" ? (
+                <p className="mt-1 text-[11px] text-foreground/55">{t("productLockedHint")}</p>
+              ) : null}
             </div>
             <div className="min-w-0">
               <label
@@ -1252,52 +1327,56 @@ export function LiveDemoClient({
         </section>
       </div>
 
-      <details className="group border-t border-foreground/10 pt-2 text-xs text-foreground/55">
-        <summary className="cursor-pointer select-none list-none text-foreground/45 transition-colors hover:text-foreground/65 [&::-webkit-details-marker]:hidden">
-          <span className="inline-flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="inline-block text-[9px] text-foreground/35 transition-transform duration-200 group-open:rotate-90"
-            >
-              ▶
+      {isSuperAdmin ? (
+        <details className="group border-t border-foreground/10 pt-2 text-xs text-foreground/55">
+          <summary className="cursor-pointer select-none list-none text-foreground/45 transition-colors hover:text-foreground/65 [&::-webkit-details-marker]:hidden">
+            <span className="inline-flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="inline-block text-[9px] text-foreground/35 transition-transform duration-200 group-open:rotate-90"
+              >
+                ▶
+              </span>
+              {t("voiceDiagnosticsSummary")}
             </span>
-            {t("voiceDiagnosticsSummary")}
-          </span>
-        </summary>
-        <div className="mt-2 rounded-md border border-foreground/[0.08] bg-foreground/[0.02] p-2 font-mono text-[11px] leading-relaxed text-foreground/65">
-          <p className="mb-2 font-sans text-[10px] font-medium uppercase tracking-wide text-foreground/40">
-            {t("voiceHealthTitle")}
-          </p>
-          {voiceHealth ? (
-            <ul className="space-y-1.5">
-              <li>
-                {t("labelAgentWs")}: {voiceHealth.endpoints?.agentWs ?? "—"}
-              </li>
-              <li>
-                {t("labelEngine")}:{" "}
-                {[
-                  voiceHealth.engine?.twilioConfigured && "Twilio",
-                  voiceHealth.engine?.deepgramConfigured && "Deepgram",
-                  voiceHealth.engine?.anthropicConfigured && "Anthropic",
-                ]
-                  .filter(Boolean)
-                  .join(", ") || "—"}
-              </li>
-              {voiceHealth.recentCallsFromDb &&
-              voiceHealth.recentCallsFromDb.length > 0 ? (
-                <li className="pt-1 text-foreground/55">
-                  {t("recentDb")}:{" "}
-                  {voiceHealth.recentCallsFromDb
-                    .map((r) => r.callSid)
-                    .join(", ")}
+          </summary>
+          <div className="mt-2 rounded-md border border-foreground/[0.08] bg-foreground/[0.02] p-2 font-mono text-[11px] leading-relaxed text-foreground/65">
+            <p className="mb-2 font-sans text-[10px] font-medium uppercase tracking-wide text-foreground/40">
+              {t("voiceHealthTitle")}
+            </p>
+            {voiceHealth ? (
+              <ul className="space-y-1.5">
+                <li>
+                  {t("labelAgentWs")}: {voiceHealth.endpoints?.agentWs ?? "—"}
                 </li>
-              ) : null}
-            </ul>
-          ) : (
-            <p className="font-sans text-foreground/50">{t("voiceHealthLoading")}</p>
-          )}
-        </div>
-      </details>
+                <li>
+                  {t("labelEngine")}:{" "}
+                  {[
+                    voiceHealth.engine?.twilioConfigured && "Twilio",
+                    voiceHealth.engine?.deepgramConfigured && "Deepgram",
+                    voiceHealth.engine?.anthropicConfigured && "Anthropic",
+                  ]
+                    .filter(Boolean)
+                    .join(", ") || "—"}
+                </li>
+                {voiceHealth.recentCallsFromDb &&
+                voiceHealth.recentCallsFromDb.length > 0 ? (
+                  <li className="pt-1 text-foreground/55">
+                    {t("recentDb")}:{" "}
+                    {voiceHealth.recentCallsFromDb
+                      .map((r) => r.callSid)
+                      .join(", ")}
+                  </li>
+                ) : null}
+              </ul>
+            ) : (
+              <p className="font-sans text-foreground/50">
+                {t("voiceHealthLoading")}
+              </p>
+            )}
+          </div>
+        </details>
+      ) : null}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { getFormatter, getTranslations } from "next-intl/server";
+import type { IntakeSessionListRow } from "@easy-intake/shared";
 import { fetchIntakeSessionsListFromBff } from "@/lib/bff/serverFetch";
 import {
   computeSalesKpis,
@@ -33,10 +34,13 @@ export async function DashboardLiveMetrics({
   locale,
   carrier,
   product,
+  /** When set (including null), skips BFF fetch and uses this list instead. */
+  initialRows,
 }: {
   locale: string;
   carrier?: string;
   product?: string;
+  initialRows?: IntakeSessionListRow[] | null;
 }) {
   const t = await getTranslations("dashboard");
   const tFunnel = await getTranslations("dashboard.funnel");
@@ -44,7 +48,10 @@ export async function DashboardLiveMetrics({
   const tSales = await getTranslations("dashboard.kpis.sales");
   const format = await getFormatter();
 
-  const allRows = await fetchIntakeSessionsListFromBff();
+  const allRows =
+    initialRows !== undefined
+      ? initialRows
+      : await fetchIntakeSessionsListFromBff();
   const carrierOptions =
     allRows !== null ? toOptions(allRows.map((r) => r.verticalId)) : [];
   const productOptions =

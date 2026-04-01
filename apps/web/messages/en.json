@@ -8,13 +8,28 @@
     "signIn": "Sign in"
   },
   "nav": {
-    "home": "Home",
     "overview": "Dashboard",
     "intakeQueue": "Intake queue",
     "liveDemo": "Live demo",
     "liveCall": "Live call",
     "brand": "EasyIntake App",
-    "settings": "Settings"
+    "settings": "Settings",
+    "ceoDash": "CEO Dash"
+  },
+  "ceoDash": {
+    "title": "CEO Dash",
+    "subtitle": "Business-wide intake volume, funnel health, activity, and cost placeholders — scoped to the latest session batch from the engine.",
+    "scopeNote": "Figures below aggregate every organization in the current API snapshot (up to 100 recent sessions). They are operational slices, not a full analytics warehouse.",
+    "orgSectionTitle": "Volume by organization",
+    "orgColId": "Organization",
+    "orgColSessions": "Sessions in snapshot",
+    "orgColUpdated": "Latest activity",
+    "orgEmpty": "No sessions in the current snapshot.",
+    "costsTitle": "Costs and usage",
+    "costsIntro": "Usage-based spend (telephony, transcription, model inference) is not wired into this view yet. Connect billing exports or engine telemetry to populate these cards.",
+    "costsVoiceLabel": "Voice (est.)",
+    "costsTranscriptionLabel": "Transcription (est.)",
+    "costsModelLabel": "Model usage (est.)"
   },
   "home": {
     "title": "EasyIntake App",
@@ -143,7 +158,8 @@
       "hitlNo": "No",
       "sortAsc": "Sort ascending",
       "sortDesc": "Sort descending",
-      "loadError": "Could not load sessions."
+      "loadError": "Could not load sessions.",
+      "loadErrorNoOrg": "Choose or create an organization in your account (Clerk), then refresh this page. Intake data is scoped to your active organization."
     },
     "session": {
       "title": "Session",
@@ -187,7 +203,17 @@
       "sendReminder": "Send reminder to complete",
       "reminderSending": "Sending…",
       "reminderSent": "Reminder sent",
-      "reminderError": "Could not send reminder."
+      "reminderError": "Could not send reminder.",
+      "applicationsFromCallTitle": "Applications from this call",
+      "applicationsFromCallHint": "Each row is a separate application. New ones reuse the stored call transcript.",
+      "newApplicationFromCallTitle": "New application from this call",
+      "newApplicationProductLabel": "Product / form",
+      "newApplicationSubmit": "Create and open",
+      "newApplicationWorking": "Creating…",
+      "newApplicationError": "Could not create application. Ensure the call has a saved transcript.",
+      "newApplicationMissingCallSid": "No Call SID is linked to this session.",
+      "applicationDerivedBadge": "From transcript",
+      "applicationPrimaryBadge": "Primary (call)"
     },
     "voiceBridge": {
       "title": "Voice agent console",
@@ -366,7 +392,8 @@
       "crmLabelAlienNumber": "A-Number",
       "crmLabelPreferredContact": "Preferred contact",
       "crmLabelSession": "Session (Call SID)",
-      "crmValueEmpty": "—"
+      "crmValueEmpty": "—",
+      "productLockedHint": "Product is fixed for this call after you connect. Start a new application from the session record to use the same transcript with another product."
     }
   },
   "settings": {

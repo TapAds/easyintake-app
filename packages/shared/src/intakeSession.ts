@@ -107,6 +107,16 @@ export interface IntakeSession {
     hasActiveToken: boolean;
     expiresAt?: string;
   };
+  /** Sessions sharing the same voice call transcript (primary + derived applications). */
+  relatedApplications?: {
+    sessionId: string;
+    configPackageId: string;
+    createdAt: string;
+    updatedAt: string;
+    completenessScore: number;
+    /** True when created via re-extract from transcript (not the primary call session). */
+    isDerived: boolean;
+  }[];
   createdAt: string;
   updatedAt: string;
 }

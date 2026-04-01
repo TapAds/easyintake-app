@@ -3,16 +3,27 @@ import type { FieldChangeEventV1 } from "@easy-intake/shared";
 import { computeCompletenessSnapshot, getVerticalConfigForPackageId } from "@easy-intake/shared";
 import { prisma } from "../../db/prisma";
 import { requireAuth } from "../middleware/auth";
+import { attachOperatorOrgScope } from "../middleware/operatorOrgScope";
 import { config } from "../../config";
+import {
+  sessionOrganizationInScope,
+  type OperatorOrgScope,
+} from "../../services/operatorOrgScope";
 import {
   createApplicantPortalAccess,
   getActivePortalAccessSummary,
 } from "../../services/applicantPortalAccess";
 import { deliverApplicantPortalReminder } from "../../services/followUpSend";
 import { getGhlContactPrimaryPhone } from "../../services/ghl";
+import { forkIntakeSessionFromCallTranscript } from "../../services/forkIntakeSessionFromCall";
 
 export const intakeSessionsRouter = Router();
 intakeSessionsRouter.use(requireAuth);
+intakeSessionsRouter.use(attachOperatorOrgScope);
+
+/** Fallback org when a Call has no primary IntakeSession (align with forkIntakeSessionFromCall). */
+const DEFAULT_ORG_FOR_SCOPE =
+  process.env.DEFAULT_ORGANIZATION_ID ?? "org_local_dev";
 
 function normalizeLog(raw: unknown): FieldChangeEventV1[] {
   if (!Array.isArray(raw)) return [];
@@ -65,8 +76,13 @@ function parseHitl(hitl: unknown): {
 /**
  * GET /api/intake/sessions
  */
-intakeSessionsRouter.get("/", async (_req: Request, res: Response): Promise<void> => {
+intakeSessionsRouter.get("/", async (req: Request, res: Response): Promise<void> => {
+  const scope = req.operatorScope!;
   const rows = await prisma.intakeSession.findMany({
+    where:
+      scope.mode === "all"
+        ? undefined
+        : { organizationId: { in: scope.organizationIds } },
     orderBy: { updatedAt: "desc" },
     take: 100,
   });
@@ -90,14 +106,55 @@ intakeSessionsRouter.get("/", async (_req: Request, res: Response): Promise<void
 });
 
 /**
+ * POST /api/intake/sessions/from-call-transcript
+ * Body: { callSid, configPackageId } — new IntakeSession seeded from stored transcript.
+ */
+intakeSessionsRouter.post("/from-call-transcript", async (req: Request, res: Response): Promise<void> => {
+  const scope = req.operatorScope!;
+  const body = req.body as { callSid?: string; configPackageId?: string };
+  const callSid = (body.callSid ?? "").trim();
+  const configPackageId = (body.configPackageId ?? "").trim();
+  if (!callSid || !configPackageId) {
+    res.status(400).json({ error: "callSid and configPackageId required" });
+    return;
+  }
+
+  const callPeek = await prisma.call.findUnique({
+    where: { callSid },
+    select: { intakeSession: { select: { organizationId: true } } },
+  });
+  const peekOrg =
+    callPeek?.intakeSession?.organizationId?.trim() || DEFAULT_ORG_FOR_SCOPE;
+  if (!sessionOrganizationInScope(peekOrg, scope)) {
+    res.status(404).json({ error: "Call not found" });
+    return;
+  }
+
+  const result = await forkIntakeSessionFromCallTranscript({
+    callSid,
+    configPackageId,
+  });
+  if ("error" in result && "status" in result) {
+    res.status(result.status).json({ error: result.error });
+    return;
+  }
+  res.status(201).json({ sessionId: result.sessionId });
+});
+
+/**
  * POST /api/intake/sessions/:sessionId/applicant-portal-token
  */
 intakeSessionsRouter.post(
   "/:sessionId/applicant-portal-token",
   async (req: Request, res: Response): Promise<void> => {
     const sessionId = String(req.params.sessionId);
+    const scope = req.operatorScope!;
     const row = await prisma.intakeSession.findUnique({ where: { id: sessionId } });
     if (!row) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    if (!sessionOrganizationInScope(row.organizationId, scope)) {
       res.status(404).json({ error: "Session not found" });
       return;
     }
@@ -130,6 +187,7 @@ intakeSessionsRouter.post(
  */
 intakeSessionsRouter.patch("/:sessionId", async (req: Request, res: Response): Promise<void> => {
   const sessionId = String(req.params.sessionId);
+  const scope = req.operatorScope!;
   const body = req.body as { hitl?: { agentRequestedFieldKeys?: unknown } };
   const keys = body.hitl?.agentRequestedFieldKeys;
   if (!Array.isArray(keys) || !keys.every((k) => typeof k === "string")) {
@@ -139,6 +197,10 @@ intakeSessionsRouter.patch("/:sessionId", async (req: Request, res: Response): P
 
   const row = await prisma.intakeSession.findUnique({ where: { id: sessionId } });
   if (!row) {
+    res.status(404).json({ error: "Session not found" });
+    return;
+  }
+  if (!sessionOrganizationInScope(row.organizationId, scope)) {
     res.status(404).json({ error: "Session not found" });
     return;
   }
@@ -167,11 +229,16 @@ intakeSessionsRouter.post(
   "/:sessionId/remind-applicant",
   async (req: Request, res: Response): Promise<void> => {
     const sessionId = String(req.params.sessionId);
+    const scope = req.operatorScope!;
     const body = req.body as { locale?: unknown };
     const locale = body.locale === "es" ? "es" : "en";
 
     const row = await prisma.intakeSession.findUnique({ where: { id: sessionId } });
     if (!row) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    if (!sessionOrganizationInScope(row.organizationId, scope)) {
       res.status(404).json({ error: "Session not found" });
       return;
     }
@@ -244,6 +311,95 @@ intakeSessionsRouter.post(
   }
 );
 
+
+async function relatedApplicationsForSession(
+  sessionId: string,
+  sourceCallId: string | null,
+  externalIds: Record<string, unknown>,
+  scope: OperatorOrgScope
+): Promise<
+  {
+    sessionId: string;
+    configPackageId: string;
+    createdAt: string;
+    updatedAt: string;
+    completenessScore: number;
+    isDerived: boolean;
+  }[]
+> {
+  let call:
+    | { id: string; intakeSessionId: string | null; callSid: string }
+    | null = null;
+
+  if (sourceCallId) {
+    call = await prisma.call.findUnique({
+      where: { id: sourceCallId },
+      select: { id: true, intakeSessionId: true, callSid: true },
+    });
+  } else {
+    const sid =
+      typeof externalIds.callSid === "string" ? externalIds.callSid.trim() : "";
+    if (sid) {
+      call = await prisma.call.findUnique({
+        where: { callSid: sid },
+        select: { id: true, intakeSessionId: true, callSid: true },
+      });
+    }
+    if (!call) {
+      call = await prisma.call.findFirst({
+        where: { intakeSessionId: sessionId },
+        select: { id: true, intakeSessionId: true, callSid: true },
+      });
+    }
+  }
+
+  if (!call) return [];
+
+  const orClause: { id: string }[] = [];
+  if (call.intakeSessionId) {
+    orClause.push({ id: call.intakeSessionId });
+  }
+  const rows = await prisma.intakeSession.findMany({
+    where: {
+      OR: [{ sourceCallId: call.id }, ...orClause],
+    },
+    select: {
+      id: true,
+      organizationId: true,
+      configPackageId: true,
+      createdAt: true,
+      updatedAt: true,
+      completenessScore: true,
+      sourceCallId: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const seen = new Set<string>();
+  const out: {
+    sessionId: string;
+    configPackageId: string;
+    createdAt: string;
+    updatedAt: string;
+    completenessScore: number;
+    isDerived: boolean;
+  }[] = [];
+  for (const s of rows) {
+    if (!sessionOrganizationInScope(s.organizationId, scope)) continue;
+    if (seen.has(s.id)) continue;
+    seen.add(s.id);
+    out.push({
+      sessionId: s.id,
+      configPackageId: s.configPackageId,
+      createdAt: s.createdAt.toISOString(),
+      updatedAt: s.updatedAt.toISOString(),
+      completenessScore: s.completenessScore,
+      isDerived: Boolean(s.sourceCallId),
+    });
+  }
+  return out;
+}
+
 /**
  * GET /api/intake/sessions/:sessionId
  */
@@ -251,6 +407,7 @@ intakeSessionsRouter.get(
   "/:sessionId",
   async (req: Request, res: Response): Promise<void> => {
     const sessionId = String(req.params.sessionId);
+    const scope = req.operatorScope!;
     const row = await prisma.intakeSession.findUnique({
       where: { id: sessionId },
       include: {
@@ -289,6 +446,10 @@ intakeSessionsRouter.get(
       res.status(404).json({ error: "Session not found" });
       return;
     }
+    if (!sessionOrganizationInScope(row.organizationId, scope)) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
 
     const hitlParsed = parseHitl(row.hitl);
     const fieldValues = (row.fieldValues as Record<string, unknown>) ?? {};
@@ -300,6 +461,12 @@ intakeSessionsRouter.get(
     const { attachments: attachmentRows, signatureRequests: sigRows, ...sessionRest } = row;
 
     const portalSummary = await getActivePortalAccessSummary(sessionId);
+    const relatedApplications = await relatedApplicationsForSession(
+      sessionId,
+      sessionRest.sourceCallId ?? null,
+      externalIds,
+      scope
+    );
 
     res.json({
       sessionId: sessionRest.id,
@@ -340,6 +507,7 @@ intakeSessionsRouter.get(
       })),
       externalIds:
         Object.keys(externalIds).length > 0 ? externalIds : undefined,
+      relatedApplications,
       createdAt: sessionRest.createdAt.toISOString(),
       updatedAt: sessionRest.updatedAt.toISOString(),
     });

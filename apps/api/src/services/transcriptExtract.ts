@@ -253,3 +253,80 @@ export async function runTranscriptExtractAndPersist(
     skippedDueToCorrection,
   };
 }
+
+export type TranscriptExtractFlatResult = {
+  callSid: string;
+  utteranceCount: number;
+  chunkCount: number;
+  entities: EntityState;
+  fieldConfidences: Record<string, number>;
+  completenessScore: number;
+  tier: string;
+};
+
+/**
+ * Full transcript extraction for `callSid` using an explicit target package (no DB entity merge).
+ * Used when spawning a new IntakeSession from an existing call's recording.
+ */
+export async function runTranscriptExtractToFlatForPackage(
+  callSid: string,
+  configPackageId: string
+): Promise<TranscriptExtractFlatResult | { error: string; status: number }> {
+  const call = await prisma.call.findUnique({
+    where: { callSid },
+    select: { id: true },
+  });
+
+  if (!call) {
+    return { error: "Call not found", status: 404 };
+  }
+
+  const utterances = utterancesToExtractInput(
+    await loadAllTranscriptUtterances(call.id)
+  );
+
+  if (utterances.length === 0) {
+    return { error: "No transcript segments for this call", status: 400 };
+  }
+
+  const chunks = chunkUtterancesForExtraction(utterances);
+  let extracted: Record<string, unknown> = {};
+  let fieldConfidences: Record<string, number> = {};
+
+  for (const chunk of chunks) {
+    const part =
+      configPackageId === "uscis-n400"
+        ? await extractN400Entities(chunk)
+        : await extractEntities(chunk, "all", { scope: "all" });
+    extracted = mergeChunkExtractions(extracted, part.entities);
+    fieldConfidences = mergeChunkConfidences(fieldConfidences, part.fieldConfidences);
+  }
+
+  const base: EntityState = {};
+  const { merged } = mergeExtractIntoFlatState(base, extracted, false);
+
+  if (configPackageId !== "uscis-n400") {
+    if (
+      merged.existingCoverageAmount != null &&
+      (merged.existingCoverage === undefined || merged.existingCoverage === null)
+    ) {
+      merged.existingCoverage = true;
+    }
+  }
+
+  const { overall, tier } =
+    configPackageId === "uscis-n400"
+      ? computeN400CompletenessScore(merged as Record<string, unknown>)
+      : computeCompletenessScore(merged);
+
+  return {
+    callSid,
+    utteranceCount: utterances.length,
+    chunkCount: chunks.length,
+    entities: merged,
+    fieldConfidences,
+    completenessScore: overall,
+    tier,
+  };
+}
+

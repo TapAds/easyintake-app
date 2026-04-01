@@ -2,11 +2,13 @@ import { Router, Request, Response } from "express";
 import Anthropic from "@anthropic-ai/sdk";
 import { config } from "../../config";
 import { requireAuth } from "../middleware/auth";
+import { attachOperatorOrgScope } from "../middleware/operatorOrgScope";
 
 const client = new Anthropic({ apiKey: config.anthropic.apiKey });
 
 export const formCatalogRouter = Router();
 formCatalogRouter.use(requireAuth);
+formCatalogRouter.use(attachOperatorOrgScope);
 
 const FORM_ANALYSIS_SYSTEM = `You analyze government or carrier PDF forms and propose a vertical-intake catalog draft.
 

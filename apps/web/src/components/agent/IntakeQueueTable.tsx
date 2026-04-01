@@ -12,7 +12,7 @@ export function IntakeQueueTable() {
   const locale = useLocale();
   const prefix = `/${locale}`;
   const [rows, setRows] = useState<IntakeSessionListRow[] | null>(null);
-  const [loadError, setLoadError] = useState(false);
+  const [loadError, setLoadError] = useState<false | "generic" | "no_org">(false);
   const [filter, setFilter] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updatedAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -21,14 +21,24 @@ export function IntakeQueueTable() {
     const ac = new AbortController();
     let alive = true;
     fetch("/api/intake/sessions", { signal: ac.signal })
-      .then((r) => {
-        if (!r.ok) throw new Error(String(r.status));
+      .then(async (r) => {
+        if (!r.ok) {
+          if (r.status === 403) {
+            const body = (await r.json().catch(() => null)) as {
+              code?: string;
+            } | null;
+            if (body?.code === "NO_ORG") {
+              throw new Error("NO_ORG");
+            }
+          }
+          throw new Error(String(r.status));
+        }
         return r.json() as Promise<unknown>;
       })
       .then((data) => {
         if (!alive) return;
         if (!Array.isArray(data)) {
-          setLoadError(true);
+          setLoadError("generic");
           return;
         }
         setRows(data as IntakeSessionListRow[]);
@@ -36,7 +46,11 @@ export function IntakeQueueTable() {
       .catch((err: unknown) => {
         if (!alive) return;
         if (err instanceof Error && err.name === "AbortError") return;
-        setLoadError(true);
+        if (err instanceof Error && err.message === "NO_ORG") {
+          setLoadError("no_org");
+          return;
+        }
+        setLoadError("generic");
       });
     return () => {
       alive = false;
@@ -86,7 +100,15 @@ export function IntakeQueueTable() {
     }
   }
 
-  if (loadError) {
+  if (loadError === "no_org") {
+    return (
+      <p className="text-sm text-amber-800 dark:text-amber-200/90" role="status">
+        {t("loadErrorNoOrg")}
+      </p>
+    );
+  }
+
+  if (loadError === "generic") {
     return (
       <p className="text-sm text-red-600 dark:text-red-400" role="alert">
         {t("loadError")}

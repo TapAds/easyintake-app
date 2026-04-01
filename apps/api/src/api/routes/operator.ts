@@ -3,7 +3,9 @@ import type { Prisma } from "@prisma/client";
 import twilio from "twilio";
 import { config } from "../../config";
 import { prisma } from "../../db/prisma";
-import { requireBearerJwt } from "../middleware/bearerJwtAuth";
+import { requireAuth } from "../middleware/auth";
+import { attachOperatorOrgScope } from "../middleware/operatorOrgScope";
+import { sessionOrganizationInScope } from "../../services/operatorOrgScope";
 
 export const operatorRouter = Router();
 
@@ -22,7 +24,8 @@ function last4Digits(num: string | null | undefined): string {
  */
 operatorRouter.get(
   "/twilio/recent-calls",
-  requireBearerJwt,
+  requireAuth,
+  attachOperatorOrgScope,
   async (_req: Request, res: Response): Promise<void> => {
     try {
       const client = twilio(config.twilio.accountSid, config.twilio.authToken);
@@ -53,8 +56,10 @@ operatorRouter.get(
  */
 operatorRouter.post(
   "/intake-template",
-  requireBearerJwt,
+  requireAuth,
+  attachOperatorOrgScope,
   async (req: Request, res: Response): Promise<void> => {
+    const scope = req.operatorScope!;
     const body = req.body as {
       organizationId?: string;
       configPackageId?: string;
@@ -65,6 +70,10 @@ operatorRouter.post(
     const configPackageId = body.configPackageId?.trim();
     if (!organizationId || !configPackageId) {
       res.status(400).json({ error: "organizationId and configPackageId required" });
+      return;
+    }
+    if (!sessionOrganizationInScope(organizationId, scope)) {
+      res.status(403).json({ error: "organizationId not allowed for this session" });
       return;
     }
     const fieldDefinitions = (

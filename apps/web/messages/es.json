@@ -8,13 +8,28 @@
     "signIn": "Iniciar sesión"
   },
   "nav": {
-    "home": "Inicio",
     "overview": "Panel",
     "intakeQueue": "Cola de captación",
     "liveDemo": "Demo en vivo",
     "liveCall": "Llamada en vivo",
     "brand": "EasyIntake App",
-    "settings": "Configuración"
+    "settings": "Configuración",
+    "ceoDash": "Panel CEO"
+  },
+  "ceoDash": {
+    "title": "Panel CEO",
+    "subtitle": "Volumen de captación, embudo, actividad y espacio reservado para costes, a nivel de negocio, según el último lote de sesiones del motor.",
+    "scopeNote": "Los datos agrupan todas las organizaciones en la instantánea actual de la API (hasta 100 sesiones recientes). Son vistas operativas, no un almacén analítico completo.",
+    "orgSectionTitle": "Volumen por organización",
+    "orgColId": "Organización",
+    "orgColSessions": "Sesiones en la instantánea",
+    "orgColUpdated": "Última actividad",
+    "orgEmpty": "No hay sesiones en la instantánea actual.",
+    "costsTitle": "Costes y uso",
+    "costsIntro": "El gasto por uso (telefonía, transcripción, inferencia del modelo) aún no está conectado a esta vista. Conecta exportaciones de facturación o telemetría del motor para completar estas tarjetas.",
+    "costsVoiceLabel": "Voz (est.)",
+    "costsTranscriptionLabel": "Transcripción (est.)",
+    "costsModelLabel": "Uso del modelo (est.)"
   },
   "home": {
     "title": "EasyIntake App",
@@ -143,7 +158,8 @@
       "hitlNo": "No",
       "sortAsc": "Orden ascendente",
       "sortDesc": "Orden descendente",
-      "loadError": "No se pudieron cargar las sesiones."
+      "loadError": "No se pudieron cargar las sesiones.",
+      "loadErrorNoOrg": "Elige o crea una organización en tu cuenta (Clerk) y actualiza esta página. Los datos de captación están limitados a la organización activa."
     },
     "session": {
       "title": "Sesión",
@@ -187,7 +203,17 @@
       "sendReminder": "Enviar recordatorio para completar",
       "reminderSending": "Enviando…",
       "reminderSent": "Recordatorio enviado",
-      "reminderError": "No se pudo enviar el recordatorio."
+      "reminderError": "No se pudo enviar el recordatorio.",
+      "applicationsFromCallTitle": "Solicitudes de esta llamada",
+      "applicationsFromCallHint": "Cada fila es una solicitud distinta. Las nuevas reutilizan la transcripción guardada de la llamada.",
+      "newApplicationFromCallTitle": "Nueva solicitud a partir de esta llamada",
+      "newApplicationProductLabel": "Producto / formulario",
+      "newApplicationSubmit": "Crear y abrir",
+      "newApplicationWorking": "Creando…",
+      "newApplicationError": "No se pudo crear la solicitud. Asegúrese de que la llamada tenga transcripción guardada.",
+      "newApplicationMissingCallSid": "No hay Call SID vinculado a esta sesión.",
+      "applicationDerivedBadge": "Desde transcripción",
+      "applicationPrimaryBadge": "Principal (llamada)"
     },
     "voiceBridge": {
       "title": "Consola de agente de voz",
@@ -366,7 +392,8 @@
       "crmLabelAlienNumber": "Número A",
       "crmLabelPreferredContact": "Contacto preferido",
       "crmLabelSession": "Sesión (Call SID)",
-      "crmValueEmpty": "—"
+      "crmValueEmpty": "—",
+      "productLockedHint": "El producto queda fijado para esta llamada después de conectar. Cree una nueva solicitud desde la sesión para reutilizar la transcripción con otro producto."
     }
   },
   "settings": {

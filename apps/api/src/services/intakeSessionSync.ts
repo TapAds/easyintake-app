@@ -68,7 +68,8 @@ export async function ensureIntakeSessionForCall(
   });
 }
 
-function flatStateToFieldValues(
+/** Build session `fieldValues` cells from a flat engine entity map (voice / re-extract). */
+export function flatStateToFieldValues(
   flat: Record<string, unknown>
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};

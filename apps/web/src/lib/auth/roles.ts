@@ -1,4 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
+import { ceoDashAllowedEmails } from "@/lib/auth/ceoDashAllowlist";
 
 /**
  * Platform super-admin (Clerk). Set `role: "super_admin"` on the user's
@@ -23,6 +24,19 @@ export async function userHasSuperAdminRole(): Promise<boolean> {
   const user = await currentUser();
   const pm = user?.publicMetadata as Record<string, unknown> | undefined;
   return pm?.role === "super_admin";
+}
+
+/** Platform CEO dashboard: super_admin and primary email on the CEO allowlist. */
+export async function userCanAccessCeoDash(): Promise<boolean> {
+  if (!(await userHasSuperAdminRole())) return false;
+
+  const allowed = ceoDashAllowedEmails();
+  if (allowed.length === 0) return false;
+
+  const user = await currentUser();
+  const email = user?.primaryEmailAddress?.emailAddress?.trim().toLowerCase();
+  if (!email) return false;
+  return allowed.includes(email);
 }
 
 /**

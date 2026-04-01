@@ -57,12 +57,14 @@ model Call {
   detectedLanguages  String[]   @default([]) // ISO-639-1 codes detected during call
   primaryLanguage    String?    // ISO-639-1 code of dominant language
   intakeSessionId    String?
+  /// Intake sessions created later from this call's stored transcript (different product / application).
+  derivedIntakeSessions IntakeSession[] @relation("IntakeSessionSourceCall")
   /// Append-only JSON array of field-level edits (see FieldChangeEventV1 in apps/api)
   fieldChangeLog     Json       @default("[]")
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 
-  intakeSession      IntakeSession?       @relation(fields: [intakeSessionId], references: [id], onDelete: SetNull)
+  intakeSession      IntakeSession?       @relation("CallPrimaryIntakeSession", fields: [intakeSessionId], references: [id], onDelete: SetNull)
   entity             LifeInsuranceEntity?
   transcriptSegments TranscriptSegment[]
   followUpJobs       FollowUpJob[] // post-call jobs only (callId set; intakeSessionId null)
@@ -88,9 +90,12 @@ model IntakeSession {
   /// Append-only JSON array of field-level edits (cross-channel audit)
   fieldChangeLog     Json     @default("[]")
   configTemplateId   String?
+  /// When set, field values were seeded from this call's transcript (new application / product). Primary leg uses Call.intakeSessionId.
+  sourceCallId       String?
+  sourceCall         Call?    @relation("IntakeSessionSourceCall", fields: [sourceCallId], references: [id], onDelete: SetNull)
 
   template IntakeFieldTemplate? @relation(fields: [configTemplateId], references: [id], onDelete: SetNull)
-  calls        Call[]
+  calls        Call[] @relation("CallPrimaryIntakeSession")
   attachments  IntakeAttachment[]
   signatureRequests SignatureRequest[]
   followUpJobs FollowUpJob[]
@@ -103,6 +108,7 @@ model IntakeSession {
 
   @@index([organizationId, updatedAt])
   @@index([configPackageId])
+  @@index([sourceCallId])
 }
 
 /// Time-limited opaque token for applicant self-service (microsite); store hash only.
@@ -300,6 +306,8 @@ model GhlProcessedInboundMessage {
 model AgencyConfig {
   id                     String   @id @default(cuid())
   ghlLocationId          String   @unique
+  /// When set, dashboard JWT org scope includes `ghl:{ghlLocationId}` for this sub-account (links Clerk org to voice/GHL-created sessions).
+  clerkOrganizationId    String?
   ghlAccessToken         String
   ghlRefreshToken        String
   ghlTokenExpiresAt      DateTime
@@ -310,6 +318,8 @@ model AgencyConfig {
   voiceAgentForwardNumber String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+
+  @@index([clerkOrganizationId])
 }
 
 model ComplianceLog {

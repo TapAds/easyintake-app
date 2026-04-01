@@ -6,6 +6,7 @@ import { UserButton } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { SiteFooter } from "@/components/SiteFooter";
+import { useClientCeoDashAccess } from "@/lib/auth/useClientCeoDashAccess";
 import { useClientSuperAdmin } from "@/lib/auth/useClientSuperAdmin";
 
 export function AppChrome({ children }: { children: React.ReactNode }) {
@@ -13,6 +14,7 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
   const locale = useLocale();
   const pathname = usePathname();
   const isSuperAdmin = useClientSuperAdmin();
+  const showCeoDash = useClientCeoDashAccess();
   const voiceHrefSegment = isSuperAdmin ? "live-demo" : "live-call";
   const voiceNavActive =
     pathname.startsWith(`/${locale}/dashboard/live-demo`) ||
@@ -32,16 +34,6 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
               {t("brand")}
             </Link>
             <nav className="flex flex-wrap items-center gap-3 sm:gap-5 text-sm font-medium">
-              <Link
-                href={prefix}
-                className={`hover:text-foreground ${
-                  pathname === prefix || pathname === `${prefix}/`
-                    ? "text-primary"
-                    : "text-foreground/70"
-                }`}
-              >
-                {t("home")}
-              </Link>
               <Link
                 href={`${prefix}/dashboard`}
                 className={`hover:text-foreground ${
@@ -81,6 +73,18 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
               >
                 {t("settings")}
               </Link>
+              {showCeoDash ? (
+                <Link
+                  href={`${prefix}/dashboard/ceo`}
+                  className={`hover:text-foreground ${
+                    pathname.startsWith(`${prefix}/dashboard/ceo`)
+                      ? "text-primary"
+                      : "text-foreground/70"
+                  }`}
+                >
+                  {t("ceoDash")}
+                </Link>
+              ) : null}
             </nav>
           </div>
           <div className="flex items-center gap-3 shrink-0">

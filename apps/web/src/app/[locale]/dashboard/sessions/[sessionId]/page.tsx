@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppChrome } from "@/components/AppChrome";
 import { SessionApplicantTools } from "@/components/sessions/SessionApplicantTools";
+import { SessionApplicationsFromCall } from "@/components/sessions/SessionApplicationsFromCall";
 import { fetchIntakeSessionFromBff } from "@/lib/bff/serverFetch";
 import { buildAgentHtmlUrl } from "@/lib/agent/buildAgentHtmlUrl";
 import { fieldLabelForLocale } from "@/lib/intake/fieldLabels";
@@ -80,6 +81,12 @@ export default async function SessionDetailPage({
             )}
           </div>
         </div>
+
+
+        <SessionApplicationsFromCall
+          callSid={callSid}
+          relatedApplications={session.relatedApplications ?? []}
+        />
 
         <section aria-labelledby="channels-heading">
           <h2
