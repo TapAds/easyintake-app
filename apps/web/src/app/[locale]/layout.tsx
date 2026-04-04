@@ -22,7 +22,7 @@ export default async function LocaleLayout({
 
   const signInUrl = `/${locale}/sign-in`;
   const signUpUrl = `/${locale}/sign-up`;
-  const queueUrl = `/${locale}/dashboard/queue`;
+  const queueUrl = `/${locale}/dashboard/applications`;
 
   return (
     <ClerkProvider

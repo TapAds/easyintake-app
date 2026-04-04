@@ -1,7 +1,12 @@
 import type { EntityFieldName } from "../config/fieldStages";
 import { FIELD_CONFIG } from "../config/fieldStages";
 import { prisma } from "../db/prisma";
-import { getGhlContactPrimaryPhone, resolveGhlLocationIdFromTwilioTo } from "./ghl";
+import {
+  getGhlContactPrimaryPhone,
+  resolveGhlLocationIdFromTwilioTo,
+  sendGhlConversationSms,
+  sendGhlConversationWhatsApp,
+} from "./ghl";
 import { deliverFollowUpSms } from "./followUpSend";
 import type { SmsTemplateId } from "./sms";
 
@@ -9,6 +14,12 @@ import type { SmsTemplateId } from "./sms";
 
 const POLL_INTERVAL_MS = 60 * 1000; // 60 seconds
 const BATCH_SIZE = 10; // max jobs per poll cycle
+
+const WORKFLOW_BLOCK_PHASES = new Set([
+  "ESCALATED_CONFLICT",
+  "ESCALATED_LEGAL_REVIEW",
+  "ESCALATED",
+]);
 
 function plainField(fv: Record<string, unknown>, key: string): string | null {
   const cell = fv[key];
@@ -82,6 +93,8 @@ async function processCallFollowUpJob(
 async function processIntakeSessionFollowUpJob(
   jobId: string,
   job: {
+    kind: string;
+    outreachChannel: string;
     chaserFieldKey: string | null;
     intakeSession: {
       fieldValues: unknown;
@@ -117,6 +130,38 @@ async function processIntakeSessionFollowUpJob(
     stickyRaw === "other"
       ? stickyRaw
       : null;
+
+  if (job.kind === "WORKFLOW_NUDGE" || job.kind === "WEB_ABANDON_RESUME") {
+    const body =
+      job.kind === "WEB_ABANDON_RESUME"
+        ? `Hi ${firstName || "there"}, you started your application online. Reply here to continue or finish in the applicant portal.`
+        : `Hi ${firstName || "there"}, please upload any remaining documents for your application. Reply if you need help.`;
+    const wantWa = job.outreachChannel === "WHATSAPP" || stickyChannel === "whatsapp";
+    const result = wantWa
+      ? await sendGhlConversationWhatsApp(ghlLocationId, {
+          contactId: ghlContactId,
+          phone,
+          message: body,
+        })
+      : await sendGhlConversationSms(ghlLocationId, {
+          contactId: ghlContactId,
+          phone,
+          message: body,
+        });
+    await prisma.followUpJob.update({
+      where: { id: jobId },
+      data: {
+        status: "SENT",
+        sentAt: new Date(),
+        externalMessageId: result.messageId ?? "unknown",
+        outreachProvider: "ghl",
+      },
+    });
+    console.log(
+      `[followUpPoller] job ${jobId}: workflow kind=${job.kind} via ghl id=${result.messageId}`
+    );
+    return;
+  }
 
   const key = job.chaserFieldKey;
   const isKnownKey = Boolean(key && key in FIELD_CONFIG);
@@ -186,10 +231,28 @@ async function processJob(jobId: string): Promise<void> {
       return;
     }
     if (job.intakeSessionId && job.intakeSession) {
-      await processIntakeSessionFollowUpJob(
-        jobId,
-        job as typeof job & { intakeSession: NonNullable<typeof job.intakeSession> }
-      );
+      const wf = await prisma.workflowInstance.findUnique({
+        where: { intakeSessionId: job.intakeSessionId },
+        select: { phase: true },
+      });
+      if (wf && WORKFLOW_BLOCK_PHASES.has(wf.phase)) {
+        await prisma.followUpJob.update({
+          where: { id: jobId },
+          data: {
+            status: "CANCELLED",
+            failReason: "workflow_escalated",
+          },
+        });
+        console.log(`[followUpPoller] job ${jobId}: cancelled — workflow phase ${wf.phase}`);
+        return;
+      }
+
+      await processIntakeSessionFollowUpJob(jobId, {
+        kind: job.kind,
+        outreachChannel: job.outreachChannel,
+        chaserFieldKey: job.chaserFieldKey,
+        intakeSession: job.intakeSession,
+      });
       return;
     }
 

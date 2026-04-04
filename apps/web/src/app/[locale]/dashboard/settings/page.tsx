@@ -1,3 +1,4 @@
+import type { OrgPipelineConfig } from "@easy-intake/shared";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { getTranslations } from "next-intl/server";
 import { AppChrome } from "@/components/AppChrome";
@@ -5,6 +6,7 @@ import { AddFormApplicationDialog } from "@/components/settings/AddFormApplicati
 import { CrmIntegrationsSection } from "@/components/settings/crm/CrmIntegrationsSection";
 import type { OrganizationInitial } from "@/components/settings/OrganizationSection";
 import { OrganizationSection } from "@/components/settings/OrganizationSection";
+import { PipelineSection } from "@/components/settings/PipelineSection";
 import { UsersSection } from "@/components/settings/UsersSection";
 import {
   userCanConfigureIntake,
@@ -12,6 +14,7 @@ import {
   userCanViewSettingsUsers,
 } from "@/lib/auth/roles";
 import { ORG_PUBLIC_LOGO_URL, ORG_PUBLIC_WEBSITE_URL } from "@/lib/settings/orgProfile";
+import { readOrgPipelineAndOnboarding } from "@/lib/settings/readOrgMetadata";
 
 export default async function DashboardSettingsPage() {
   const t = await getTranslations("settings");
@@ -21,6 +24,8 @@ export default async function DashboardSettingsPage() {
   const { orgId } = await auth();
 
   let organizationInitial: OrganizationInitial | null = null;
+  let pipelineInitial: OrgPipelineConfig | null = null;
+  let onboardingCompleteInitial = false;
   if (canEditOrg && orgId) {
     const client = await clerkClient();
     const org = await client.organizations.getOrganization({ organizationId: orgId });
@@ -31,6 +36,9 @@ export default async function DashboardSettingsPage() {
         typeof pm[ORG_PUBLIC_WEBSITE_URL] === "string" ? pm[ORG_PUBLIC_WEBSITE_URL] : "",
       logoUrl: typeof pm[ORG_PUBLIC_LOGO_URL] === "string" ? pm[ORG_PUBLIC_LOGO_URL] : "",
     };
+    const ob = readOrgPipelineAndOnboarding(pm);
+    pipelineInitial = ob.pipelineConfig;
+    onboardingCompleteInitial = ob.onboardingComplete;
   }
 
   return (
@@ -52,6 +60,13 @@ export default async function DashboardSettingsPage() {
 
         {canEditOrg ? (
           <OrganizationSection initial={organizationInitial} hasOrgId={Boolean(orgId)} />
+        ) : null}
+
+        {canEditOrg ? (
+          <PipelineSection
+            initial={pipelineInitial}
+            initialOnboardingComplete={onboardingCompleteInitial}
+          />
         ) : null}
 
         {showUsers ? <UsersSection /> : null}

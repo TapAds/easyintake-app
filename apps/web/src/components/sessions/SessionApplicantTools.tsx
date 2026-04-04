@@ -161,7 +161,7 @@ export function SessionApplicantTools({
   );
 
   return (
-    <div className="space-y-8">
+    <div id="applicant-portal" className="space-y-8 scroll-mt-24">
       <section aria-labelledby="portal-title" className="rounded-xl border border-foreground/10 overflow-hidden">
         <h2
           id="portal-title"

@@ -434,6 +434,8 @@ export async function processGhlInboundMessage(
       intakeSessionId: session.id,
       configPackageId: "uscis-n400",
       sourceChannel: inbound.channel,
+      idempotencyKey: inbound.messageId ?? undefined,
+      externalRef: inbound.messageId ?? undefined,
     }).catch((err) => console.error("[workflow] processIngestedData:", err));
   }
 

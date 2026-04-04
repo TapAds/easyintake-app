@@ -124,3 +124,20 @@ export function computeN400CompletenessScore(entity: Record<string, unknown>): {
   const overall = total === 0 ? 0 : collected / total;
   return { overall, tier: tierFromScore(overall) };
 }
+
+/**
+ * Dual readiness for N-400: catalog field fill vs evidence checklist (orchestrator / NBA).
+ */
+export function computeN400FieldAndEvidenceReadiness(
+  entity: Record<string, unknown>,
+  evidenceCompletion01: number
+): { fieldCompletion: number; evidenceCompletion: number; tier: ScoreTier } {
+  const { overall } = computeN400CompletenessScore(entity);
+  const ec = Math.max(0, Math.min(1, evidenceCompletion01));
+  const blended = overall * 0.55 + ec * 0.45;
+  return {
+    fieldCompletion: overall,
+    evidenceCompletion: ec,
+    tier: tierFromScore(blended),
+  };
+}

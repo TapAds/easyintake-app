@@ -1,6 +1,10 @@
 import { Router, Request, Response } from "express";
 import type { FieldChangeEventV1 } from "@easy-intake/shared";
-import { computeCompletenessSnapshot, getVerticalConfigForPackageId } from "@easy-intake/shared";
+import {
+  applicantDisplayNameFromFieldValues,
+  computeCompletenessSnapshot,
+  getVerticalConfigForPackageId,
+} from "@easy-intake/shared";
 import { prisma } from "../../db/prisma";
 import { requireAuth } from "../middleware/auth";
 import { attachOperatorOrgScope } from "../middleware/operatorOrgScope";
@@ -90,6 +94,17 @@ intakeSessionsRouter.get("/", async (req: Request, res: Response): Promise<void>
   res.json(
     rows.map((r) => {
       const hitl = r.hitl as { pendingAgentReview?: boolean } | null;
+      const fieldValues = (r.fieldValues as Record<string, unknown>) ?? {};
+      const externalIds = (r.externalIds as Record<string, unknown>) ?? {};
+      const callSidRaw = externalIds.callSid;
+      const callSid =
+        typeof callSidRaw === "string" && callSidRaw.trim()
+          ? callSidRaw.trim()
+          : null;
+      const applicantDisplayName = applicantDisplayNameFromFieldValues(
+        fieldValues,
+        r.configPackageId
+      );
       return {
         sessionId: r.id,
         organizationId: r.organizationId,
@@ -100,6 +115,8 @@ intakeSessionsRouter.get("/", async (req: Request, res: Response): Promise<void>
         completenessScore: r.completenessScore,
         channelSummary: channelSummary(r.channels),
         pendingHitl: Boolean(hitl?.pendingAgentReview),
+        applicantDisplayName,
+        callSid,
       };
     })
   );
@@ -399,6 +416,68 @@ async function relatedApplicationsForSession(
   }
   return out;
 }
+
+/**
+ * GET /api/intake/sessions/:sessionId/workflow-events
+ */
+intakeSessionsRouter.get(
+  "/:sessionId/workflow-events",
+  async (req: Request, res: Response): Promise<void> => {
+    const sessionId = String(req.params.sessionId);
+    const scope = req.operatorScope!;
+    const row = await prisma.intakeSession.findUnique({
+      where: { id: sessionId },
+      select: {
+        organizationId: true,
+        workflowInstance: {
+          select: {
+            id: true,
+            phase: true,
+            preferredChannel: true,
+            targetSubmissionDate: true,
+            lastIngestionAt: true,
+            lastChannel: true,
+            events: {
+              orderBy: { createdAt: "desc" },
+              take: 80,
+              select: {
+                id: true,
+                type: true,
+                payload: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!row) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+    if (!sessionOrganizationInScope(row.organizationId, scope)) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
+    const wf = row.workflowInstance;
+    res.json({
+      workflowInstanceId: wf?.id ?? null,
+      phase: wf?.phase ?? null,
+      preferredChannel: wf?.preferredChannel ?? null,
+      targetSubmissionDate: wf?.targetSubmissionDate?.toISOString().slice(0, 10) ?? null,
+      lastIngestionAt: wf?.lastIngestionAt?.toISOString() ?? null,
+      lastChannel: wf?.lastChannel ?? null,
+      events: (wf?.events ?? []).map((e) => ({
+        id: e.id,
+        type: e.type,
+        payload: e.payload,
+        createdAt: e.createdAt.toISOString(),
+      })),
+    });
+  }
+);
 
 /**
  * GET /api/intake/sessions/:sessionId

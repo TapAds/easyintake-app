@@ -134,5 +134,9 @@ export interface IntakeSessionListRow {
   /** Short summary of channels, e.g. "voice · microsite". */
   channelSummary: string;
   pendingHitl: boolean;
+  /** Best-effort display label from field values; omit or null when unknown. */
+  applicantDisplayName?: string | null;
+  /** Voice call SID when the session is tied to a Twilio leg. */
+  callSid?: string | null;
 }
 

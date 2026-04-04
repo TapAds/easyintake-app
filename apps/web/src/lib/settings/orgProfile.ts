@@ -1,5 +1,9 @@
 export const ORG_PUBLIC_WEBSITE_URL = "websiteUrl";
 export const ORG_PUBLIC_LOGO_URL = "logoUrl";
+/** Clerk org `publicMetadata` — validated `OrgPipelineConfig` JSON (`@easy-intake/shared`). */
+export const ORG_PUBLIC_PIPELINE_CONFIG = "pipelineConfig";
+/** Clerk org `publicMetadata` — boolean; true after org admin completes onboarding (or skips). */
+export const ORG_PUBLIC_ONBOARDING_COMPLETE = "onboardingComplete";
 
 export const ALLOWED_LOGO_IMAGE_TYPES = new Set([
   "image/png",

@@ -19,6 +19,8 @@ export function getIntakeQueueFixture(): IntakeSessionListRow[] {
       completenessScore: 0.35,
       channelSummary: "voice",
       pendingHitl: false,
+      applicantDisplayName: "Alex Rivera",
+      callSid: "CA_fixture_stub",
     },
     {
       sessionId: "sess_alpha",
@@ -30,6 +32,8 @@ export function getIntakeQueueFixture(): IntakeSessionListRow[] {
       completenessScore: 0.82,
       channelSummary: "voice · microsite",
       pendingHitl: true,
+      applicantDisplayName: "Jordan Lee",
+      callSid: null,
     },
     {
       sessionId: "sess_beta",
@@ -41,6 +45,8 @@ export function getIntakeQueueFixture(): IntakeSessionListRow[] {
       completenessScore: 0.96,
       channelSummary: "web_form · sms",
       pendingHitl: false,
+      applicantDisplayName: "Sam Patel",
+      callSid: null,
     },
   ];
 }

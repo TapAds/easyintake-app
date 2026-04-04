@@ -46,9 +46,11 @@ export function AppChrome({ children }: { children: React.ReactNode }) {
                 {t("overview")}
               </Link>
               <Link
-                href={`${prefix}/dashboard/queue`}
+                href={`${prefix}/dashboard/applications`}
                 className={`hover:text-foreground ${
-                  pathname.startsWith(`${prefix}/dashboard/queue`)
+                  pathname.startsWith(`${prefix}/dashboard/applications`) ||
+                  pathname.startsWith(`${prefix}/dashboard/queue`) ||
+                  pathname.startsWith(`${prefix}/dashboard/sessions/`)
                     ? "text-primary"
                     : "text-foreground/70"
                 }`}

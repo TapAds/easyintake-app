@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
+import { parseOrgPipelineConfig } from "@easy-intake/shared";
 import { userCanEditOrganizationProfile } from "@/lib/auth/roles";
 import {
   ORG_PUBLIC_LOGO_URL,
+  ORG_PUBLIC_ONBOARDING_COMPLETE,
+  ORG_PUBLIC_PIPELINE_CONFIG,
   ORG_PUBLIC_WEBSITE_URL,
   validateWebsiteForStorage,
 } from "@/lib/settings/orgProfile";
+import { readOrgPipelineAndOnboarding } from "@/lib/settings/readOrgMetadata";
 
 function readOrgBranding(pm: Record<string, unknown>) {
   return {
@@ -30,11 +34,14 @@ export async function GET() {
   const org = await client.organizations.getOrganization({ organizationId: orgId });
   const pm = (org.publicMetadata ?? {}) as Record<string, unknown>;
   const { websiteUrl, logoUrl } = readOrgBranding(pm);
+  const { pipelineConfig, onboardingComplete } = readOrgPipelineAndOnboarding(pm);
 
   return NextResponse.json({
     name: org.name,
     websiteUrl,
     logoUrl,
+    pipelineConfig,
+    onboardingComplete,
   });
 }
 
@@ -64,6 +71,8 @@ export async function PATCH(req: Request) {
   const nameRaw = b.name;
   const websiteRaw = b.websiteUrl;
   const logoRaw = b.logoUrl;
+  const pipelineRaw = b.pipelineConfig;
+  const onboardingCompleteRaw = b.onboardingComplete;
 
   const client = await clerkClient();
   const org = await client.organizations.getOrganization({ organizationId: orgId });
@@ -115,6 +124,25 @@ export async function PATCH(req: Request) {
     }
   }
 
+  if (pipelineRaw !== undefined) {
+    if (pipelineRaw === null) {
+      delete patch.publicMetadata[ORG_PUBLIC_PIPELINE_CONFIG];
+    } else {
+      const parsed = parseOrgPipelineConfig(pipelineRaw);
+      if (!parsed) {
+        return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
+      }
+      patch.publicMetadata[ORG_PUBLIC_PIPELINE_CONFIG] = parsed;
+    }
+  }
+
+  if (onboardingCompleteRaw !== undefined) {
+    if (typeof onboardingCompleteRaw !== "boolean") {
+      return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
+    }
+    patch.publicMetadata[ORG_PUBLIC_ONBOARDING_COMPLETE] = onboardingCompleteRaw;
+  }
+
   try {
     await client.organizations.updateOrganization(orgId, {
       ...(patch.name !== undefined ? { name: patch.name } : {}),
@@ -123,7 +151,8 @@ export async function PATCH(req: Request) {
     const next = await client.organizations.getOrganization({ organizationId: orgId });
     const pm = (next.publicMetadata ?? {}) as Record<string, unknown>;
     const { websiteUrl, logoUrl } = readOrgBranding(pm);
-    return NextResponse.json({ name: next.name, websiteUrl, logoUrl });
+    const { pipelineConfig, onboardingComplete } = readOrgPipelineAndOnboarding(pm);
+    return NextResponse.json({ name: next.name, websiteUrl, logoUrl, pipelineConfig, onboardingComplete });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Clerk error";
     return NextResponse.json({ error: "CLERK", message }, { status: 422 });

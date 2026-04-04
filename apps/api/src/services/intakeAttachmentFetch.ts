@@ -67,7 +67,8 @@ export const SUPPORTED_DOCUMENT_MEDIA_TYPES = new Set([
 ]);
 
 /**
- * Download attachment bytes. Retries with GHL Bearer token when the host looks LC/GHL and open fetch fails.
+ * Download attachment bytes. Follows redirects (WhatsApp / CDN presigned URLs). Retries with GHL Bearer
+ * when the host looks LC/GHL and open fetch fails.
  */
 export async function fetchGhlAttachment(
   ghlLocationId: string,
@@ -80,6 +81,7 @@ export async function fetchGhlAttachment(
     timeout,
     maxContentLength: max,
     maxBodyLength: max,
+    maxRedirects: 5,
     responseType: "arraybuffer",
     validateStatus: () => true,
   });

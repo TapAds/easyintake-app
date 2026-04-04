@@ -59,7 +59,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "VALIDATION" }, { status: 400 });
   }
 
-  const redirectUrl = `${appOriginFromRequest(req)}/en/dashboard/queue`;
+  const redirectUrl = `${appOriginFromRequest(req)}/en/dashboard/applications`;
 
   try {
     const client = await clerkClient();

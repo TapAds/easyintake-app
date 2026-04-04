@@ -7,7 +7,7 @@ export default async function SignInPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const queue = `/${locale}/dashboard/queue`;
+  const queue = `/${locale}/dashboard/applications`;
   const signInPath = `/${locale}/sign-in`;
   const signUpPath = `/${locale}/sign-up`;
 

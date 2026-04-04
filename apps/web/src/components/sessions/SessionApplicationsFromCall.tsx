@@ -2,21 +2,11 @@
 
 import type { IntakeSession } from "@easy-intake/shared";
 import { LIVE_DEMO_PRESETS } from "@easy-intake/shared";
+import { intakePackageLabel } from "@/lib/intake/packageLabel";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
-
-function packageLabel(
-  configPackageId: string,
-  locale: string
-): string {
-  const preset = LIVE_DEMO_PRESETS.find(
-    (p) => p.configPackageId === configPackageId
-  );
-  if (!preset) return configPackageId;
-  return locale === "es" ? preset.labels.es : preset.labels.en;
-}
 
 export function SessionApplicationsFromCall({
   callSid,
@@ -108,7 +98,7 @@ export function SessionApplicationsFromCall({
                   {row.sessionId}
                 </Link>
                 <div className="mt-0.5 text-foreground/80">
-                  {packageLabel(row.configPackageId, locale)} —{" "}
+                  {intakePackageLabel(row.configPackageId, locale)} —{" "}
                   {Math.round(row.completenessScore * 100)}%
                 </div>
               </div>

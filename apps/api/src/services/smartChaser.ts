@@ -66,6 +66,7 @@ export async function scheduleGapChaserIfNeeded(params: {
 
   await prisma.followUpJob.create({
     data: {
+      kind: "GAP_CHASER",
       callId: null,
       intakeSessionId: session.id,
       chaserFieldKey: firstKey,

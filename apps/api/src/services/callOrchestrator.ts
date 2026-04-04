@@ -209,6 +209,7 @@ export async function handleCallEnd(payload: CallEndPayload): Promise<void> {
     try {
       await prisma.followUpJob.create({
         data: {
+          kind: "POST_CALL",
           callId,
           status: "PENDING",
           scheduledFor,

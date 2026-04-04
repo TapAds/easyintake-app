@@ -32,6 +32,7 @@ In **Vercel → Project → Settings → Environment Variables**, add the same k
 | `NEXT_PUBLIC_API_URL` | HTTPS origin of **`apps/api`** (production: `https://api.easyintakeapp.com`; or `https://your-api.up.railway.app`) | Staging API if needed |
 | `NEXT_PUBLIC_AGENT_HTML_URL` | Optional; same as API origin if agent static files are served there | Same |
 | `API_JWT_SECRET` | **Same value as** `API_JWT_SECRET` on **`apps/api`** — used by Route Handlers to mint WebSocket JWTs for the agent console | Never expose to the browser; server-only on Vercel |
+| `ANTHROPIC_API_KEY` | Anthropic API key for **Dashboard → Onboarding** chat (`POST /api/onboarding/chat`). Same product as `apps/api` Claude usage; server-only | Without it, onboarding chat returns 503 (`LLM_NOT_CONFIGURED`); pre-screen blocks still work without a key |
 | `BLOB_READ_WRITE_TOKEN` | From **[Vercel Blob](https://vercel.com/docs/storage/vercel-blob)** linked to this project — **required** for **Settings → Organization** logo uploads and for rehosting logos fetched from a website | Server-only; without it, uploads return 503 |
 | `NEXT_PUBLIC_APP_URL` | Optional but recommended — production origin (e.g. `https://app.easyintakeapp.com`) for stable absolute URLs in invites and similar | Public |
 

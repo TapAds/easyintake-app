@@ -1,10 +1,14 @@
 import {
   computeDocumentEvidenceCompletenessScore,
   mergeEvidenceRequirements,
+  nextBestActionKind,
   runN400RuleEngine,
   type N400RuleEngineOutput,
 } from "@easy-intake/shared";
 import { prisma } from "../../db/prisma";
+import { computeN400FieldAndEvidenceReadiness } from "../scoring";
+import { syncSilenceNurtureTagForSession } from "../ghlSilenceTag";
+import { scheduleWorkflowFollowUpIfEligible } from "./workflowSchedule";
 
 const ESCALATION_PHASES = new Set([
   "ESCALATED_LEGAL_REVIEW",
@@ -20,10 +24,14 @@ function parseDateOnly(iso: string | null): Date | null {
 
 function resolveNextWorkflowPhase(
   currentPhase: string,
-  engine: N400RuleEngineOutput
+  engine: N400RuleEngineOutput,
+  hitlConflicts: boolean
 ): string {
   if (ESCALATION_PHASES.has(currentPhase)) {
     return currentPhase;
+  }
+  if (hitlConflicts) {
+    return "ESCALATED_CONFLICT";
   }
   if (currentPhase === "CLOSED" || currentPhase === "AUDIT_READY") {
     return currentPhase;
@@ -79,25 +87,43 @@ async function appendWorkflowEvents(args: {
 
 /**
  * Channel-agnostic workflow pass for `uscis-n400`: rules engine, merged `requirementsJson`,
- * phase (incl. `PRE_ELIGIBLE_COLLECTION`), dates on `WorkflowInstance`, evidence score on session.
- * Does not downgrade `ESCALATED_*` phases.
+ * phase, dates, evidence score, optional idempotency, interaction anchor, silence tag, follow-up scheduling.
  */
 export async function processIngestedData(params: {
   intakeSessionId: string;
   configPackageId: string;
   sourceChannel?: string;
+  idempotencyKey?: string;
+  callId?: string;
+  externalRef?: string;
 }): Promise<void> {
   if (params.configPackageId !== "uscis-n400") return;
+
+  const idem = params.idempotencyKey?.trim();
+  if (idem) {
+    const existing = await prisma.workflowIngestionDedupe.findUnique({
+      where: {
+        intakeSessionId_idempotencyKey: {
+          intakeSessionId: params.intakeSessionId,
+          idempotencyKey: idem,
+        },
+      },
+      select: { id: true },
+    });
+    if (existing) return;
+  }
 
   const session = await prisma.intakeSession.findUnique({
     where: { id: params.intakeSessionId },
     select: {
       fieldValues: true,
+      hitl: true,
       workflowInstance: {
         select: {
           id: true,
           phase: true,
           requirementsJson: true,
+          preferredChannel: true,
         },
       },
     },
@@ -110,15 +136,27 @@ export async function processIngestedData(params: {
       ? (session.fieldValues as Record<string, unknown>)
       : {};
 
+  const hitlRaw = session.hitl as Record<string, unknown> | null | undefined;
+  const conflicts = hitlRaw?.conflicts;
+  const hitlConflicts =
+    Array.isArray(conflicts) &&
+    conflicts.some((c) => c && typeof c === "object" && Object.keys(c as object).length > 0);
+
   const engine = runN400RuleEngine(fv);
   const generated = [...engine.eligibilityGates, ...engine.evidenceRequired];
   const prevReq = session.workflowInstance?.requirementsJson ?? [];
   const merged = mergeEvidenceRequirements(prevReq, generated);
 
   const evidenceScore = computeDocumentEvidenceCompletenessScore(merged);
+  const dual = computeN400FieldAndEvidenceReadiness(fv, evidenceScore);
+  const nba = nextBestActionKind({
+    fieldCompletion: dual.fieldCompletion,
+    evidenceCompletion: dual.evidenceCompletion,
+    moralCharacterHeavy: engine.moralCharacter.requiresLegalReview,
+  });
 
   const prevPhase = session.workflowInstance?.phase ?? "INITIAL_INTAKE";
-  const nextPhase = resolveNextWorkflowPhase(prevPhase, engine);
+  const nextPhase = resolveNextWorkflowPhase(prevPhase, engine, Boolean(hitlConflicts));
 
   const targetDate = parseDateOnly(engine.earlyFiling.targetSubmissionDate);
   const residenceCompleteDate = parseDateOnly(engine.earlyFiling.continuousResidenceCompleteDate);
@@ -133,6 +171,7 @@ export async function processIngestedData(params: {
       continuousResidenceCompleteDate: residenceCompleteDate,
       lastIngestionAt: new Date(),
       lastChannel: params.sourceChannel ?? null,
+      preferredChannel: params.sourceChannel?.trim() || null,
       ...(engine.moralCharacter.requiresLegalReview
         ? {
             escalationReason: engine.moralCharacter.escalationReason,
@@ -147,6 +186,11 @@ export async function processIngestedData(params: {
       continuousResidenceCompleteDate: residenceCompleteDate,
       lastIngestionAt: new Date(),
       lastChannel: params.sourceChannel ?? null,
+      ...(params.sourceChannel
+        ? {
+            preferredChannel: params.sourceChannel,
+          }
+        : {}),
       ...(engine.moralCharacter.requiresLegalReview
         ? {
             escalationReason: engine.moralCharacter.escalationReason,
@@ -165,6 +209,47 @@ export async function processIngestedData(params: {
 
   await prisma.intakeSession.update({
     where: { id: params.intakeSessionId },
-    data: { evidenceCompletenessScore: evidenceScore },
+    data: {
+      evidenceCompletenessScore: evidenceScore,
+      completenessScore: dual.fieldCompletion,
+    },
+  });
+
+  await prisma.intakeInteraction.create({
+    data: {
+      intakeSessionId: params.intakeSessionId,
+      channel: params.sourceChannel ?? "unknown",
+      externalRef: params.externalRef ?? null,
+      callId: params.callId ?? null,
+      payloadSummary: {
+        orchestrator: "processIngestedData",
+        phase: nextPhase,
+      },
+    },
+  });
+
+  if (idem) {
+    await prisma.workflowIngestionDedupe.create({
+      data: {
+        intakeSessionId: params.intakeSessionId,
+        idempotencyKey: idem,
+      },
+    });
+  }
+
+  await syncSilenceNurtureTagForSession({
+    intakeSessionId: params.intakeSessionId,
+    activeCase: nextPhase !== "CLOSED",
+  });
+
+  await scheduleWorkflowFollowUpIfEligible({
+    intakeSessionId: params.intakeSessionId,
+    workflowInstanceId: wf.id,
+    phase: nextPhase,
+    fieldCompletion: dual.fieldCompletion,
+    evidenceCompletion: dual.evidenceCompletion,
+    moralCharacterHeavy: engine.moralCharacter.requiresLegalReview,
+    preferredChannel: wf.preferredChannel,
+    nba,
   });
 }
